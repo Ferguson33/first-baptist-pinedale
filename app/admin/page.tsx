@@ -90,6 +90,7 @@ export default function AdminDashboard() {
   // Real members from Supabase (for Option 1 - Member Approval)
   const [realMembers, setRealMembers] = useState<any[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<any>(null); // For viewing full profile in modal
 
   // Real prayers from Supabase (for Prayer Wall approval flow)
   const [realPrayers, setRealPrayers] = useState<any[]>([]);
@@ -501,6 +502,11 @@ export default function AdminDashboard() {
                 {pendingPrayerCount}
               </span>
             )}
+            {tab.id === 'members' && realMembers.filter((m: any) => m.role === 'pending').length > 0 && (
+              <span className="ml-1.5 px-1.5 py-px text-[10px] leading-none font-semibold bg-orange-500 text-white rounded-full">
+                {realMembers.filter((m: any) => m.role === 'pending').length}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -728,50 +734,137 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {!loadingMembers && realMembers.map((m: any) => (
-              <div key={m.id} className="flex justify-between border-b py-4 last:border-0 items-center gap-4">
-                <div className="min-w-0">
-                  <div className="font-semibold">{m.full_name}</div>
-                  <div className="text-xs text-[var(--color-stone-light)]">{m.email}</div>
-                  <div className="text-[10px] mt-1 uppercase tracking-wider">
-                    Status: <span className={m.role === 'approved' ? 'text-green-600' : m.role === 'admin' ? 'text-[var(--color-gold-dark)]' : 'text-orange-600'}>
-                      {m.role}
-                    </span>
+            {!loadingMembers && realMembers.map((m: any) => {
+              // Build nice display name for couples
+              const displayName = m.spouse_name 
+                ? `${m.full_name} & ${m.spouse_name}` 
+                : m.full_name;
+
+              return (
+                <div 
+                  key={m.id} 
+                  onClick={() => setSelectedMember(m)}
+                  className="flex justify-between border-b py-4 last:border-0 items-center gap-4 hover:bg-[var(--color-cream)] cursor-pointer rounded-lg px-2 -mx-2 transition"
+                >
+                  <div className="min-w-0">
+                    <div className="font-semibold text-lg">{displayName}</div>
+                    
+                    <div className="text-xs text-[var(--color-stone-light)] mt-0.5">{m.email}</div>
+
+                    {/* Key dates and phone */}
+                    <div className="text-sm mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[var(--color-stone)]">
+                      {m.phone && <div>📞 {m.phone}</div>}
+                      {m.birthdate && <div>🎂 {m.birthdate}</div>}
+                      {m.anniversary && <div>💍 Anniversary: {m.anniversary}</div>}
+                      {m.spouse_birthdate && <div>🎂 Spouse: {m.spouse_birthdate}</div>}
+                    </div>
+
+                    <div className="text-[10px] mt-1.5 uppercase tracking-wider">
+                      Status: <span className={m.role === 'approved' ? 'text-green-600' : m.role === 'admin' ? 'text-[var(--color-gold-dark)]' : 'text-orange-600'}>
+                        {m.role}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                    {/* Prayer Wall trust toggle - only for approved or admin members */}
+                    {m.role !== 'pending' && (
+                      <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={!!m.prayer_auto_approve}
+                          onChange={() => togglePrayerTrust(m.id, !!m.prayer_auto_approve)}
+                          className="w-4 h-4 accent-[var(--color-gold)]"
+                        />
+                        <span className="text-[var(--color-stone)]">Can post prayers without review</span>
+                      </label>
+                    )}
+
+                    {m.role === 'pending' ? (
+                      <button 
+                        onClick={() => approveRealMember(m.id)} 
+                        className="px-5 py-1.5 bg-[var(--color-gold)] text-white rounded-full text-xs font-semibold whitespace-nowrap"
+                      >
+                        APPROVE MEMBERSHIP
+                      </button>
+                    ) : (
+                      <span className="text-xs px-4 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
+                        {m.role === 'admin' ? 'Admin' : 'Approved'}
+                      </span>
+                    )}
                   </div>
                 </div>
-
-                <div className="flex items-center gap-4 flex-shrink-0">
-                  {/* Prayer Wall trust toggle - only for approved or admin members */}
-                  {m.role !== 'pending' && (
-                    <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={!!m.prayer_auto_approve}
-                        onChange={() => togglePrayerTrust(m.id, !!m.prayer_auto_approve)}
-                        className="w-4 h-4 accent-[var(--color-gold)]"
-                      />
-                      <span className="text-[var(--color-stone)]">Can post prayers without review</span>
-                    </label>
-                  )}
-
-                  {m.role === 'pending' ? (
-                    <button 
-                      onClick={() => approveRealMember(m.id)} 
-                      className="px-5 py-1.5 bg-[var(--color-gold)] text-white rounded-full text-xs font-semibold whitespace-nowrap"
-                    >
-                      APPROVE MEMBERSHIP
-                    </button>
-                  ) : (
-                    <span className="text-xs px-4 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
-                      {m.role === 'admin' ? 'Admin' : 'Approved'}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-6 text-sm">When you approve someone they gain access to the Member Directory and Prayer Wall. Check the box to let trusted members post prayers immediately without going through the review queue.</div>
+        </div>
+      )}
+
+      {/* Member Detail Modal */}
+      {selectedMember && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedMember(null)}>
+          <div 
+            className="bg-white rounded-3xl max-w-lg w-full p-8 relative" 
+            onClick={e => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setSelectedMember(null)}
+              className="absolute top-4 right-4 text-2xl leading-none text-[var(--color-stone-light)] hover:text-[var(--color-navy)]"
+            >
+              ×
+            </button>
+
+            <div className="font-semibold text-2xl mb-1">
+              {selectedMember.spouse_name 
+                ? `${selectedMember.full_name} & ${selectedMember.spouse_name}` 
+                : selectedMember.full_name}
+            </div>
+            <div className="text-sm text-[var(--color-stone-light)] mb-6">{selectedMember.email}</div>
+
+            {selectedMember.photo_url && (
+              <img 
+                src={selectedMember.photo_url} 
+                alt="Member photo" 
+                className="w-32 h-32 rounded-full object-cover mx-auto mb-6 border-4 border-[var(--color-cream)]" 
+              />
+            )}
+
+            <div className="space-y-3 text-sm">
+              {selectedMember.phone && <div><strong>Phone:</strong> {selectedMember.phone}</div>}
+              {selectedMember.birthdate && <div><strong>Birthdate:</strong> {selectedMember.birthdate}</div>}
+              {selectedMember.anniversary && <div><strong>Anniversary:</strong> {selectedMember.anniversary}</div>}
+              {selectedMember.spouse_birthdate && <div><strong>Spouse Birthdate:</strong> {selectedMember.spouse_birthdate}</div>}
+              {selectedMember.address && <div><strong>Address:</strong> {selectedMember.address}</div>}
+              {selectedMember.notes && (
+                <div>
+                  <strong>Notes:</strong><br />
+                  <span className="text-[var(--color-stone)]">{selectedMember.notes}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-8 flex justify-end gap-3">
+              {selectedMember.role === 'pending' && (
+                <button 
+                  onClick={() => {
+                    approveRealMember(selectedMember.id);
+                    setSelectedMember(null);
+                  }} 
+                  className="px-6 py-2 bg-[var(--color-gold)] text-white rounded-full text-sm font-semibold"
+                >
+                  Approve Membership
+                </button>
+              )}
+              <button 
+                onClick={() => setSelectedMember(null)} 
+                className="px-6 py-2 border rounded-full text-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

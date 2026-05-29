@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -10,6 +10,24 @@ export default function MemberProfilePage() {
   const { user, profile, refreshProfile, isApprovedMember } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Prevent the whole page from navigating when someone drops a file anywhere
+  useEffect(() => {
+    const preventDefaults = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    window.addEventListener('dragover', preventDefaults);
+    window.addEventListener('drop', preventDefaults);
+
+    return () => {
+      window.removeEventListener('dragover', preventDefaults);
+      window.removeEventListener('drop', preventDefaults);
+    };
+  }, []);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -46,8 +64,7 @@ export default function MemberProfilePage() {
   };
 
   // Handle photo upload to Supabase Storage
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const uploadPhoto = async (file: File) => {
     if (!file || !user) return;
 
     if (!file.type.startsWith('image/')) {
@@ -85,8 +102,9 @@ export default function MemberProfilePage() {
 
       toast.success("Photo uploaded! Don't forget to save your profile.");
     } catch (error: any) {
-      console.error(error);
-      toast.error("Failed to upload photo. Make sure the 'member-photos' bucket exists in Supabase.");
+      console.error("Photo upload error:", error);
+      const errorMessage = error?.message || error?.error?.message || "Unknown error";
+      toast.error(`Failed to upload photo: ${errorMessage}`);
     } finally {
       setUploadingPhoto(false);
     }
@@ -126,6 +144,39 @@ export default function MemberProfilePage() {
     }
   };
 
+  // Photo upload handlers
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      uploadPhoto(file);
+    }
+  };
+
+  const handlePhotoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadPhoto(file);
+  };
+
   if (!user) {
     return (
       <div className="max-w-md mx-auto text-center py-20">
@@ -156,28 +207,60 @@ export default function MemberProfilePage() {
         {/* Photo Upload */}
         <div>
           <label className="block text-sm font-medium mb-2">Profile Photo</label>
-          <div className="flex items-center gap-6">
-            {formData.photo_url ? (
-              <img 
-                src={formData.photo_url} 
-                alt="Your photo" 
-                className="w-24 h-24 rounded-full object-cover border-2 border-[var(--color-gold)]/30" 
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-[var(--color-cream)] flex items-center justify-center text-[var(--color-stone-light)] text-sm">
-                No photo
+          <div className="flex items-start gap-6">
+            {/* Preview */}
+            <div className="flex-shrink-0">
+              {formData.photo_url ? (
+                <img 
+                  src={formData.photo_url} 
+                  alt="Your photo" 
+                  className="w-24 h-24 rounded-full object-cover border-2 border-[var(--color-gold)]/30" 
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-[var(--color-cream)] flex items-center justify-center text-[var(--color-stone-light)] text-sm border border-dashed border-[var(--color-gold)]/40">
+                  No photo
+                </div>
+              )}
+            </div>
+
+            {/* Upload Dropzone */}
+            <div className="flex-1">
+              <div
+                onClick={triggerFileInput}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+                  isDragging 
+                    ? 'border-[var(--color-gold)] bg-[var(--color-cream)]' 
+                    : 'border-[var(--color-gold)]/40 hover:border-[var(--color-gold)]/70'
+                }`}
+              >
+                <div className="text-sm text-[var(--color-stone)]">
+                  {uploadingPhoto ? (
+                    "Uploading photo..."
+                  ) : (
+                    <>
+                      <span className="font-medium text-[var(--color-gold-dark)]">Click to choose</span> or drag and drop
+                      <br />
+                      <span className="text-xs text-[var(--color-stone-light)]">JPG or PNG • Max 5MB</span>
+                    </>
+                  )}
+                </div>
               </div>
-            )}
-            <div>
+
               <input 
+                ref={fileInputRef}
                 type="file" 
                 accept="image/*" 
-                onChange={handlePhotoUpload} 
+                onChange={handlePhotoInputChange} 
                 disabled={uploadingPhoto}
-                className="block text-sm"
+                className="hidden"
               />
-              <p className="text-xs text-[var(--color-stone-light)] mt-1">JPG or PNG, max 5MB</p>
-              {uploadingPhoto && <p className="text-xs text-[var(--color-gold-dark)]">Uploading...</p>}
+
+              {uploadingPhoto && (
+                <p className="text-xs text-[var(--color-gold-dark)] mt-2 text-center">Uploading...</p>
+              )}
             </div>
           </div>
           <p className="text-[10px] text-[var(--color-stone-light)] mt-2">
@@ -213,33 +296,36 @@ export default function MemberProfilePage() {
           <div>
             <label className="block text-sm font-medium mb-1.5">Birthdate</label>
             <input
-              type="date"
+              type="text"
               name="birthdate"
               value={formData.birthdate}
               onChange={handleChange}
               className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
+              placeholder="MM/DD/YYYY or YYYY-MM-DD"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-1.5">Anniversary (if married)</label>
             <input
-              type="date"
+              type="text"
               name="anniversary"
               value={formData.anniversary}
               onChange={handleChange}
               className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
+              placeholder="MM/DD/YYYY or YYYY-MM-DD (optional)"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-1.5">Spouse’s Birthdate (if married)</label>
             <input
-              type="date"
+              type="text"
               name="spouse_birthdate"
               value={formData.spouse_birthdate}
               onChange={handleChange}
               className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
+              placeholder="MM/DD/YYYY or YYYY-MM-DD (optional)"
             />
           </div>
 
