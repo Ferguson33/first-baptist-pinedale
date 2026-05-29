@@ -199,9 +199,7 @@ export default function BuildingProject() {
         </div>
       </div>
 
-      <div className="mt-16 text-center text-sm border-t pt-8 text-[var(--color-stone)]">
-        Want regular updates? Join the email list at the welcome desk or contact the church office. <br />Thank you for your sacrificial generosity.
-      </div>
+
 
       {/* Photo Gallery Lightbox with Navigation */}
       {galleryOpen && photos.length > 0 && (
