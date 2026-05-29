@@ -36,15 +36,15 @@ export default function MembersPortal() {
           <p className="text-sm mt-2">Submit and view prayer requests from the body.</p>
         </Link>
 
-        <div className="block border bg-[var(--color-cream)] p-8 rounded-3xl">
-          <div className="font-semibold text-2xl">Your Profile</div>
+        <Link href="/members/profile" className="block border bg-white p-8 rounded-3xl hover:border-[var(--color-gold)]">
+          <div className="font-semibold text-2xl">My Profile</div>
           <div className="text-sm mt-4 space-y-1 text-[var(--color-stone)]">
             <div><span className="font-medium">Name:</span> {profile?.full_name}</div>
             <div><span className="font-medium">Email:</span> {profile?.email}</div>
             <div><span className="font-medium">Status:</span> {profile?.role === 'approved' ? 'Approved Member' : profile?.role}</div>
           </div>
-          <div className="text-xs mt-6 text-[var(--color-stone-light)]">Need to update your information? Speak with the church office or email Firstbaptist646@gmail.com</div>
-        </div>
+          <div className="text-xs mt-6 text-[var(--color-gold-dark)]">Update your photo, birthdate, anniversary, contact info →</div>
+        </Link>
       </div>
     </div>
   );

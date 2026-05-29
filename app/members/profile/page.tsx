@@ -1,0 +1,275 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/auth-context';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+
+export default function MemberProfilePage() {
+  const { user, profile, refreshProfile, isApprovedMember } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const [formData, setFormData] = useState({
+    full_name: '',
+    phone: '',
+    address: '',
+    spouse_name: '',
+    birthdate: '',
+    anniversary: '',
+    notes: '',
+    photo_url: '',
+  });
+
+  // Load current profile data
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        full_name: profile.full_name || '',
+        phone: profile.phone || '',
+        address: profile.address || '',
+        spouse_name: profile.spouse_name || '',
+        birthdate: profile.birthdate || '',
+        anniversary: profile.anniversary || '',
+        notes: profile.notes || '',
+        photo_url: profile.photo_url || '',
+      });
+    }
+  }, [profile]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Handle photo upload to Supabase Storage
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Photo must be smaller than 5MB");
+      return;
+    }
+
+    setUploadingPhoto(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `public/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('member-photos')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage
+        .from('member-photos')
+        .getPublicUrl(filePath);
+
+      const publicUrl = data.publicUrl;
+
+      // Update form with new photo URL
+      setFormData(prev => ({ ...prev, photo_url: publicUrl }));
+
+      toast.success("Photo uploaded! Don't forget to save your profile.");
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Failed to upload photo. Make sure the 'member-photos' bucket exists in Supabase.");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: formData.full_name,
+          phone: formData.phone || null,
+          address: formData.address || null,
+          spouse_name: formData.spouse_name || null,
+          birthdate: formData.birthdate || null,
+          anniversary: formData.anniversary || null,
+          notes: formData.notes || null,
+          photo_url: formData.photo_url || null,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      await refreshProfile();
+      toast.success("Profile updated successfully!");
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Failed to save profile: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="max-w-md mx-auto text-center py-20">
+        <p>Please sign in to access your profile.</p>
+        <Link href="/login" className="mt-4 inline-block underline">Sign In</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto px-6 py-12">
+      <div className="mb-8">
+        <Link href="/members" className="text-sm text-[var(--color-gold-dark)] hover:underline">← Back to Members Portal</Link>
+        <h1 className="text-4xl font-semibold tracking-tight mt-2">My Member Profile</h1>
+        <p className="text-[var(--color-stone)] mt-1">This information helps us know you better as part of our church family.</p>
+      </div>
+
+      <form onSubmit={handleSave} className="space-y-8 bg-white border rounded-3xl p-8">
+        {/* Photo Upload */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Profile Photo</label>
+          <div className="flex items-center gap-6">
+            {formData.photo_url ? (
+              <img 
+                src={formData.photo_url} 
+                alt="Your photo" 
+                className="w-24 h-24 rounded-full object-cover border-2 border-[var(--color-gold)]/30" 
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-[var(--color-cream)] flex items-center justify-center text-[var(--color-stone-light)] text-sm">
+                No photo
+              </div>
+            )}
+            <div>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handlePhotoUpload} 
+                disabled={uploadingPhoto}
+                className="block text-sm"
+              />
+              <p className="text-xs text-[var(--color-stone-light)] mt-1">JPG or PNG, max 5MB</p>
+              {uploadingPhoto && <p className="text-xs text-[var(--color-gold-dark)]">Uploading...</p>}
+            </div>
+          </div>
+          <p className="text-[10px] text-[var(--color-stone-light)] mt-2">
+            Note: You may need to ask a pastor to create the "member-photos" storage bucket if uploads fail.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Full Name</label>
+            <input
+              type="text"
+              name="full_name"
+              value={formData.full_name}
+              onChange={handleChange}
+              className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Spouse Name (if married)</label>
+            <input
+              type="text"
+              name="spouse_name"
+              value={formData.spouse_name}
+              onChange={handleChange}
+              className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
+              placeholder="Optional"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Birthdate</label>
+            <input
+              type="date"
+              name="birthdate"
+              value={formData.birthdate}
+              onChange={handleChange}
+              className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Anniversary (if married)</label>
+            <input
+              type="date"
+              name="anniversary"
+              value={formData.anniversary}
+              onChange={handleChange}
+              className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Phone Number</label>
+            <input
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
+              placeholder="(307) 555-1234"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Mailing Address</label>
+            <input
+              type="text"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
+              placeholder="Optional"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1.5">Notes / Prayer Requests (optional)</label>
+          <textarea
+            name="notes"
+            value={formData.notes}
+            onChange={handleChange}
+            rows={3}
+            className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
+            placeholder="Anything the pastors or church family should know..."
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-[var(--color-navy)] hover:bg-black text-white py-4 rounded-2xl font-medium transition disabled:opacity-60"
+        >
+          {loading ? "Saving..." : "Save My Profile"}
+        </button>
+
+        <p className="text-center text-xs text-[var(--color-stone-light)]">
+          This information is only visible to approved members and pastors.
+        </p>
+      </form>
+    </div>
+  );
+}
