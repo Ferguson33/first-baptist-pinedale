@@ -22,6 +22,13 @@ export type Profile = {
   joined_date?: string;
   prayer_auto_approve?: boolean;
   created_at: string;
+
+  // Extended profile fields for member directory
+  spouse_name?: string;
+  birthdate?: string;
+  anniversary?: string;
+  spouse_birthdate?: string;
+  notes?: string;
 };
 
 export type Sermon = {

@@ -18,6 +18,7 @@ export default function MemberProfilePage() {
     spouse_name: '',
     birthdate: '',
     anniversary: '',
+    spouse_birthdate: '',
     notes: '',
     photo_url: '',
   });
@@ -32,6 +33,7 @@ export default function MemberProfilePage() {
         spouse_name: profile.spouse_name || '',
         birthdate: profile.birthdate || '',
         anniversary: profile.anniversary || '',
+        spouse_birthdate: profile.spouse_birthdate || '',
         notes: profile.notes || '',
         photo_url: profile.photo_url || '',
       });
@@ -106,6 +108,7 @@ export default function MemberProfilePage() {
           spouse_name: formData.spouse_name || null,
           birthdate: formData.birthdate || null,
           anniversary: formData.anniversary || null,
+          spouse_birthdate: formData.spouse_birthdate || null,
           notes: formData.notes || null,
           photo_url: formData.photo_url || null,
         })
@@ -224,6 +227,17 @@ export default function MemberProfilePage() {
               type="date"
               name="anniversary"
               value={formData.anniversary}
+              onChange={handleChange}
+              className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Spouse’s Birthdate (if married)</label>
+            <input
+              type="date"
+              name="spouse_birthdate"
+              value={formData.spouse_birthdate}
               onChange={handleChange}
               className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
             />
