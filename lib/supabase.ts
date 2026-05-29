@@ -11,25 +11,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Database types for TypeScript (update as you add tables)
-export type Profile = {
-  id: string;
-  email: string;
-  full_name: string;
-  role: 'pending' | 'approved' | 'admin';
-  photo_url?: string;
-  phone?: string;
-  address?: string;
-  joined_date?: string;
-  prayer_auto_approve?: boolean;
-  created_at: string;
-
-  // Extended profile fields for member directory
-  spouse_name?: string;
-  birthdate?: string;
-  anniversary?: string;
-  spouse_birthdate?: string;
-  notes?: string;
-};
 
 export type Sermon = {
   id: string;
@@ -103,25 +84,3 @@ export type Family = {
   updated_at: string;
 };
 
-export type Profile = {
-  id: string;
-  email: string;
-  full_name: string;
-  role: 'pending' | 'approved' | 'admin';
-  photo_url?: string;
-  phone?: string;
-  address?: string;
-  joined_date?: string;
-  prayer_auto_approve?: boolean;
-  created_at: string;
-
-  // Extended fields
-  spouse_name?: string;
-  birthdate?: string;
-  anniversary?: string;
-  spouse_birthdate?: string;
-  notes?: string;
-
-  // Link to family
-  family_id?: string;
-};
