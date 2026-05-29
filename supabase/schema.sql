@@ -1,0 +1,177 @@
+-- ============================================
+-- FIRST BAPTIST CHURCH PINEDALE - SUPABASE SCHEMA
+-- Run this entire file in Supabase SQL Editor once
+-- ============================================
+
+-- PROFILES (extends auth.users)
+create table if not exists profiles (
+  id uuid references auth.users on delete cascade primary key,
+  email text not null,
+  full_name text not null,
+  role text default 'pending' check (role in ('pending','approved','admin')),
+  photo_url text,
+  phone text,
+  address text,
+  joined_date date,
+  prayer_auto_approve boolean default false,   -- If true, this member's prayer submissions go live immediately (no review)
+  created_at timestamptz default now()
+);
+
+-- Enable RLS
+alter table profiles enable row level security;
+
+-- SERMONS
+create table if not exists sermons (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  preacher text not null,
+  date date not null,
+  video_url text not null,
+  thumbnail_url text not null,
+  description text,
+  created_at timestamptz default now()
+);
+
+-- BUILDING PHOTOS
+create table if not exists building_photos (
+  id uuid primary key default gen_random_uuid(),
+  url text not null,
+  caption text,
+  uploaded_at timestamptz default now()
+);
+
+-- BUILDING PROGRESS (single row)
+create table if not exists building_progress (
+  id int primary key default 1,
+  physical_percent int default 68,
+  funds_raised numeric default 250000,
+  funds_goal numeric default 451000,
+  physical_note text,
+  updated_at timestamptz default now()
+);
+
+insert into building_progress (id) values (1) on conflict do nothing;
+
+-- PRAYER REQUESTS
+create table if not exists prayer_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users,
+  requester_name text not null,
+  request_text text not null,
+  is_anonymous boolean default false,
+  photo_url text,
+  status text default 'pending' check (status in ('pending','approved','hidden')),
+  created_at timestamptz default now()
+);
+
+-- EVENTS
+create table if not exists events (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  date date not null,
+  time text,
+  description text,
+  location text,
+  image_url text,
+  created_at timestamptz default now()
+);
+
+-- MEMBER DIRECTORY
+create table if not exists directory_members (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  spouse text,
+  photo_url text,
+  phone text,
+  email text,
+  notes text,
+  approved boolean default false,
+  created_at timestamptz default now()
+);
+
+-- Simple starter policies (tighten for production)
+create policy "Public can read approved profiles" on profiles for select using (role = 'approved' or role = 'admin');
+create policy "Users can read own profile" on profiles for select using (auth.uid() = id);
+
+-- =====================================================
+-- PRAYER REQUESTS — RLS + GRANTS (run in SQL Editor)
+-- =====================================================
+
+-- Enable RLS
+ALTER TABLE prayer_requests ENABLE ROW LEVEL SECURITY;
+
+-- CRITICAL: Grant table privileges to the Supabase roles.
+-- Without these, you get "permission denied for table prayer_requests" (code 42501)
+-- even if RLS policies exist. This was the root cause of the 403s.
+GRANT SELECT ON public.prayer_requests TO anon, authenticated;
+GRANT INSERT ON public.prayer_requests TO authenticated;
+GRANT UPDATE ON public.prayer_requests TO authenticated;
+GRANT DELETE ON public.prayer_requests TO authenticated;
+
+-- Clean up old policies
+DROP POLICY IF EXISTS "Anyone can read approved prayers" ON prayer_requests;
+DROP POLICY IF EXISTS "Authenticated users can insert pending prayers" ON prayer_requests;
+DROP POLICY IF EXISTS "Admins can read all prayer requests" ON prayer_requests;
+DROP POLICY IF EXISTS "Admins can update prayer requests" ON prayer_requests;
+DROP POLICY IF EXISTS "Admins can delete prayer requests" ON prayer_requests;
+DROP POLICY IF EXISTS "public_can_read_approved_prayers" ON prayer_requests;
+DROP POLICY IF EXISTS "authenticated_can_insert_pending" ON prayer_requests;
+DROP POLICY IF EXISTS "admin_all_access" ON prayer_requests;
+
+-- 1. Anyone (public visitors + members) can read ONLY approved prayers
+CREATE POLICY "public_can_read_approved_prayers"
+ON prayer_requests FOR SELECT
+TO anon, authenticated
+USING (status = 'approved');
+
+-- 2. Logged-in users can submit new prayers.
+-- Normal members must use status='pending' (goes to review queue).
+-- Trusted members (prayer_auto_approve = true) are allowed to insert directly as 'approved'.
+CREATE POLICY "authenticated_can_insert_pending_or_trusted"
+ON prayer_requests FOR INSERT
+TO authenticated
+WITH CHECK (
+  (status = 'pending')
+  OR
+  (
+    status = 'approved'
+    AND EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+        AND profiles.prayer_auto_approve = true
+    )
+  )
+);
+
+-- 3. Admins get full access (read all statuses, approve, hide, delete)
+CREATE POLICY "admin_all_access"
+ON prayer_requests FOR ALL
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE profiles.id = auth.uid() 
+      AND profiles.role = 'admin'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE profiles.id = auth.uid() 
+      AND profiles.role = 'admin'
+  )
+);
+
+-- Storage buckets you must create in the Supabase dashboard:
+-- building-photos, sermons, prayer-photos, member-photos (make them public for now)
+
+-- =====================================================
+-- PRAYER WALL TRUSTED POSTERS
+-- =====================================================
+-- The `prayer_auto_approve` column on profiles (see top of file) lets you
+-- mark specific approved members as trusted.
+-- When true, their prayer submissions are inserted with status='approved'
+-- and appear immediately on the public Prayer Wall (no pending review).
+-- This is controlled exclusively from the Admin Dashboard > Member Directory tab.
+-- Use it only for people you completely trust (e.g. pastoral family).
+
