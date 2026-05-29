@@ -35,14 +35,14 @@ export default function EventsPage() {
               <div className="text-[var(--color-stone)]">
                 Available during Sunday School and the morning service.
                 {/* TODO: Replace this placeholder link with the actual Google Calendar share link for nursery scheduling */}
-                <div className="mt-1">
+                <div className="mt-2">
                   <a
-                    href="#"
+                    href="https://calendar.google.com/calendar/embed?src=jncferguson18%40gmail.com&ctz=America%2FDenver"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[var(--color-gold-dark)] underline hover:no-underline text-sm font-medium"
+                    className="inline-block px-4 py-2 bg-[var(--color-navy)] hover:bg-black text-white text-sm rounded-full transition"
                   >
-                    Nursery Volunteer Schedule
+                    View Nursery Volunteer Schedule →
                   </a>
                 </div>
               </div>
