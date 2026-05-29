@@ -8,7 +8,7 @@ export default function LeadershipPage() {
     {
       names: "Pastor Ted & Teresa York",
       roles: "Lead Pastor & Women’s Ministry",
-      bio: "Ted has served as lead pastor at First Baptist Pinedale for 14 years. A graduate of Bob Jones University and former rancher, Ted is a passionate Bible teacher who loves expository preaching. Teresa directs our women’s Bible studies, coordinates hospitality, and provides counsel to many women in the church and community. Together they have three grown children and seven grandchildren who all live nearby.",
+      bio: "Pastor Ted and Teresa York have faithfully served the Lord in Pinedale for the past ten years. With over forty-five years of pastoral ministry, Ted is a seasoned preacher and teacher of God’s Word. A graduate of Bob Jones University in South Carolina, he has a deep love for expository preaching and a shepherd’s heart for the people he serves. When he isn’t in the pulpit, Ted enjoys painting, fishing, and hunting.\n\nTeresa faithfully serves the church behind the scenes. She regularly plays the piano during worship services and teaches in the Sunday School, using her musical and teaching gifts to support the ministry and encourage others in their faith. Her quiet servant’s heart has been a consistent blessing to the church family.",
       verse: "Preach the word; be instant in season, out of season; reprove, rebuke, exhort with all longsuffering and doctrine.",
       verseRef: "2 Timothy 4:2 (KJV)",
       image: "/images/pastors/york-couple.jpg"
