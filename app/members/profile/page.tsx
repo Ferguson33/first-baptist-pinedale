@@ -151,8 +151,15 @@ export default function MemberProfilePage() {
 
       await refreshProfile();
     } catch (error: any) {
-      console.error(error);
-      toast.error("Failed to save family: " + error.message);
+      console.error("Full family save error:", error);
+      console.error("Error details:", {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+      });
+      const msg = error?.message || error?.details || "Unknown error";
+      toast.error("Failed to save family: " + msg);
     } finally {
       setSavingFamily(false);
     }
