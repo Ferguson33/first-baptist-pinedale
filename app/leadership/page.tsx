@@ -17,8 +17,8 @@ export default function LeadershipPage() {
       names: "Heath & Tessa Holmes",
       roles: "Assistant Pastor / Youth & Music Ministry",
       bio: "Heath and Tessa met in 2018 as students at Maranatha Baptist University. They were married on June 4, 2022. Tessa graduated with a Bachelor of Science in Nursing and is an RN. Heath graduated with a Bachelor of Arts in Biblical Counseling. The Lord led the Holmes to First Baptist Church of Pinedale in May 2025. Today, Tessa serves as the nurse at Redcliff Bible Camp, as well as in the music ministry, women’s Bible studies, and other areas of ministry at FBC. Heath serves as the Assistant Pastor, primarily leading the youth and music ministries.",
-      verse: "Let no man despise thy youth; but be thou an example of the believers, in word, in conversation, in charity, in spirit, in faith, in purity.",
-      verseRef: "1 Timothy 4:12 (KJV)",
+      verse: "Rejoicing in hope; patient in tribulation; continuing instant in prayer;",
+      verseRef: "Romans 12:12 (KJV)",
       image: "/images/pastors/holmes-couple.jpg"
     }
   ];
