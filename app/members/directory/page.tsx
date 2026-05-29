@@ -59,7 +59,7 @@ export default function MemberDirectory() {
           .map(p => ({
             id: p.id,
             name: p.full_name,
-            photo: p.photo_url || '/images/pastors/york-couple.jpg', // fallback photo
+            photo: p.photo_url || '', // no fallback - only show if they uploaded one
             phone: p.phone || undefined,
             email: p.email,
             notes: undefined,
@@ -114,7 +114,11 @@ export default function MemberDirectory() {
         <div className="mt-6 grid md:grid-cols-2 gap-4">
           {filtered.map(m => (
             <div key={m.id} className="member-card flex gap-5 bg-white border p-5 rounded-2xl">
-              <img src={m.photo} className="w-16 h-16 rounded-full object-cover flex-shrink-0" alt="" />
+              {m.photo ? (
+                <img src={m.photo} className="w-16 h-16 rounded-full object-cover flex-shrink-0" alt="" />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-[var(--color-cream)] flex-shrink-0" />
+              )}
               <div className="min-w-0">
                 <div className="font-semibold text-lg tracking-tight">{m.name}</div>
                 {m.notes && <div className="text-xs text-[var(--color-gold-dark)]">{m.notes}</div>}
