@@ -199,6 +199,26 @@ export default function AdminDashboard() {
     }
   }
 
+  async function deleteRealPrayer(id: string) {
+    if (!confirm("Delete this prayer request permanently? This cannot be undone.")) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from('prayer_requests')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast.error("Failed to delete prayer");
+      console.error('deleteRealPrayer error:', error);
+    } else {
+      toast.success("Prayer request permanently deleted");
+      fetchRealPrayers();
+      fetchPendingPrayerCount();
+    }
+  }
+
   async function fetchPendingPrayerCount() {
     const { count, error } = await supabase
       .from('prayer_requests')
@@ -695,7 +715,7 @@ export default function AdminDashboard() {
                   <div className="text-sm mt-2 pr-8">{p.request_text}</div>
                   <div className="text-xs text-[var(--color-stone-light)] mt-3">{new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                 </div>
-                <div className="flex gap-2 self-start">
+                <div className="flex gap-2 self-start items-center">
                   {p.status === 'pending' && (
                     <>
                       <button onClick={() => approveRealPrayer(p.id)} className="flex items-center gap-1.5 px-5 py-2 bg-green-600 text-white rounded-full text-sm"><CheckCircle className="w-4 h-4" /> Approve</button>
@@ -703,6 +723,15 @@ export default function AdminDashboard() {
                     </>
                   )}
                   {p.status !== 'pending' && <div className="text-xs px-4 py-2 rounded bg-[var(--color-cream)]">{p.status}</div>}
+
+                  {/* Delete button - available for all prayers */}
+                  <button 
+                    onClick={() => deleteRealPrayer(p.id)} 
+                    className="flex items-center gap-1.5 px-3 py-2 text-red-600 hover:bg-red-50 rounded-full text-sm border border-red-200 hover:border-red-300"
+                    title="Delete permanently"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}

@@ -111,12 +111,14 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="text-xs text-center mt-6 text-[var(--color-stone-light)]">
-            {mode === 'login' ? "New to the church family?" : "Already have an account?"}{" "}
-            <button onClick={() => setMode(mode === 'login' ? 'signup' : 'login')} className="text-[var(--color-gold-dark)] hover:underline font-medium">
-              {mode === 'login' ? "Request membership" : "Sign in instead"}
-            </button>
-          </div>
+          {mode === 'signup' && (
+            <div className="text-xs text-center mt-6 text-[var(--color-stone-light)]">
+              Already have an account?{" "}
+              <button onClick={() => setMode('login')} className="text-[var(--color-gold-dark)] hover:underline font-medium">
+                Sign in instead
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="text-center mt-8 text-xs text-[var(--color-stone-light)]">

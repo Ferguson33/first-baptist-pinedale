@@ -24,6 +24,7 @@ export default function PrayerWall() {
   const [newRequest, setNewRequest] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   // Fetch only approved prayers for the public wall
   const fetchApprovedPrayers = async () => {
@@ -109,6 +110,29 @@ export default function PrayerWall() {
     }
   };
 
+  // Allow logged-in users to delete their own prayers
+  const deleteMyPrayer = async (prayerId: number) => {
+    if (!user) return;
+    if (!confirm("Delete this prayer request? This cannot be undone.")) return;
+
+    setDeletingId(prayerId);
+
+    const { error } = await supabase
+      .from('prayer_requests')
+      .delete()
+      .eq('id', prayerId)
+      .eq('user_id', user.id); // Extra safety: only delete if it belongs to them
+
+    setDeletingId(null);
+
+    if (error) {
+      toast.error("Could not delete prayer");
+    } else {
+      toast.success("Prayer deleted");
+      fetchApprovedPrayers(); // refresh the list
+    }
+  };
+
   return (
     <div className="max-w-3xl mx-auto px-6 py-14">
       <div className="text-center mb-12">
@@ -162,9 +186,22 @@ export default function PrayerWall() {
         )}
         {prayers.map(p => (
           <div key={p.id} className="prayer-card bg-white border-l-4 border-[var(--color-gold)] p-6 rounded-r-2xl">
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-sm items-start">
               <div className="font-semibold">{p.name}</div>
-              <div className="text-[var(--color-stone-light)]">{p.date}</div>
+              <div className="flex items-center gap-3">
+                <div className="text-[var(--color-stone-light)]">{p.date}</div>
+                {/* Allow user to delete their own prayer */}
+                {user && (p as any).user_id === user.id && (
+                  <button
+                    onClick={() => deleteMyPrayer(p.id)}
+                    disabled={deletingId === p.id}
+                    className="text-red-500 hover:text-red-700 text-xs px-2 py-0.5 rounded hover:bg-red-50 disabled:opacity-50"
+                    title="Delete your prayer"
+                  >
+                    {deletingId === p.id ? "Deleting..." : "Delete"}
+                  </button>
+                )}
+              </div>
             </div>
             <div className="mt-3 text-[15px] leading-relaxed text-[var(--color-stone)]">{p.text}</div>
           </div>
