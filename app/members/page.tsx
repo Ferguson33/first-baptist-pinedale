@@ -43,7 +43,11 @@ export default function MembersPortal() {
             <div><span className="font-medium">Email:</span> {profile?.email}</div>
             <div><span className="font-medium">Status:</span> {profile?.role === 'approved' ? 'Approved Member' : profile?.role}</div>
           </div>
-          <div className="text-xs mt-6 text-[var(--color-gold-dark)]">Update your photo, birthdate, anniversary, contact info →</div>
+          <div className="text-xs mt-6 text-[var(--color-gold-dark)] font-medium">
+            {profile?.role === 'pending' 
+              ? "Complete your profile while waiting for approval →" 
+              : "Update your photo, birthdate, anniversary, and contact info →"}
+          </div>
         </Link>
       </div>
     </div>

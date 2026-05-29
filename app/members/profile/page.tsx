@@ -133,12 +133,21 @@ export default function MemberProfilePage() {
     );
   }
 
+  const isPending = profile?.role === 'pending';
+
   return (
     <div className="max-w-2xl mx-auto px-6 py-12">
       <div className="mb-8">
         <Link href="/members" className="text-sm text-[var(--color-gold-dark)] hover:underline">← Back to Members Portal</Link>
         <h1 className="text-4xl font-semibold tracking-tight mt-2">My Member Profile</h1>
         <p className="text-[var(--color-stone)] mt-1">This information helps us know you better as part of our church family.</p>
+
+        {isPending && (
+          <div className="mt-4 bg-[var(--color-cream)] border border-[var(--color-gold)]/40 rounded-2xl p-4 text-sm">
+            Thank you for signing up! Your membership request is currently with the pastors for approval. 
+            You’re welcome to complete your profile now — this information will be visible to the church family once you’re approved.
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSave} className="space-y-8 bg-white border rounded-3xl p-8">

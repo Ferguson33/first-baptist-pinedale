@@ -37,8 +37,8 @@ export default function LoginPage() {
         if (res.error) {
           toast.error(res.error);
         } else {
-          toast.success("Account created! Your membership is now pending pastor approval. You will receive an email when you're approved.");
-          router.push('/');
+          toast.success("Account created! While the pastors review your request, please take a moment to complete your member profile.");
+          router.push('/members/profile');
         }
       }
     } finally {
