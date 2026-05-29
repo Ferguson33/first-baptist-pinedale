@@ -57,10 +57,6 @@ export default function WhatWeBelieve() {
         <p className="text-xl font-light">“All scripture is given by inspiration of God, and is profitable for doctrine, for reproof, for correction, for instruction in righteousness:”</p>
         <div className="text-sm text-[var(--color-gold-light)] mt-3">— 2 Timothy 3:16 (KJV)</div>
       </div>
-
-      <div className="mt-10 text-sm text-center text-[var(--color-stone-light)]">
-        A complete printed copy of the Constitution and Bylaws is available at the church office or by request.
-      </div>
     </div>
   );
 }
