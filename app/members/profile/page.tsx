@@ -39,9 +39,18 @@ export default function MemberProfilePage() {
     spouse_birthdate: '',
     notes: '',
     photo_url: '',
+    family_name: '',
+    family_member_count: 1,
   });
 
-  // Load current profile data
+  // Family management state
+  const [family, setFamily] = useState<any>(null);
+  const [familyMembers, setFamilyMembers] = useState<any[]>([]);
+  const [newChildName, setNewChildName] = useState('');
+  const [newChildBirthdate, setNewChildBirthdate] = useState('');
+  const [savingFamily, setSavingFamily] = useState(false);
+
+  // Load current profile data + family
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -54,9 +63,141 @@ export default function MemberProfilePage() {
         spouse_birthdate: profile.spouse_birthdate || '',
         notes: profile.notes || '',
         photo_url: profile.photo_url || '',
+        family_name: '',
+        family_member_count: 1,
       });
+
+      // Load family if the user is linked to one
+      if (profile.family_id) {
+        loadUserFamily(profile.family_id);
+      }
     }
   }, [profile]);
+
+  const loadUserFamily = async (familyId: string) => {
+    const { data: fam } = await supabase
+      .from('families')
+      .select('*')
+      .eq('id', familyId)
+      .single();
+
+    if (fam) {
+      setFamily(fam);
+      setFormData(prev => ({
+        ...prev,
+        family_name: fam.name || '',
+        family_member_count: fam.member_count || 1,
+      }));
+
+      // Load additional family members (children etc.)
+      const { data: members } = await supabase
+        .from('family_members')
+        .select('*')
+        .eq('family_id', familyId)
+        .order('created_at');
+
+      if (members) setFamilyMembers(members);
+    }
+  };
+
+  // Create or update family
+  const saveFamily = async () => {
+    if (!user || !formData.family_name.trim()) {
+      toast.error("Please enter a family name");
+      return;
+    }
+
+    setSavingFamily(true);
+
+    try {
+      let familyId = family?.id;
+
+      if (!familyId) {
+        // Create new family
+        const { data: newFamily, error } = await supabase
+          .from('families')
+          .insert({
+            name: formData.family_name.trim(),
+            member_count: formData.family_member_count || 1,
+            primary_contact_id: user.id,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        familyId = newFamily.id;
+        setFamily(newFamily);
+
+        // Link the user's profile to this family
+        await supabase
+          .from('profiles')
+          .update({ family_id: familyId })
+          .eq('id', user.id);
+
+        toast.success("Family created!");
+      } else {
+        // Update existing family
+        const { error } = await supabase
+          .from('families')
+          .update({
+            name: formData.family_name.trim(),
+            member_count: formData.family_member_count || 1,
+          })
+          .eq('id', familyId);
+
+        if (error) throw error;
+        toast.success("Family updated!");
+      }
+
+      await refreshProfile();
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Failed to save family: " + error.message);
+    } finally {
+      setSavingFamily(false);
+    }
+  };
+
+  // Add a child / additional family member
+  const addFamilyMember = async () => {
+    if (!family?.id || !newChildName.trim()) {
+      toast.error("Please enter a name");
+      return;
+    }
+
+    try {
+      const { data: newMember, error } = await supabase
+        .from('family_members')
+        .insert({
+          family_id: family.id,
+          name: newChildName.trim(),
+          birthdate: newChildBirthdate || null,
+          relationship: 'child',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setFamilyMembers(prev => [...prev, newMember]);
+      setNewChildName('');
+      setNewChildBirthdate('');
+
+      // Update family member count
+      const newCount = (family.member_count || 1) + 1;
+      await supabase
+        .from('families')
+        .update({ member_count: newCount })
+        .eq('id', family.id);
+
+      setFamily({ ...family, member_count: newCount });
+      setFormData(prev => ({ ...prev, family_member_count: newCount }));
+
+      toast.success("Family member added!");
+    } catch (error: any) {
+      toast.error("Failed to add family member: " + error.message);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -364,6 +505,105 @@ export default function MemberProfilePage() {
             className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
             placeholder="Anything the pastors or church family should know..."
           />
+        </div>
+
+        {/* Family Section */}
+        <div className="pt-6 border-t">
+          <div className="font-semibold text-lg mb-3">Your Family</div>
+          <p className="text-sm text-[var(--color-stone-light)] mb-4">
+            Manage your family here. This is what will appear in the Member Directory (e.g. “The Johnson Family – 6 members”).
+          </p>
+
+          {!family ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Family Name</label>
+                <input
+                  type="text"
+                  name="family_name"
+                  value={formData.family_name || ''}
+                  onChange={handleChange}
+                  className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
+                  placeholder='e.g. "The Johnson Family" or "Mike & Sarah Johnson"'
+                />
+              </div>
+              <button
+                type="button"
+                onClick={saveFamily}
+                disabled={savingFamily || !formData.family_name.trim()}
+                className="w-full bg-[var(--color-navy)] text-white py-3 rounded-2xl font-medium disabled:opacity-60"
+              >
+                {savingFamily ? "Creating Family..." : "Create My Family"}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Family Name */}
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Family Name</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    name="family_name"
+                    value={formData.family_name || ''}
+                    onChange={handleChange}
+                    className="flex-1 border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
+                  />
+                  <button
+                    type="button"
+                    onClick={saveFamily}
+                    disabled={savingFamily}
+                    className="px-6 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium"
+                  >
+                    {savingFamily ? "Saving..." : "Save"}
+                  </button>
+                </div>
+                <p className="text-xs text-[var(--color-stone-light)] mt-1">
+                  This is how your family will appear in the directory.
+                </p>
+              </div>
+
+              {/* Current Family Members */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Family Members</label>
+                <div className="bg-[var(--color-cream)] rounded-xl p-4 space-y-2 text-sm">
+                  <div>• {formData.full_name} (you)</div>
+                  {formData.spouse_name && <div>• {formData.spouse_name}</div>}
+                  {familyMembers.map((member, index) => (
+                    <div key={index}>• {member.name} {member.birthdate ? `(${member.birthdate})` : ''}</div>
+                  ))}
+                  {family && <div className="text-[var(--color-gold-dark)] font-medium mt-2">Total: {family.member_count} people</div>}
+                </div>
+              </div>
+
+              {/* Add Child */}
+              <div className="border border-[var(--color-gold)]/30 rounded-2xl p-4">
+                <label className="block text-sm font-medium mb-2">Add a Child or Family Member</label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={newChildName}
+                    onChange={(e) => setNewChildName(e.target.value)}
+                    placeholder="Child's name"
+                    className="flex-1 border border-[var(--color-gold)]/30 rounded-xl px-4 py-2"
+                  />
+                  <input
+                    type="date"
+                    value={newChildBirthdate}
+                    onChange={(e) => setNewChildBirthdate(e.target.value)}
+                    className="border border-[var(--color-gold)]/30 rounded-xl px-4 py-2"
+                  />
+                  <button
+                    type="button"
+                    onClick={addFamilyMember}
+                    className="px-6 bg-[var(--color-gold)] text-white rounded-2xl text-sm font-medium whitespace-nowrap"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <button

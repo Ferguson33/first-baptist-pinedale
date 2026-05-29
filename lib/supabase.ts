@@ -90,3 +90,38 @@ export type DirectoryMember = {
   approved: boolean;
   created_at: string;
 };
+
+// New Family-centric model for the directory
+export type Family = {
+  id: string;
+  name: string;                    // e.g. "The Johnson Family" or "Mike & Sarah Johnson"
+  photo_url?: string;
+  address?: string;
+  notes?: string;
+  member_count: number;            // Total people in the family (including kids)
+  created_at: string;
+  updated_at: string;
+};
+
+export type Profile = {
+  id: string;
+  email: string;
+  full_name: string;
+  role: 'pending' | 'approved' | 'admin';
+  photo_url?: string;
+  phone?: string;
+  address?: string;
+  joined_date?: string;
+  prayer_auto_approve?: boolean;
+  created_at: string;
+
+  // Extended fields
+  spouse_name?: string;
+  birthdate?: string;
+  anniversary?: string;
+  spouse_birthdate?: string;
+  notes?: string;
+
+  // Link to family
+  family_id?: string;
+};
