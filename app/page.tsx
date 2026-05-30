@@ -177,69 +177,63 @@ export default function Home() {
           </div>
         )}
 
-        {/* FROM THE PULPIT + This Sunday’s Message */}
-        <div className="text-center mb-8">
-          <div className="uppercase tracking-[2px] text-xs text-[var(--color-gold-dark)]">FROM THE PULPIT</div>
-          <h2 className="text-4xl font-semibold tracking-tighter mt-2 text-[var(--color-navy)]">This Sunday’s Message</h2>
-        </div>
-
-        {/* Upcoming Sermon Info with Date */}
-        <div className="text-center mb-8">
-          {sermonTeaser.upcoming_date && (
-            <div className="text-sm text-[var(--color-gold-dark)] mb-1">
-              {new Date(sermonTeaser.upcoming_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+        {/* This Week at First Baptist */}
+        <div className="max-w-4xl mx-auto px-6 pb-8">
+          <div className="bg-[var(--color-cream)] border border-[var(--color-gold)]/30 rounded-3xl p-8">
+            <div className="text-center mb-6">
+              <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)]">THIS WEEK AT FIRST BAPTIST</div>
+              <h2 className="text-3xl font-semibold tracking-tight mt-2 text-[var(--color-navy)]">Sunday Worship &amp; Sunday School</h2>
             </div>
-          )}
-          <div className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">
-            {sermonTeaser.upcoming_title}
-          </div>
-          <div className="text-xl text-[var(--color-gold-dark)] mt-1">
-            {sermonTeaser.upcoming_reference}
-          </div>
-        </div>
 
-        {/* Main Sunday School */}
-        {(sermonTeaser.sunday_school_lesson || sermonTeaser.sunday_school_reference) && (
-          <div className="text-center mb-8">
-            <div className="uppercase tracking-[2px] text-xs text-[var(--color-gold-dark)] mb-1">SUNDAY SCHOOL</div>
-            <div className="text-2xl font-semibold text-[var(--color-navy)]">
-              {sermonTeaser.sunday_school_lesson}
-            </div>
-            {sermonTeaser.sunday_school_reference && (
-              <div className="text-lg text-[var(--color-gold-dark)] mt-1">
-                {sermonTeaser.sunday_school_reference}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Youth Sunday School - What's happening this week (placed above the sermon login box) */}
-        {(sermonTeaser.youth_sunday_school_lesson || sermonTeaser.youth_sunday_school_reference) && (
-          <div className="max-w-4xl mx-auto px-6 pb-8">
-            <div className="bg-[var(--color-cream)] border border-[var(--color-gold)]/30 rounded-3xl p-8">
-              <div className="text-center mb-6">
-                <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)]">YOUTH MINISTRY</div>
-                <h3 className="text-3xl font-semibold tracking-tight mt-2 text-[var(--color-navy)]">Youth Sunday School</h3>
-              </div>
-
-              <div className="max-w-2xl mx-auto text-center">
-                {sermonTeaser.youth_sunday_school_date && (
-                  <div className="text-sm text-[var(--color-gold-dark)] mb-2">
-                    {new Date(sermonTeaser.youth_sunday_school_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                  </div>
-                )}
-                <div className="text-2xl font-semibold text-[var(--color-navy)]">
-                  {sermonTeaser.youth_sunday_school_lesson}
+            {/* Main Service */}
+            <div className="text-center mb-6">
+              {sermonTeaser.upcoming_date && (
+                <div className="text-sm text-[var(--color-gold-dark)] mb-1">
+                  {new Date(sermonTeaser.upcoming_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </div>
-                {sermonTeaser.youth_sunday_school_reference && (
-                  <div className="text-lg text-[var(--color-gold-dark)] mt-1">
-                    {sermonTeaser.youth_sunday_school_reference}
-                  </div>
-                )}
+              )}
+              <div className="text-2xl font-semibold text-[var(--color-navy)]">
+                {sermonTeaser.upcoming_title || "This Sunday's Message"}
               </div>
+              {sermonTeaser.upcoming_reference && (
+                <div className="text-lg text-[var(--color-gold-dark)] mt-1">
+                  {sermonTeaser.upcoming_reference}
+                </div>
+              )}
+            </div>
+
+            {/* Main Sunday School */}
+            <div className="text-center mb-6 border-t border-[var(--color-gold)]/20 pt-6">
+              <div className="uppercase tracking-[2px] text-xs text-[var(--color-gold-dark)] mb-1">SUNDAY SCHOOL</div>
+              <div className="text-xl font-semibold text-[var(--color-navy)]">
+                {sermonTeaser.sunday_school_lesson || "This Week's Lesson"}
+              </div>
+              {sermonTeaser.sunday_school_reference && (
+                <div className="text-base text-[var(--color-gold-dark)] mt-1">
+                  {sermonTeaser.sunday_school_reference}
+                </div>
+              )}
+            </div>
+
+            {/* Youth Sunday School */}
+            <div className="text-center border-t border-[var(--color-gold)]/20 pt-6">
+              <div className="uppercase tracking-[2px] text-xs text-[var(--color-gold-dark)] mb-1">YOUTH SUNDAY SCHOOL</div>
+              {sermonTeaser.youth_sunday_school_date && (
+                <div className="text-sm text-[var(--color-gold-dark)] mb-1">
+                  {new Date(sermonTeaser.youth_sunday_school_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </div>
+              )}
+              <div className="text-xl font-semibold text-[var(--color-navy)]">
+                {sermonTeaser.youth_sunday_school_lesson || "This Week's Youth Lesson"}
+              </div>
+              {sermonTeaser.youth_sunday_school_reference && (
+                <div className="text-base text-[var(--color-gold-dark)] mt-1">
+                  {sermonTeaser.youth_sunday_school_reference}
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </div>
 
         {/* Video Access Teaser - requires login */}
         <div className="max-w-xl mx-auto mt-8">
