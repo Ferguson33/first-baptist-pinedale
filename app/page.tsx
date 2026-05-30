@@ -1,11 +1,28 @@
 "use client";
 
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { ArrowRight, Clock, MapPin, Users, Play, Heart } from 
-'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowRight, Clock, MapPin, Users, Heart } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function Home() {
+  const [physicalProgress, setPhysicalProgress] = useState(68);
+
+  useEffect(() => {
+    const fetchProgress = async () => {
+      const { data } = await supabase
+        .from('building_progress')
+        .select('physical_percent')
+        .eq('id', 1)
+        .single();
+
+      if (data?.physical_percent) {
+        setPhysicalProgress(data.physical_percent);
+      }
+    };
+    fetchProgress();
+  }, []);
+
   return (
     <div className="overflow-hidden">
       {/* HERO */}
@@ -100,19 +117,12 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex-1 relative aspect-video bg-[var(--color-navy)] rounded-2xl overflow-hidden shadow-2xl group cursor-pointer" onClick={() => window.location.href = '/sermons'}>
-            <img 
-              src="https://images.unsplash.com/photo-1507692049790-de58290a4334?w=1000&q=80" 
-              alt="Sanctuary" 
-              className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:scale-105 transition-transform duration-700" 
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-20 h-20 rounded-full bg-white/95 flex items-center justify-center shadow-xl group-hover:scale-110 transition">
-                <Play className="w-8 h-8 text-[var(--color-navy)] ml-1" />
-              </div>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/70">
-              <div className="text-white text-sm tracking-wide">MARK 11:22-24 • 42 MIN</div>
+          <div className="flex-1 relative aspect-video bg-[var(--color-navy)] rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center">
+            <div className="text-center px-6">
+              <div className="text-white/80 text-sm tracking-[2px] mb-3">LATEST SERMON</div>
+              <h3 className="text-white text-3xl font-semibold tracking-tight mb-2">Coming Soon</h3>
+              <p className="text-white/70 max-w-xs mx-auto">We are working on adding sermon recordings. Check back soon!</p>
+              <Link href="/sermons" className="inline-block mt-5 text-sm text-[var(--color-gold-light)] hover:underline">Go to Sermons page →</Link>
             </div>
           </div>
         </div>
@@ -128,10 +138,13 @@ export default function Home() {
           <div className="mt-8 max-w-md mx-auto">
             <div className="flex justify-between text-sm mb-2 font-medium">
               <div>Physical Progress</div>
-              <div className="text-[var(--color-gold-dark)]">68%</div>
+              <div className="text-[var(--color-gold-dark)]">{physicalProgress}%</div>
             </div>
             <div className="h-3 bg-white rounded-full overflow-hidden">
-              <div className="h-full w-[68%] bg-gradient-to-r from-[var(--color-gold)] to-[var(--color-gold-dark)] rounded-full transition-all" />
+              <div 
+                className="h-full bg-gradient-to-r from-[var(--color-gold)] to-[var(--color-gold-dark)] rounded-full transition-all" 
+                style={{ width: `${physicalProgress}%` }} 
+              />
             </div>
           </div>
 
