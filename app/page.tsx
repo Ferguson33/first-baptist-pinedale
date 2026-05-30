@@ -147,21 +147,34 @@ export default function Home() {
         </div>
       </div>
 
-      {/* SERMON TEASER - New version with Pastor Note + Login prompt for videos */}
+      {/* SERMON TEASER SECTION */}
       <div className="max-w-6xl mx-auto px-6 py-16">
+
+        {/* Prominent "Note from the Pastor" - placed above for continuity */}
+        {sermonTeaser.pastor_note && (
+          <div className="mb-12">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center gap-3">
+                <div className="h-px w-8 bg-[var(--color-gold)]" />
+                <span className="uppercase tracking-[3px] text-xs text-[var(--color-gold-dark)]">A WORD FROM THE PASTOR</span>
+                <div className="h-px w-8 bg-[var(--color-gold)]" />
+              </div>
+              <h2 className="text-4xl font-semibold tracking-tighter mt-3 text-[var(--color-navy)]">Note from the Pastor</h2>
+            </div>
+
+            <div className="max-w-3xl mx-auto bg-[var(--color-cream)] border-l-4 border-[var(--color-gold)] pl-8 pr-6 py-7 rounded-r-3xl">
+              <p className="text-[17px] leading-relaxed text-[var(--color-stone)] italic">
+                “{sermonTeaser.pastor_note}”
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* FROM THE PULPIT + This Sunday’s Message */}
         <div className="text-center mb-8">
           <div className="uppercase tracking-[2px] text-xs text-[var(--color-gold-dark)]">FROM THE PULPIT</div>
           <h2 className="text-4xl font-semibold tracking-tighter mt-2 text-[var(--color-navy)]">This Sunday’s Message</h2>
         </div>
-
-        {/* Pastor Note (from admin) */}
-        {sermonTeaser.pastor_note && (
-          <div className="max-w-3xl mx-auto mb-8 bg-[var(--color-cream)] border border-[var(--color-gold)]/30 rounded-3xl p-6 text-center">
-            <p className="text-[var(--color-stone)] italic leading-relaxed">
-              “{sermonTeaser.pastor_note}”
-            </p>
-          </div>
-        )}
 
         {/* Upcoming Sermon Info */}
         <div className="text-center mb-8">
