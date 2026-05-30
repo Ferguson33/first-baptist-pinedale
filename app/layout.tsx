@@ -19,7 +19,7 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   title: "First Baptist Church | Pinedale, Wyoming",
-  description: "A welcoming Bible-centered church family in Pinedale, Wyoming. Join us for worship, fellowship, and growing in faith together. Pastors Ted & Teresa York and Heath & Tessa Holmes.",
+  description: "A welcoming Bible-centered church family in Pinedale, Wyoming. Join us for worship, fellowship, and growing in faith together. Pastor Ted York and Pastor Heath Holmes.",
   icons: {
     icon: "/favicon.ico",
   },

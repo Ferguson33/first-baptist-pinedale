@@ -301,11 +301,11 @@ export default function Home() {
       {/* PASTORS WELCOME */}
       <div className="bg-[var(--color-navy)] text-white py-16">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <div className="text-[var(--color-gold)] tracking-[3px] text-xs mb-3">FROM OUR PASTORS</div>
+          <div className="text-[var(--color-gold)] tracking-[3px] text-xs mb-3">FROM OUR PASTOR</div>
           <p className="text-2xl md:text-3xl font-light leading-snug tracking-tight">
             “We are so grateful you’re here. Whether you’ve been walking with the Lord for decades or you’re just asking questions, there is a place for you at First Baptist Church of Pinedale.”
           </p>
-          <div className="mt-8 text-[var(--color-gold-light)]">— Pastors Ted & Teresa York</div>
+          <div className="mt-8 text-[var(--color-gold-light)]">— Pastor Ted York</div>
           <div className="text-sm text-white/80">First Baptist Church of Pinedale</div>
           <div className="mt-2 text-xs text-white/60 tracking-wide">“The Bible as it is, for men as they are.”</div>
         </div>
