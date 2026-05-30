@@ -12,7 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 
 // Types for admin
-type AdminTab = 'overview' | 'sermons' | 'building' | 'prayer' | 'members' | 'events' | 'guide';
+type AdminTab = 'overview' | 'sermons' | 'building' | 'youth' | 'prayer' | 'members' | 'events' | 'guide';
 
 interface LocalSermon {
   id: string;
