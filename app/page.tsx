@@ -8,6 +8,13 @@ import { supabase } from '@/lib/supabase';
 export default function Home() {
   const [physicalProgress, setPhysicalProgress] = useState(68);
 
+  // Sermon teaser content from admin (Pastor Note + Upcoming Sermon)
+  const [sermonTeaser, setSermonTeaser] = useState({
+    pastor_note: "",
+    upcoming_title: "The Faith That Moves Mountains",
+    upcoming_reference: "Mark 11:22-24",
+  });
+
   const fetchProgress = async () => {
     try {
       const { data, error } = await supabase
@@ -30,8 +37,25 @@ export default function Home() {
   useEffect(() => {
     fetchProgress();
 
+    // Load sermon teaser settings (Pastor note + upcoming message)
+    async function loadSermonTeaser() {
+      const { data } = await supabase
+        .from('sermon_settings')
+        .select('pastor_note, upcoming_title, upcoming_reference')
+        .eq('id', 1)
+        .single();
+
+      if (data) {
+        setSermonTeaser({
+          pastor_note: data.pastor_note || "",
+          upcoming_title: data.upcoming_title || "The Faith That Moves Mountains",
+          upcoming_reference: data.upcoming_reference || "Mark 11:22-24",
+        });
+      }
+    }
+    loadSermonTeaser();
+
     // Mobile resilience: refetch when the page becomes visible again
-    // (handles bfcache, tab switching, and stale sessions)
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         fetchProgress();
@@ -39,7 +63,6 @@ export default function Home() {
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
-    // Also refetch on window focus (helps on some mobile browsers)
     window.addEventListener('focus', fetchProgress);
 
     return () => {
@@ -124,31 +147,49 @@ export default function Home() {
         </div>
       </div>
 
-      {/* LATEST SERMON TEASER */}
-      <div className="max-w-6xl mx-auto px-6 py-20">
-        <div className="flex flex-col md:flex-row gap-10 items-center">
-          <div className="flex-1">
-            <div className="uppercase tracking-[2px] text-xs text-[var(--color-gold-dark)] mb-3">THIS SUNDAY'S MESSAGE</div>
-            <h2 className="text-5xl leading-none tracking-tighter text-[var(--color-navy)]">The Faith That Moves Mountains</h2>
-            <p className="mt-4 text-xl text-[var(--color-stone)]">Pastor Ted York • February 23, 2025</p>
-            
-            <div className="mt-8 flex gap-4">
-              <Link href="/sermons" className="inline-flex items-center gap-2 px-7 py-3.5 bg-[var(--color-navy)] text-white rounded-full font-semibold hover:bg-black">
-                Watch Full Sermon
-              </Link>
-              <Link href="/sermons" className="inline-flex items-center gap-2 px-7 py-3.5 border border-[var(--color-navy)]/30 rounded-full font-medium hover:bg-[var(--color-cream)]">
-                Browse Archive
-              </Link>
-            </div>
-          </div>
+      {/* SERMON TEASER - New version with Pastor Note + Login prompt for videos */}
+      <div className="max-w-6xl mx-auto px-6 py-16">
+        <div className="text-center mb-8">
+          <div className="uppercase tracking-[2px] text-xs text-[var(--color-gold-dark)]">FROM THE PULPIT</div>
+          <h2 className="text-4xl font-semibold tracking-tighter mt-2 text-[var(--color-navy)]">This Sunday’s Message</h2>
+        </div>
 
-          <div className="flex-1 relative aspect-video bg-[var(--color-navy)] rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center">
-            <div className="text-center px-6">
-              <div className="text-white/80 text-sm tracking-[2px] mb-3">LATEST SERMON</div>
-              <h3 className="text-white text-3xl font-semibold tracking-tight mb-2">Coming Soon</h3>
-              <p className="text-white/70 max-w-xs mx-auto">We are working on adding sermon recordings. Check back soon!</p>
-              <Link href="/sermons" className="inline-block mt-5 text-sm text-[var(--color-gold-light)] hover:underline">Go to Sermons page →</Link>
-            </div>
+        {/* Pastor Note (from admin) */}
+        {sermonTeaser.pastor_note && (
+          <div className="max-w-3xl mx-auto mb-8 bg-[var(--color-cream)] border border-[var(--color-gold)]/30 rounded-3xl p-6 text-center">
+            <p className="text-[var(--color-stone)] italic leading-relaxed">
+              “{sermonTeaser.pastor_note}”
+            </p>
+          </div>
+        )}
+
+        {/* Upcoming Sermon Info */}
+        <div className="text-center mb-8">
+          <div className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">
+            {sermonTeaser.upcoming_title}
+          </div>
+          <div className="text-xl text-[var(--color-gold-dark)] mt-1">
+            {sermonTeaser.upcoming_reference}
+          </div>
+        </div>
+
+        {/* Video Access Teaser - requires login */}
+        <div className="max-w-xl mx-auto mt-8">
+          <div className="bg-[var(--color-navy)] text-white rounded-3xl p-8 text-center">
+            <div className="uppercase tracking-[2px] text-xs text-white/60 mb-3">LIVE + ARCHIVED SERMONS</div>
+            <h3 className="text-2xl font-semibold mb-3">Watch Sermons</h3>
+            <p className="text-white/80 mb-6">
+              Live Sunday services and our full archive of Pastor Ted’s verse-by-verse teaching are available to signed-in members.
+            </p>
+            <Link 
+              href="/login" 
+              className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-white text-[var(--color-navy)] rounded-full font-semibold hover:bg-[var(--color-gold)] hover:text-white transition"
+            >
+              Sign In to Watch
+            </Link>
+            <p className="text-[10px] text-white/50 mt-4">
+              Members do not need a YouTube account — just sign in here.
+            </p>
           </div>
         </div>
       </div>

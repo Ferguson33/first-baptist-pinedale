@@ -85,6 +85,14 @@ export default function AdminDashboard() {
   });
   const [progressNote, setProgressNote] = useState("");
 
+  // Sermon Settings (Pastor Note + Upcoming Sermon for homepage)
+  const [sermonSettings, setSermonSettings] = useState({
+    pastor_note: "",
+    upcoming_title: "",
+    upcoming_reference: "",
+  });
+  const [savingSermonSettings, setSavingSermonSettings] = useState(false);
+
   // Live counts for Overview (notifications-style)
   const [pendingPrayerCount, setPendingPrayerCount] = useState(0);
 
@@ -96,6 +104,10 @@ export default function AdminDashboard() {
   // Real prayers from Supabase (for Prayer Wall approval flow)
   const [realPrayers, setRealPrayers] = useState<any[]>([]);
   const [loadingPrayers, setLoadingPrayers] = useState(false);
+
+  // Real sermons from Supabase (for Admin management)
+  const [realSermons, setRealSermons] = useState<any[]>([]);
+  const [loadingSermons, setLoadingSermons] = useState(false);
 
   async function fetchMembers() {
     setLoadingMembers(true);
@@ -484,6 +496,10 @@ export default function AdminDashboard() {
     if (tab === 'youth') {
       fetchYouthPhotos();
     }
+    if (tab === 'sermons') {
+      loadSermonSettings();
+      fetchRealSermons();
+    }
   };
 
   async function fetchBuildingPhotos() {
@@ -510,6 +526,90 @@ export default function AdminDashboard() {
       toast.error("Failed to load youth photos");
     } else {
       setYouthPhotos(data || []);
+    }
+  }
+
+  // === Sermon Settings (Pastor Note + Upcoming Sermon) ===
+  async function loadSermonSettings() {
+    const { data, error } = await supabase
+      .from('sermon_settings')
+      .select('*')
+      .eq('id', 1)
+      .single();
+
+    if (error) {
+      console.error('Error loading sermon settings:', error);
+    } else if (data) {
+      setSermonSettings({
+        pastor_note: data.pastor_note || "",
+        upcoming_title: data.upcoming_title || "",
+        upcoming_reference: data.upcoming_reference || "",
+      });
+    }
+  }
+
+  async function saveSermonSettings() {
+    setSavingSermonSettings(true);
+    const { error } = await supabase
+      .from('sermon_settings')
+      .update({
+        pastor_note: sermonSettings.pastor_note || null,
+        upcoming_title: sermonSettings.upcoming_title || null,
+        upcoming_reference: sermonSettings.upcoming_reference || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', 1);
+
+    setSavingSermonSettings(false);
+
+    if (error) {
+      console.error('Failed to save sermon settings:', error);
+      toast.error("Failed to save sermon settings. Did you run the sermon-settings.sql file?");
+    } else {
+      toast.success("Note and upcoming sermon updated on the homepage!");
+    }
+  }
+
+  // Load and manage real archived sermons
+  async function fetchRealSermons() {
+    setLoadingSermons(true);
+    const { data, error } = await supabase
+      .from('sermons')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Error loading sermons:', error);
+    } else {
+      setRealSermons(data || []);
+    }
+    setLoadingSermons(false);
+  }
+
+  async function addRealSermon() {
+    const title = prompt("Sermon title?");
+    if (!title) return;
+
+    const videoUrl = prompt("YouTube URL or Embed URL?");
+    if (!videoUrl) return;
+
+    const preacher = prompt("Preacher name?", "Pastor Ted York") || "Pastor Ted York";
+    const date = prompt("Date (YYYY-MM-DD)?", new Date().toISOString().split('T')[0]);
+
+    const { error } = await supabase.from('sermons').insert({
+      title,
+      preacher,
+      date: date || new Date().toISOString().split('T')[0],
+      video_url: videoUrl,
+      thumbnail_url: "https://picsum.photos/id/1015/600/340", // placeholder for now
+      description: "",
+    });
+
+    if (error) {
+      toast.error("Failed to add sermon: " + error.message);
+    } else {
+      toast.success("Sermon added!");
+      fetchRealSermons();
     }
   }
 
@@ -641,31 +741,95 @@ export default function AdminDashboard() {
 
       {/* SERMONS TAB */}
       {activeTab === 'sermons' && (
-        <div>
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <div className="font-semibold text-2xl">Sermons Archive</div>
-              <div className="text-sm text-[var(--color-stone-light)]">Add new messages. Visitors see these on the public Sermons page.</div>
+        <div className="space-y-10">
+          {/* === NEW: Pastor Note + Upcoming Sermon (pushes to homepage) === */}
+          <div>
+            <div className="mb-4">
+              <div className="font-semibold text-2xl">Homepage Sermon Teaser</div>
+              <div className="text-sm text-[var(--color-stone-light)]">
+                This content appears on the main page for everyone. Use it for a short note from the Pastor and this week’s upcoming message.
+              </div>
             </div>
-            <button onClick={addSermon} className="admin-big-button flex items-center gap-2 bg-[var(--color-navy)] text-white px-6 rounded-2xl"><Plus className="w-5 h-5" /> Add New Sermon</button>
-          </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            {sermons.map(s => (
-              <div key={s.id} className="bg-white border rounded-2xl p-5 flex gap-5">
-                <img src={s.thumbnail_url} className="w-36 h-20 object-cover rounded-xl flex-shrink-0" alt="" />
-                <div className="min-w-0">
-                  <div className="font-semibold text-[var(--color-navy)] leading-tight">{s.title}</div>
-                  <div className="text-sm mt-0.5">{s.preacher} • {format(new Date(s.date), 'MMM d, yyyy')}</div>
-                  <div className="text-xs text-[var(--color-stone-light)] mt-1 line-clamp-2">{s.description}</div>
-                  <div className="text-[10px] mt-2 font-mono text-[var(--color-gold-dark)] truncate">{s.video_url}</div>
+            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8 space-y-8">
+              {/* Pastor Note */}
+              <div>
+                <label className="block font-medium mb-2">Note from the Pastor (to the church family)</label>
+                <textarea
+                  value={sermonSettings.pastor_note}
+                  onChange={(e) => setSermonSettings({ ...sermonSettings, pastor_note: e.target.value })}
+                  rows={4}
+                  className="w-full border border-[var(--color-gold)]/30 rounded-2xl p-4 text-sm"
+                  placeholder="Example: Dear church family, as we continue through the Gospel of Mark..."
+                />
+                <p className="text-xs text-[var(--color-stone-light)] mt-1">This will be shown prominently on the homepage.</p>
+              </div>
+
+              {/* Upcoming Sermon */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block font-medium mb-2">Upcoming Sermon Title</label>
+                  <input
+                    type="text"
+                    value={sermonSettings.upcoming_title}
+                    onChange={(e) => setSermonSettings({ ...sermonSettings, upcoming_title: e.target.value })}
+                    className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3"
+                    placeholder="The Faith That Moves Mountains"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium mb-2">Scripture Reference</label>
+                  <input
+                    type="text"
+                    value={sermonSettings.upcoming_reference}
+                    onChange={(e) => setSermonSettings({ ...sermonSettings, upcoming_reference: e.target.value })}
+                    className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3"
+                    placeholder="Mark 11:22-24"
+                  />
                 </div>
               </div>
-            ))}
+
+              <button
+                onClick={saveSermonSettings}
+                disabled={savingSermonSettings}
+                className="w-full md:w-auto px-8 py-3 bg-[var(--color-navy)] text-white rounded-2xl font-medium disabled:opacity-60"
+              >
+                {savingSermonSettings ? "Saving..." : "Save Note & Upcoming Sermon to Homepage"}
+              </button>
+            </div>
           </div>
 
-          <div className="mt-8 admin-help">
-            <strong>How to add a real sermon:</strong> Click “Add New Sermon”, paste the YouTube embed URL (example: https://www.youtube.com/embed/VIDEO_ID), then drag a thumbnail image into the box above (in a future version this uploads directly to Supabase Storage).
+          {/* Real Archived Sermons Management */}
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <div className="font-semibold text-2xl">Archived Sermons</div>
+                <div className="text-sm text-[var(--color-stone-light)]">These will be visible only to signed-in approved members on the Sermons page.</div>
+              </div>
+              <button onClick={addRealSermon} className="admin-big-button flex items-center gap-2 bg-[var(--color-navy)] text-white px-6 rounded-2xl"><Plus className="w-5 h-5" /> Add Sermon</button>
+            </div>
+
+            {loadingSermons ? (
+              <div className="text-center py-8 text-[var(--color-stone-light)]">Loading...</div>
+            ) : realSermons.length > 0 ? (
+              <div className="grid md:grid-cols-2 gap-4">
+                {realSermons.map((s: any) => (
+                  <div key={s.id} className="bg-white border rounded-2xl p-5">
+                    <div className="font-semibold text-[var(--color-navy)]">{s.title}</div>
+                    <div className="text-sm mt-1 text-[var(--color-stone)]">{s.preacher} • {new Date(s.date).toLocaleDateString()}</div>
+                    <div className="text-xs mt-2 text-[var(--color-gold-dark)] truncate font-mono">{s.video_url}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-[var(--color-stone-light)] border rounded-2xl">
+                No sermons added yet. Click “Add Sermon” above.
+              </div>
+            )}
+
+            <div className="mt-6 admin-help text-xs">
+              Paste the full YouTube URL (or embed URL). Only approved members will be able to watch these on the Sermons page after logging in.
+            </div>
           </div>
         </div>
       )}

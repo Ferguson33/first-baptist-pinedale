@@ -26,22 +26,32 @@ export default function MembersPortal() {
         <p className="text-lg text-[var(--color-stone)] mt-2">Thank you for being part of our church family.</p>
       </div>
 
-      {/* Three main cards - evenly spaced on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <Link href="/members/directory" className="block border bg-white p-8 rounded-3xl hover:border-[var(--color-gold)] h-full">
+      {/* Three main cards - evenly spaced and balanced */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+        <Link 
+          href="/members/directory" 
+          className="block border bg-white p-7 sm:p-8 rounded-3xl hover:border-[var(--color-gold)] h-full flex flex-col"
+        >
           <div className="font-semibold text-2xl">Member Directory</div>
-          <p className="text-sm mt-2">Official church directory (Google Doc maintained by the office).</p>
+          <p className="text-sm mt-2 flex-1">Official church directory (Google Doc maintained by the office).</p>
           <div className="mt-6 text-xs text-[var(--color-gold-dark)]">ONLY VISIBLE TO APPROVED MEMBERS →</div>
         </Link>
 
-        <Link href="/prayer-wall" className="block border bg-white p-8 rounded-3xl hover:border-[var(--color-gold)] h-full">
+        <Link 
+          href="/prayer-wall" 
+          className="block border bg-white p-7 sm:p-8 rounded-3xl hover:border-[var(--color-gold)] h-full flex flex-col"
+        >
           <div className="font-semibold text-2xl">Prayer Wall</div>
-          <p className="text-sm mt-2">Submit and view prayer requests from the body.</p>
+          <p className="text-sm mt-2 flex-1">Submit and view prayer requests from the body.</p>
+          <div className="mt-auto pt-6 text-xs text-[var(--color-gold-dark)]">SHARE REQUESTS WITH THE CHURCH →</div>
         </Link>
 
-        <Link href="/members/profile" className="block border bg-white p-8 rounded-3xl hover:border-[var(--color-gold)] h-full">
+        <Link 
+          href="/members/profile" 
+          className="block border bg-white p-7 sm:p-8 rounded-3xl hover:border-[var(--color-gold)] h-full flex flex-col"
+        >
           <div className="font-semibold text-2xl">My Profile</div>
-          <div className="text-sm mt-4 space-y-1 text-[var(--color-stone)]">
+          <div className="text-sm mt-4 space-y-1 text-[var(--color-stone)] flex-1">
             <div><span className="font-medium">Name:</span> {profile?.full_name}</div>
             <div><span className="font-medium">Email:</span> {profile?.email}</div>
             <div><span className="font-medium">Status:</span> {profile?.role === 'approved' ? 'Approved Member' : profile?.role}</div>
