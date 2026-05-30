@@ -153,13 +153,8 @@ export default function Home() {
         {/* Prominent "Note from the Pastor" - placed above for continuity */}
         {sermonTeaser.pastor_note && (
           <div className="mb-12">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-3">
-                <div className="h-px w-8 bg-[var(--color-gold)]" />
-                <span className="uppercase tracking-[3px] text-xs text-[var(--color-gold-dark)]">A WORD FROM THE PASTOR</span>
-                <div className="h-px w-8 bg-[var(--color-gold)]" />
-              </div>
-              <h2 className="text-4xl font-semibold tracking-tighter mt-3 text-[var(--color-navy)]">Note from the Pastor</h2>
+            <div className="text-center mb-5">
+              <h2 className="text-4xl font-semibold tracking-tighter text-[var(--color-navy)]">Note from the Pastor</h2>
             </div>
 
             <div className="max-w-3xl mx-auto bg-[var(--color-cream)] border-l-4 border-[var(--color-gold)] pl-8 pr-6 py-7 rounded-r-3xl">
