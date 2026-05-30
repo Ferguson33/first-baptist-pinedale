@@ -11,10 +11,9 @@ export default function MissionsPage() {
 
       <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-10 md:p-14 text-center">
         <div className="max-w-md mx-auto">
-          <h2 className="text-2xl font-semibold text-[var(--color-navy)] mb-4">Coming Soon</h2>
+          <h2 className="text-2xl font-semibold text-[var(--color-navy)] mb-4">Our Mission Support</h2>
           <p className="text-[var(--color-stone)]">
-            We are currently updating our list of supported missionaries and mission organizations. 
-            Check back soon for details on who we support and how you can be involved.
+            By God’s grace, through Faith Promise giving, this church supports 15 missionaries worldwide at $150 per month each.
           </p>
         </div>
       </div>
