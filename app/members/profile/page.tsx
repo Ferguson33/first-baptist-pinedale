@@ -50,6 +50,10 @@ export default function MemberProfilePage() {
   const [newChildBirthdate, setNewChildBirthdate] = useState('');
   const [savingFamily, setSavingFamily] = useState(false);
 
+  // Separate local state for the "create family" flow (prevents formData pollution / reset issues)
+  const [createFamilyName, setCreateFamilyName] = useState('');
+  const [createFamilyCount, setCreateFamilyCount] = useState(1);
+
   // Load current profile data + family
   useEffect(() => {
     if (profile) {
@@ -63,13 +67,22 @@ export default function MemberProfilePage() {
         spouse_birthdate: profile.spouse_birthdate || '',
         notes: profile.notes || '',
         photo_url: profile.photo_url || '',
+        // family_* are no longer used for the create form (isolated state now)
         family_name: '',
         family_member_count: 1,
       });
 
+      // Reset create-family local inputs when profile changes (fresh start)
+      setCreateFamilyName('');
+      setCreateFamilyCount(1);
+
       // Load family if the user is linked to one
       if (profile.family_id) {
         loadUserFamily(profile.family_id);
+      } else {
+        // Clear any previously loaded family UI
+        setFamily(null);
+        setFamilyMembers([]);
       }
     }
   }, [profile]);
@@ -100,10 +113,21 @@ export default function MemberProfilePage() {
     }
   };
 
-  // Create or update family
+  // Create or update family (uses isolated create state to avoid wiping profile form fields)
   const saveFamily = async () => {
-    if (!user || !formData.family_name.trim()) {
+    if (!user) return;
+
+    const nameToUse = family ? formData.family_name : createFamilyName;
+    const countToUse = family ? (formData.family_member_count || 1) : (createFamilyCount || 1);
+
+    if (!nameToUse || !nameToUse.trim()) {
       toast.error("Please enter a family name");
+      return;
+    }
+
+    // Only approved members (or admins) should create families that appear in the directory
+    if (!isApprovedMember) {
+      toast.error("Your membership must be approved before you can create a family entry.");
       return;
     }
 
@@ -113,35 +137,49 @@ export default function MemberProfilePage() {
       let familyId = family?.id;
 
       if (!familyId) {
-        // Create new family
-        const { data: newFamily, error } = await supabase
+        // Create new family — primary contact is the logged-in user
+        const { data: newFamily, error: famErr } = await supabase
           .from('families')
           .insert({
-            name: formData.family_name.trim(),
-            member_count: formData.family_member_count || 1,
+            name: nameToUse.trim(),
+            member_count: countToUse || 1,
             primary_contact_id: user.id,
           })
           .select()
           .single();
 
-        if (error) throw error;
+        if (famErr) throw famErr;
+
         familyId = newFamily.id;
         setFamily(newFamily);
 
-        // Link the user's profile to this family
-        await supabase
+        // Link this profile to the new family (this is the step that previously could look like "data loss" if it failed)
+        const { error: linkErr } = await supabase
           .from('profiles')
           .update({ family_id: familyId })
           .eq('id', user.id);
 
-        toast.success("Family created!");
+        if (linkErr) {
+          // Family was created but link failed — surface clearly instead of silent weird state
+          console.error("Family created but could not link to profile:", linkErr);
+          toast.error("Family was created, but we couldn't link it to your profile yet. Please refresh and try again, or ask a pastor to connect it.");
+          // Still refresh so any partial state updates
+          await refreshProfile();
+          return;
+        }
+
+        // Clear the create inputs
+        setCreateFamilyName('');
+        setCreateFamilyCount(1);
+
+        toast.success("Family created! It will now appear in the Member Directory.");
       } else {
-        // Update existing family
+        // Update existing family (name / count)
         const { error } = await supabase
           .from('families')
           .update({
-            name: formData.family_name.trim(),
-            member_count: formData.family_member_count || 1,
+            name: nameToUse.trim(),
+            member_count: countToUse || 1,
           })
           .eq('id', familyId);
 
@@ -158,7 +196,7 @@ export default function MemberProfilePage() {
         details: error?.details,
         hint: error?.hint,
       });
-      const msg = error?.message || error?.details || "Unknown error";
+      const msg = error?.message || error?.details || "Unknown error (this is often a missing database permission policy — ask your pastor to run the latest RLS SQL)";
       toast.error("Failed to save family: " + msg);
     } finally {
       setSavingFamily(false);
@@ -527,21 +565,33 @@ export default function MemberProfilePage() {
                 <label className="block text-sm font-medium mb-1.5">Family Name</label>
                 <input
                   type="text"
-                  name="family_name"
-                  value={formData.family_name || ''}
-                  onChange={handleChange}
+                  value={createFamilyName}
+                  onChange={(e) => setCreateFamilyName(e.target.value)}
                   className="w-full border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
                   placeholder='e.g. "The Johnson Family" or "Mike & Sarah Johnson"'
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">How many people in your family? (including you + spouse + children)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={createFamilyCount}
+                  onChange={(e) => setCreateFamilyCount(parseInt(e.target.value) || 1)}
+                  className="w-32 border border-[var(--color-gold)]/30 rounded-xl px-4 py-3"
                 />
               </div>
               <button
                 type="button"
                 onClick={saveFamily}
-                disabled={savingFamily || !formData.family_name.trim()}
+                disabled={savingFamily || !createFamilyName.trim()}
                 className="w-full bg-[var(--color-navy)] text-white py-3 rounded-2xl font-medium disabled:opacity-60"
               >
                 {savingFamily ? "Creating Family..." : "Create My Family"}
               </button>
+              <p className="text-xs text-[var(--color-stone-light)]">
+                This creates the family entry that will show in the Member Directory once you are approved.
+              </p>
             </div>
           ) : (
             <div className="space-y-6">

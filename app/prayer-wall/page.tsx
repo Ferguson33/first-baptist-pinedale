@@ -12,6 +12,7 @@ interface Prayer {
   name: string;
   text: string;
   date: string;
+  user_id?: string;   // needed for "delete my own" UI
   hasPhoto?: boolean;
 }
 
@@ -53,6 +54,7 @@ export default function PrayerWall() {
         name: p.is_anonymous ? 'Anonymous' : p.requester_name || 'Member',
         text: p.request_text,
         date: new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        user_id: p.user_id || undefined,
       }));
       setPrayers(formatted);
     }
@@ -126,7 +128,8 @@ export default function PrayerWall() {
     setDeletingId(null);
 
     if (error) {
-      toast.error("Could not delete prayer");
+      console.error('Delete prayer error (may be missing RLS policy):', error);
+      toast.error("Could not delete prayer — if this persists after refresh, ask a pastor to run the latest RLS policies SQL file.");
     } else {
       toast.success("Prayer deleted");
       fetchApprovedPrayers(); // refresh the list
