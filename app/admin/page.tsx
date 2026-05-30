@@ -309,6 +309,44 @@ export default function AdminDashboard() {
       toast.info("Thumbnail selected. Fill out the form below and save.");
       // Could open a modal in a full version
     }
+    else if (type === 'youth') {
+      // Youth photo upload
+      try {
+        toast.loading("Uploading youth photo...", { id: 'youth-upload' });
+        
+        const file = files[0];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `youth-${Date.now()}.${fileExt}`;
+        const filePath = `youth/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('youth-photos')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from('youth-photos')
+          .getPublicUrl(filePath);
+
+        const caption = prompt("Enter a caption for this photo (optional)") || "";
+
+        const { error: insertError } = await supabase
+          .from('youth_photos')
+          .insert({
+            url: urlData.publicUrl,
+            caption: caption || null,
+          });
+
+        if (insertError) throw insertError;
+
+        toast.success("Youth photo uploaded!", { id: 'youth-upload' });
+        fetchYouthPhotos();
+      } catch (error: any) {
+        console.error('Youth upload error:', error);
+        toast.error("Failed to upload youth photo: " + (error.message || "Check bucket and policies"), { id: 'youth-upload' });
+      }
+    }
   };
 
   // Old local prayer actions removed - now using real Supabase functions (approveRealPrayer / hideRealPrayer)
@@ -356,8 +394,8 @@ export default function AdminDashboard() {
       .eq('id', 1);
 
     if (error) {
-      toast.error("Failed to update progress. Check console for details.");
       console.error("Supabase update error:", error);
+      toast.error("Failed to update progress: " + (error.message || "Permission denied. Check RLS policies."));
     } else {
       setProgress({
         physical_percent: newPhysical,
@@ -408,6 +446,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (activeTab === 'building') {
       fetchBuildingPhotos();
+      loadBuildingProgress();
     }
   }, [activeTab]);
 
@@ -468,8 +507,31 @@ export default function AdminDashboard() {
 
     if (error) {
       console.error('Error fetching youth photos:', error);
+      toast.error("Failed to load youth photos");
     } else {
       setYouthPhotos(data || []);
+    }
+  }
+
+  async function deleteYouthPhoto(id: string, url: string) {
+    if (!confirm("Delete this youth photo?")) return;
+
+    try {
+      // Delete from storage (path is "youth/filename")
+      const path = url.split('/youth-photos/')[1];
+      if (path) {
+        await supabase.storage.from('youth-photos').remove([`youth/${path.split('/').pop()}`]);
+      }
+
+      // Delete from database
+      const { error } = await supabase.from('youth_photos').delete().eq('id', id);
+      if (error) throw error;
+
+      setYouthPhotos(prev => prev.filter(p => p.id !== id));
+      toast.success("Youth photo deleted");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete youth photo");
     }
   }
 
@@ -483,8 +545,8 @@ export default function AdminDashboard() {
       .eq('id', 1);
 
     if (error) {
-      toast.error("Failed to save note");
-      console.error(error);
+      console.error("Failed to save progress note:", error);
+      toast.error("Failed to save note: " + (error.message || "Permission denied"));
     } else {
       toast.success("Note saved! It will appear on the public Building Project page.");
       // Also update local progress state
@@ -758,78 +820,83 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* YOUTH PHOTOS - Admin upload and management */}
+      {/* YOUTH PHOTOS - Admin upload and management (identical experience to Building Project tab) */}
       {activeTab === 'youth' && (
         <div>
-          <div className="font-semibold text-2xl mb-6">Youth Ministry Photos</div>
-          
-          <div className="bg-white rounded-3xl p-8 mb-8">
-            <h3 className="font-semibold mb-4">Upload New Photo</h3>
-            <input 
-              type="file" 
-              accept="image/*" 
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-
-                try {
-                  toast.loading("Uploading youth photo...", { id: 'youth-upload' });
-                  
-                  const fileExt = file.name.split('.').pop();
-                  const fileName = `youth-${Date.now()}.${fileExt}`;
-                  const filePath = `youth/${fileName}`;
-
-                  const { error: uploadError } = await supabase.storage
-                    .from('youth-photos')
-                    .upload(filePath, file);
-
-                  if (uploadError) throw uploadError;
-
-                  const { data: urlData } = supabase.storage
-                    .from('youth-photos')
-                    .getPublicUrl(filePath);
-
-                  const caption = prompt("Enter a caption for this photo (optional)") || "";
-
-                  const { error: insertError } = await supabase
-                    .from('youth_photos')
-                    .insert({
-                      url: urlData.publicUrl,
-                      caption: caption || null,
-                    });
-
-                  if (insertError) throw insertError;
-
-                  toast.success("Photo uploaded!", { id: 'youth-upload' });
-                  fetchYouthPhotos();
-                } catch (error: any) {
-                  toast.error("Upload failed: " + (error.message || "Check bucket and policies"), { id: 'youth-upload' });
-                }
-              }}
-              className="block"
-            />
-            <p className="text-xs text-[var(--color-stone-light)] mt-2">JPG or PNG. Max 5MB recommended.</p>
+          <div className="flex justify-between mb-6">
+            <div>
+              <div className="font-semibold text-2xl">Youth Ministry Photos</div>
+              <div className="text-sm text-[var(--color-stone-light)]">Upload photos that appear on the public Youth Ministry page with captions.</div>
+            </div>
+            <div className="flex gap-3">
+              <button 
+                onClick={async () => {
+                  await fetchYouthPhotos();
+                  toast.success("Youth photos refreshed");
+                }} 
+                className="admin-big-button px-4 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
+              >
+                Refresh Data
+              </button>
+            </div>
           </div>
 
-          <div className="bg-white rounded-3xl p-8">
-            <h3 className="font-semibold mb-4">Current Youth Photos</h3>
+          {/* BIG DRAG & DROP ZONE - exact same style as Building */}
+          <div 
+            className="dropzone dropzone-large mb-6" 
+            onDragOver={handleDragOver} 
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => { 
+              e.preventDefault(); 
+              e.currentTarget.classList.remove('dragover'); 
+              handleImageUpload(e.dataTransfer.files, 'youth'); 
+            }}
+            onClick={() => document.getElementById('youth-upload')?.click()}
+          >
+            <Upload className="w-10 h-10 text-[var(--color-gold-dark)] mb-4" />
+            <div className="font-semibold text-xl">Drag &amp; Drop New Youth Photos Here</div>
+            <div className="text-[var(--color-stone-light)] mt-1">or click to browse • JPG or PNG recommended</div>
+            <input 
+              id="youth-upload" 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              onChange={(e) => handleImageUpload(e.target.files, 'youth')} 
+            />
+          </div>
+
+          {/* Current Youth Photos - grid styled to match Building admin tab */}
+          <div className="bg-white p-8 rounded-3xl">
+            <div className="font-semibold mb-4">Current Youth Photos</div>
             {youthPhotos.length === 0 ? (
-              <div className="text-[var(--color-stone-light)]">No youth photos yet. Upload some above.</div>
+              <div className="text-[var(--color-stone-light)] py-4">No youth photos yet. Drag photos into the box above to get started.</div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {youthPhotos.map((photo) => (
-                  <div key={photo.id} className="relative group">
-                    <img src={photo.url} alt={photo.caption || ''} className="w-full aspect-square object-cover rounded-xl" />
+                {youthPhotos.map((photo: any) => (
+                  <div key={photo.id} className="group relative rounded-2xl overflow-hidden border aspect-video bg-[var(--color-cream)]">
+                    <img 
+                      src={photo.url} 
+                      alt={photo.caption || ""} 
+                      className="w-full h-full object-contain p-1" 
+                    />
                     {photo.caption && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-2 rounded-b-xl">
-                        {photo.caption}
-                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 p-3 text-xs text-white">{photo.caption}</div>
                     )}
+                    
+                    {/* Delete button - exact same style as Building photos */}
+                    <button
+                      onClick={() => deleteYouthPhoto(photo.id, photo.url)}
+                      className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
+                    >
+                      Delete
+                    </button>
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          <div className="admin-help mt-4">Photos you add here will appear on the public Youth Ministry page with a beautiful gallery and lightbox (same style as the Building Project).</div>
         </div>
       )}
 
