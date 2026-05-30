@@ -12,24 +12,61 @@ interface YouthPhoto {
 export default function YouthMinistry() {
   const [photos, setPhotos] = useState<YouthPhoto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const fetchPhotos = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('youth_photos')
+      .select('id, url, caption')
+      .order('uploaded_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching youth photos:', error);
+    } else if (data) {
+      setPhotos(data);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchPhotos = async () => {
-      const { data, error } = await supabase
-        .from('youth_photos')
-        .select('id, url, caption')
-        .order('uploaded_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching youth photos:', error);
-      } else if (data) {
-        setPhotos(data);
-      }
-      setLoading(false);
-    };
-
     fetchPhotos();
   }, []);
+
+  // Gallery keyboard navigation + body scroll lock
+  useEffect(() => {
+    if (galleryOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!galleryOpen) return;
+
+      if (e.key === 'Escape') {
+        setGalleryOpen(false);
+      }
+      if (e.key === 'ArrowLeft') {
+        setCurrentIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
+      }
+      if (e.key === 'ArrowRight') {
+        setCurrentIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [galleryOpen, photos.length]);
+
+  const openGallery = (index: number) => {
+    setCurrentIndex(index);
+    setGalleryOpen(true);
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-16">
@@ -41,24 +78,36 @@ export default function YouthMinistry() {
         </p>
       </div>
 
-      {/* Photo Gallery - Admin managed */}
-      <div className="mb-12">
-        <h2 className="text-2xl font-semibold text-[var(--color-navy)] mb-6 text-center">Youth Photos</h2>
-        
+      {/* Photo Gallery - Matches Building Project style */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-5">
+          <div className="font-semibold text-2xl tracking-tight">Youth Photo Gallery</div>
+          <button 
+            onClick={fetchPhotos}
+            className="text-xs px-3 py-1 border border-[var(--color-gold)]/40 rounded hover:bg-[var(--color-cream)] transition"
+          >
+            Refresh
+          </button>
+        </div>
+
         {loading ? (
           <div className="text-center py-12 text-[var(--color-stone-light)]">Loading photos...</div>
         ) : photos.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {photos.map((photo) => (
-              <div key={photo.id} className="group relative overflow-hidden rounded-2xl aspect-square bg-[var(--color-cream)]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {photos.map((p, index) => (
+              <div 
+                key={p.id} 
+                className="group overflow-hidden rounded-2xl border aspect-[4/3] relative cursor-pointer bg-[var(--color-cream)]"
+                onClick={() => openGallery(index)}
+              >
                 <img 
-                  src={photo.url} 
-                  alt={photo.caption || 'Youth photo'} 
-                  className="w-full h-full object-cover transition-transform group-hover:scale-105" 
+                  src={p.url} 
+                  alt={p.caption || "Youth photo"} 
+                  className="absolute inset-0 w-full h-full object-contain p-1 group-hover:scale-[1.02] transition-transform duration-500" 
                 />
-                {photo.caption && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 p-4">
-                    <p className="text-white text-sm">{photo.caption}</p>
+                {p.caption && (
+                  <div className="absolute bottom-0 left-0 right-0 p-3 text-xs text-white bg-gradient-to-t from-black/80">
+                    {p.caption}
                   </div>
                 )}
               </div>
@@ -74,6 +123,77 @@ export default function YouthMinistry() {
       <div className="mt-12 text-center text-sm text-[var(--color-stone-light)]">
         Led by Heath &amp; Tessa Holmes. Parents are always welcome at youth events.
       </div>
+
+      {/* Photo Gallery Lightbox - Same style as Building Project */}
+      {galleryOpen && photos.length > 0 && (
+        <div 
+          className="fixed inset-0 bg-black/95 z-[70] flex flex-col"
+          onClick={() => setGalleryOpen(false)}
+        >
+          {/* Top bar */}
+          <div className="flex-shrink-0 h-14 flex items-center justify-between px-4 bg-black/70 z-[80]">
+            <div className="text-white text-sm">
+              {currentIndex + 1} / {photos.length}
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); setGalleryOpen(false); }}
+              className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-[var(--color-navy)] text-3xl font-bold hover:bg-[var(--color-gold)] hover:text-white shadow-lg transition"
+              aria-label="Close gallery"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Main image */}
+          <div 
+            className="flex-1 flex items-center justify-center p-4 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {photos.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white text-4xl hover:text-[var(--color-gold)] transition z-10"
+              >
+                ‹
+              </button>
+            )}
+
+            <div className="flex flex-col items-center max-w-[95vw] max-h-[calc(100vh-120px)]">
+              <img 
+                src={photos[currentIndex].url} 
+                alt={photos[currentIndex].caption || "Youth photo"} 
+                className="max-w-full max-h-[70vh] object-contain bg-[var(--color-cream)] shadow-2xl" 
+              />
+              {photos[currentIndex].caption && (
+                <div className="mt-4 px-6 py-2 bg-black/70 rounded text-center text-white text-base md:text-lg max-w-2xl">
+                  {photos[currentIndex].caption}
+                </div>
+              )}
+            </div>
+
+            {photos.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1));
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white text-4xl hover:text-[var(--color-gold)] transition z-10"
+              >
+                ›
+              </button>
+            )}
+          </div>
+
+          {photos.length > 1 && (
+            <div className="flex-shrink-0 pb-4 text-center text-white/60 text-xs">
+              Use ← → arrow keys or click the arrows to navigate
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
