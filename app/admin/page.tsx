@@ -69,6 +69,7 @@ export default function AdminDashboard() {
     { id: '1', title: "The Faith That Moves Mountains", preacher: "Ted York", date: "2025-02-23", video_url: "https://youtube.com/watch?v=dQw4w9wg", thumbnail_url: "https://picsum.photos/id/1016/600/340", description: "Mark 11:22-24" }
   ]);
   const [buildingPhotos, setBuildingPhotos] = useState<any[]>([]);
+  const [youthPhotos, setYouthPhotos] = useState<any[]>([]);
   // prayers local state removed - now using realPrayers from Supabase for the approval tab
   const [directory, setDirectory] = useState<LocalMember[]>([
     { id: 'm1', name: "Robert & Linda Thompson", spouse: "Linda", phone: "(307) 555-0182", approved: true }
@@ -418,6 +419,7 @@ export default function AdminDashboard() {
     { id: 'overview', label: 'Overview', icon: TrendingUp },
     { id: 'sermons', label: 'Sermons', icon: BookOpen },
     { id: 'building', label: 'Building Project', icon: Image },
+    { id: 'youth', label: 'Youth Photos', icon: Image },
     { id: 'prayer', label: 'Prayer Requests', icon: Heart },
     { id: 'members', label: 'Member Directory', icon: Users },
     { id: 'events', label: 'Events', icon: Calendar },
@@ -440,6 +442,9 @@ export default function AdminDashboard() {
       fetchBuildingPhotos();
       loadBuildingProgress();
     }
+    if (tab === 'youth') {
+      fetchYouthPhotos();
+    }
   };
 
   async function fetchBuildingPhotos() {
@@ -452,6 +457,19 @@ export default function AdminDashboard() {
       console.error('Error fetching building photos:', error);
     } else {
       setBuildingPhotos(data || []);
+    }
+  }
+
+  async function fetchYouthPhotos() {
+    const { data, error } = await supabase
+      .from('youth_photos')
+      .select('*')
+      .order('uploaded_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching youth photos:', error);
+    } else {
+      setYouthPhotos(data || []);
     }
   }
 
@@ -737,6 +755,81 @@ export default function AdminDashboard() {
             ))}
           </div>
           <div className="mt-6 admin-help">Only approved requests are visible to the public on the Prayer Wall. Hidden requests stay in the system but are not shown.</div>
+        </div>
+      )}
+
+      {/* YOUTH PHOTOS - Admin upload and management */}
+      {activeTab === 'youth' && (
+        <div>
+          <div className="font-semibold text-2xl mb-6">Youth Ministry Photos</div>
+          
+          <div className="bg-white rounded-3xl p-8 mb-8">
+            <h3 className="font-semibold mb-4">Upload New Photo</h3>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                try {
+                  toast.loading("Uploading youth photo...", { id: 'youth-upload' });
+                  
+                  const fileExt = file.name.split('.').pop();
+                  const fileName = `youth-${Date.now()}.${fileExt}`;
+                  const filePath = `youth/${fileName}`;
+
+                  const { error: uploadError } = await supabase.storage
+                    .from('youth-photos')
+                    .upload(filePath, file);
+
+                  if (uploadError) throw uploadError;
+
+                  const { data: urlData } = supabase.storage
+                    .from('youth-photos')
+                    .getPublicUrl(filePath);
+
+                  const caption = prompt("Enter a caption for this photo (optional)") || "";
+
+                  const { error: insertError } = await supabase
+                    .from('youth_photos')
+                    .insert({
+                      url: urlData.publicUrl,
+                      caption: caption || null,
+                    });
+
+                  if (insertError) throw insertError;
+
+                  toast.success("Photo uploaded!", { id: 'youth-upload' });
+                  fetchYouthPhotos();
+                } catch (error: any) {
+                  toast.error("Upload failed: " + (error.message || "Check bucket and policies"), { id: 'youth-upload' });
+                }
+              }}
+              className="block"
+            />
+            <p className="text-xs text-[var(--color-stone-light)] mt-2">JPG or PNG. Max 5MB recommended.</p>
+          </div>
+
+          <div className="bg-white rounded-3xl p-8">
+            <h3 className="font-semibold mb-4">Current Youth Photos</h3>
+            {youthPhotos.length === 0 ? (
+              <div className="text-[var(--color-stone-light)]">No youth photos yet. Upload some above.</div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {youthPhotos.map((photo) => (
+                  <div key={photo.id} className="relative group">
+                    <img src={photo.url} alt={photo.caption || ''} className="w-full aspect-square object-cover rounded-xl" />
+                    {photo.caption && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-2 rounded-b-xl">
+                        {photo.caption}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

@@ -24,7 +24,7 @@ export default function PlanYourVisit() {
             <div>Nursery available during Sunday School and Worship</div>
           </div>
           <div className="mt-3 text-xs text-[var(--color-stone-light)]">
-            We do not currently have a Sunday evening or Wednesday service.
+            We do not currently have a Sunday evening service.
           </div>
 
           <div className="mt-8">

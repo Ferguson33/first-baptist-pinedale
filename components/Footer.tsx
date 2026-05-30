@@ -44,10 +44,9 @@ export function Footer() {
             <Clock className="w-4 h-4 text-[var(--color-gold)]" /> Service Times
           </div>
           <div className="space-y-1.5 text-white/80">
-            <div><span className="text-white/60">Sunday School</span> — 9:00 AM</div>
-            <div><span className="text-white/60">Sunday Worship</span> — 10:15 AM</div>
-            <div><span className="text-white/60">Wednesday Bible Study</span> — 7:00 PM</div>
-            <div><span className="text-white/60">Youth Group (Wed)</span> — 6:30 PM</div>
+            <div><span className="text-white/60">Sunday Breakfast</span> — 9:45 AM</div>
+            <div><span className="text-white/60">Sunday School</span> — 10:15 AM</div>
+            <div><span className="text-white/60">Sunday Worship</span> — 11:00 AM</div>
           </div>
           <Link href="/visit" className="inline-block mt-3 text-[var(--color-gold-light)] hover:text-[var(--color-gold)] text-sm font-medium">
             Visitors Info →

@@ -50,7 +50,7 @@ export default function EventsPage() {
           </div>
 
           <div className="mt-8 pt-6 border-t text-sm text-[var(--color-stone-light)]">
-            We currently do not have a Sunday evening service or a Wednesday service. We are a small congregation and value the time together we do have on Sunday mornings.
+            We currently do not have a Sunday evening service. We are a small congregation and value the time together we do have on Sunday mornings.
           </div>
         </div>
       </div>

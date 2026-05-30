@@ -10,13 +10,15 @@ export default function Home() {
 
   useEffect(() => {
     const fetchProgress = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('building_progress')
-        .select('physical_percent')
+        .select('physical_percent, funds_raised, funds_goal, physical_note')
         .eq('id', 1)
         .single();
 
-      if (data?.physical_percent) {
+      if (error) {
+        console.error('Error fetching home progress:', error);
+      } else if (data?.physical_percent !== undefined) {
         setPhysicalProgress(data.physical_percent);
       }
     };
@@ -32,7 +34,7 @@ export default function Home() {
         
         <div className="relative z-10 max-w-4xl mx-auto px-6 text-center text-white">
           <div className="inline-block mb-6 px-6 py-2 rounded-full bg-black/40 backdrop-blur text-sm md:text-base tracking-[3px] text-white">
-            PINEDALE, WY • EST. 1952
+            PINEDALE, WY
           </div>
 
           <h1 className="text-7xl md:text-8xl font-semibold tracking-tighter leading-none mb-4 drop-shadow-[0_3px_8px_rgba(0,0,0,0.75)]">
