@@ -85,11 +85,17 @@ export default function AdminDashboard() {
   });
   const [progressNote, setProgressNote] = useState("");
 
-  // Sermon Settings (Pastor Note + Upcoming Sermon for homepage)
+  // Sermon Settings (Pastor Note + Upcoming Sermon + Sunday School for homepage)
   const [sermonSettings, setSermonSettings] = useState({
     pastor_note: "",
     upcoming_title: "",
     upcoming_reference: "",
+    upcoming_date: "",
+    sunday_school_lesson: "",
+    sunday_school_reference: "",
+    youth_sunday_school_lesson: "",
+    youth_sunday_school_reference: "",
+    youth_sunday_school_date: "",
   });
   const [savingSermonSettings, setSavingSermonSettings] = useState(false);
 
@@ -544,6 +550,12 @@ export default function AdminDashboard() {
         pastor_note: data.pastor_note || "",
         upcoming_title: data.upcoming_title || "",
         upcoming_reference: data.upcoming_reference || "",
+        upcoming_date: data.upcoming_date || "",
+        sunday_school_lesson: data.sunday_school_lesson || "",
+        sunday_school_reference: data.sunday_school_reference || "",
+        youth_sunday_school_lesson: data.youth_sunday_school_lesson || "",
+        youth_sunday_school_reference: data.youth_sunday_school_reference || "",
+        youth_sunday_school_date: data.youth_sunday_school_date || "",
       });
     }
   }
@@ -556,6 +568,12 @@ export default function AdminDashboard() {
         pastor_note: sermonSettings.pastor_note || null,
         upcoming_title: sermonSettings.upcoming_title || null,
         upcoming_reference: sermonSettings.upcoming_reference || null,
+        upcoming_date: sermonSettings.upcoming_date || null,
+        sunday_school_lesson: sermonSettings.sunday_school_lesson || null,
+        sunday_school_reference: sermonSettings.sunday_school_reference || null,
+        youth_sunday_school_lesson: sermonSettings.youth_sunday_school_lesson || null,
+        youth_sunday_school_reference: sermonSettings.youth_sunday_school_reference || null,
+        youth_sunday_school_date: sermonSettings.youth_sunday_school_date || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', 1);
@@ -564,9 +582,9 @@ export default function AdminDashboard() {
 
     if (error) {
       console.error('Failed to save sermon settings:', error);
-      toast.error("Failed to save sermon settings. Did you run the sermon-settings.sql file?");
+      toast.error("Failed to save sermon settings. Did you run the sermon-settings-update.sql file?");
     } else {
-      toast.success("Note and upcoming sermon updated on the homepage!");
+      toast.success("Homepage content updated!");
     }
   }
 
@@ -765,27 +783,66 @@ export default function AdminDashboard() {
                 <p className="text-xs text-[var(--color-stone-light)] mt-1">This will be shown prominently on the homepage.</p>
               </div>
 
-              {/* Upcoming Sermon */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block font-medium mb-2">Upcoming Sermon Title</label>
-                  <input
-                    type="text"
-                    value={sermonSettings.upcoming_title}
-                    onChange={(e) => setSermonSettings({ ...sermonSettings, upcoming_title: e.target.value })}
-                    className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3"
-                    placeholder="The Faith That Moves Mountains"
-                  />
+              {/* This Week’s Service */}
+              <div>
+                <div className="font-medium mb-3 text-lg">This Week’s Service</div>
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block font-medium mb-2 text-sm">Date</label>
+                    <input
+                      type="date"
+                      value={sermonSettings.upcoming_date}
+                      onChange={(e) => setSermonSettings({ ...sermonSettings, upcoming_date: e.target.value })}
+                      className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-2 text-sm">Sermon Title</label>
+                    <input
+                      type="text"
+                      value={sermonSettings.upcoming_title}
+                      onChange={(e) => setSermonSettings({ ...sermonSettings, upcoming_title: e.target.value })}
+                      className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3"
+                      placeholder="The Faith That Moves Mountains"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-2 text-sm">Scripture Reference</label>
+                    <input
+                      type="text"
+                      value={sermonSettings.upcoming_reference}
+                      onChange={(e) => setSermonSettings({ ...sermonSettings, upcoming_reference: e.target.value })}
+                      className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3"
+                      placeholder="Mark 11:22-24"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block font-medium mb-2">Scripture Reference</label>
-                  <input
-                    type="text"
-                    value={sermonSettings.upcoming_reference}
-                    onChange={(e) => setSermonSettings({ ...sermonSettings, upcoming_reference: e.target.value })}
-                    className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3"
-                    placeholder="Mark 11:22-24"
-                  />
+              </div>
+
+              {/* Sunday School */}
+              <div>
+                <div className="font-medium mb-3 text-lg">Sunday School</div>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block font-medium mb-2 text-sm">Lesson Title</label>
+                    <input
+                      type="text"
+                      value={sermonSettings.sunday_school_lesson}
+                      onChange={(e) => setSermonSettings({ ...sermonSettings, sunday_school_lesson: e.target.value })}
+                      className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3"
+                      placeholder="The Armor of God"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-2 text-sm">Scripture Reference</label>
+                    <input
+                      type="text"
+                      value={sermonSettings.sunday_school_reference}
+                      onChange={(e) => setSermonSettings({ ...sermonSettings, sunday_school_reference: e.target.value })}
+                      className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3"
+                      placeholder="Ephesians 6:10-18"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -794,7 +851,7 @@ export default function AdminDashboard() {
                 disabled={savingSermonSettings}
                 className="w-full md:w-auto px-8 py-3 bg-[var(--color-navy)] text-white rounded-2xl font-medium disabled:opacity-60"
               >
-                {savingSermonSettings ? "Saving..." : "Save Note & Upcoming Sermon to Homepage"}
+                {savingSermonSettings ? "Saving..." : "Save All Homepage Content"}
               </button>
             </div>
           </div>
@@ -986,24 +1043,78 @@ export default function AdminDashboard() {
 
       {/* YOUTH PHOTOS - Admin upload and management (identical experience to Building Project tab) */}
       {activeTab === 'youth' && (
-        <div>
-          <div className="flex justify-between mb-6">
-            <div>
-              <div className="font-semibold text-2xl">Youth Ministry Photos</div>
-              <div className="text-sm text-[var(--color-stone-light)]">Upload photos that appear on the public Youth Ministry page with captions.</div>
+        <div className="space-y-10">
+          {/* Youth Sunday School - same structure as main service */}
+          <div>
+            <div className="mb-4">
+              <div className="font-semibold text-2xl">Youth Sunday School (Homepage)</div>
+              <div className="text-sm text-[var(--color-stone-light)]">
+                This will appear on the main page in the Youth section.
+              </div>
             </div>
-            <div className="flex gap-3">
-              <button 
-                onClick={async () => {
-                  await fetchYouthPhotos();
-                  toast.success("Youth photos refreshed");
-                }} 
-                className="admin-big-button px-4 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
+
+            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8">
+              <div className="grid md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block font-medium mb-2 text-sm">Date</label>
+                  <input
+                    type="date"
+                    value={sermonSettings.youth_sunday_school_date}
+                    onChange={(e) => setSermonSettings({ ...sermonSettings, youth_sunday_school_date: e.target.value })}
+                    className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium mb-2 text-sm">Lesson Title</label>
+                  <input
+                    type="text"
+                    value={sermonSettings.youth_sunday_school_lesson}
+                    onChange={(e) => setSermonSettings({ ...sermonSettings, youth_sunday_school_lesson: e.target.value })}
+                    className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3"
+                    placeholder="The Armor of God"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium mb-2 text-sm">Scripture Reference</label>
+                  <input
+                    type="text"
+                    value={sermonSettings.youth_sunday_school_reference}
+                    onChange={(e) => setSermonSettings({ ...sermonSettings, youth_sunday_school_reference: e.target.value })}
+                    className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3"
+                    placeholder="Ephesians 6:10-18"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={saveSermonSettings}
+                disabled={savingSermonSettings}
+                className="mt-6 w-full md:w-auto px-8 py-3 bg-[var(--color-navy)] text-white rounded-2xl font-medium disabled:opacity-60"
               >
-                Refresh Data
+                {savingSermonSettings ? "Saving..." : "Save Youth Sunday School to Homepage"}
               </button>
             </div>
           </div>
+
+          {/* Photos section */}
+          <div>
+            <div className="flex justify-between mb-6">
+              <div>
+                <div className="font-semibold text-2xl">Youth Ministry Photos</div>
+                <div className="text-sm text-[var(--color-stone-light)]">Upload photos that appear on the public Youth Ministry page with captions.</div>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={async () => {
+                    await fetchYouthPhotos();
+                    toast.success("Youth photos refreshed");
+                  }} 
+                  className="admin-big-button px-4 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
+                >
+                  Refresh Data
+                </button>
+              </div>
+            </div>
 
           {/* BIG DRAG & DROP ZONE - exact same style as Building */}
           <div 
@@ -1061,6 +1172,7 @@ export default function AdminDashboard() {
           </div>
 
           <div className="admin-help mt-4">Photos you add here will appear on the public Youth Ministry page with a beautiful gallery and lightbox (same style as the Building Project).</div>
+          </div> {/* close photos section */}
         </div>
       )}
 

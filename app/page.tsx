@@ -8,11 +8,17 @@ import { supabase } from '@/lib/supabase';
 export default function Home() {
   const [physicalProgress, setPhysicalProgress] = useState(68);
 
-  // Sermon teaser content from admin (Pastor Note + Upcoming Sermon)
+  // Sermon teaser content from admin (including Youth Sunday School)
   const [sermonTeaser, setSermonTeaser] = useState({
     pastor_note: "",
     upcoming_title: "The Faith That Moves Mountains",
     upcoming_reference: "Mark 11:22-24",
+    upcoming_date: "",
+    sunday_school_lesson: "",
+    sunday_school_reference: "",
+    youth_sunday_school_lesson: "",
+    youth_sunday_school_reference: "",
+    youth_sunday_school_date: "",
   });
 
   const fetchProgress = async () => {
@@ -41,7 +47,7 @@ export default function Home() {
     async function loadSermonTeaser() {
       const { data } = await supabase
         .from('sermon_settings')
-        .select('pastor_note, upcoming_title, upcoming_reference')
+        .select('pastor_note, upcoming_title, upcoming_reference, upcoming_date, sunday_school_lesson, sunday_school_reference, youth_sunday_school_lesson, youth_sunday_school_reference, youth_sunday_school_date')
         .eq('id', 1)
         .single();
 
@@ -50,6 +56,12 @@ export default function Home() {
           pastor_note: data.pastor_note || "",
           upcoming_title: data.upcoming_title || "The Faith That Moves Mountains",
           upcoming_reference: data.upcoming_reference || "Mark 11:22-24",
+          upcoming_date: data.upcoming_date || "",
+          sunday_school_lesson: data.sunday_school_lesson || "",
+          sunday_school_reference: data.sunday_school_reference || "",
+          youth_sunday_school_lesson: data.youth_sunday_school_lesson || "",
+          youth_sunday_school_reference: data.youth_sunday_school_reference || "",
+          youth_sunday_school_date: data.youth_sunday_school_date || "",
         });
       }
     }
@@ -201,6 +213,34 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Youth Sunday School - What's happening this week */}
+      {(sermonTeaser.youth_sunday_school_lesson || sermonTeaser.youth_sunday_school_reference) && (
+        <div className="max-w-4xl mx-auto px-6 pb-12">
+          <div className="bg-[var(--color-cream)] border border-[var(--color-gold)]/30 rounded-3xl p-8">
+            <div className="text-center mb-6">
+              <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)]">YOUTH MINISTRY</div>
+              <h3 className="text-3xl font-semibold tracking-tight mt-2 text-[var(--color-navy)]">Youth Sunday School</h3>
+            </div>
+
+            <div className="max-w-2xl mx-auto text-center">
+              {sermonTeaser.youth_sunday_school_date && (
+                <div className="text-sm text-[var(--color-gold-dark)] mb-2">
+                  {new Date(sermonTeaser.youth_sunday_school_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </div>
+              )}
+              <div className="text-2xl font-semibold text-[var(--color-navy)]">
+                {sermonTeaser.youth_sunday_school_lesson || "This Week's Lesson"}
+              </div>
+              {sermonTeaser.youth_sunday_school_reference && (
+                <div className="text-lg text-[var(--color-gold-dark)] mt-1">
+                  {sermonTeaser.youth_sunday_school_reference}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* BUILDING PROJECT HIGHLIGHT */}
       <div className="bg-[var(--color-cream)] py-16 border-y">
