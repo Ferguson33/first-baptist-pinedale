@@ -7,16 +7,16 @@ export default function LeadershipPage() {
   const couples = [
     {
       names: "Pastor Ted & Teresa York",
-      roles: "Lead Pastor & Women’s Ministry",
-      bio: "Pastor Ted and Teresa York have faithfully served the Lord in Pinedale for the past ten years. With over forty-five years of pastoral ministry, Ted is a seasoned preacher and teacher of God’s Word. A graduate of Bob Jones University in South Carolina, he has a deep love for expository preaching and a shepherd’s heart for the people he serves. When he isn’t in the pulpit, Ted enjoys painting, fishing, and hunting.\n\nTeresa faithfully serves the church behind the scenes. She regularly plays the piano during worship services and teaches in the Sunday School, using her musical and teaching gifts to support the ministry and encourage others in their faith. Her quiet servant’s heart has been a consistent blessing to the church family.",
+      roles: "Lead Pastor",
+      bio: "Pastor Ted and Teresa York have faithfully served the Lord in Pinedale for the past ten years. With over forty years of pastoral ministry, Pastor Ted is a seasoned preacher and teacher of God’s Word. A graduate of Bob Jones University in South Carolina, he has a deep love for expository preaching and a shepherd’s heart for the people he serves. Pastor Ted and Teresa are blessed with four children and eighteen grandchildren. When he isn’t in the pulpit, Pastor Ted enjoys fishing and hunting.\n\nTeresa faithfully serves the church behind the scenes. She regularly plays the piano during worship services and teaches in the Sunday School, using her musical and teaching gifts to support the ministry and encourage others in their faith. Her quiet servant’s heart has been a consistent blessing to the church family.",
       verse: "Preach the word; be instant in season, out of season; reprove, rebuke, exhort with all longsuffering and doctrine.",
       verseRef: "2 Timothy 4:2 (KJV)",
       image: "/images/pastors/york-couple.jpg"
     },
     {
-      names: "Heath & Tessa Holmes",
+      names: "Pastor Heath & Tessa Holmes",
       roles: "Assistant Pastor / Youth & Music Ministry",
-      bio: "Heath and Tessa met in 2018 as students at Maranatha Baptist University. They were married on June 4, 2022. Tessa graduated with a Bachelor of Science in Nursing and is an RN. Heath graduated with a Bachelor of Arts in Biblical Counseling. The Lord led the Holmes to First Baptist Church of Pinedale in May 2025. Today, Tessa serves as the nurse at Redcliff Bible Camp, as well as in the music ministry, women’s Bible studies, and other areas of ministry at FBC. Heath serves as the Assistant Pastor, primarily leading the youth and music ministries.",
+      bio: "Pastor Heath and Tessa met in 2018 as students at Maranatha Baptist University. They were married on June 4, 2022. Tessa graduated with a Bachelor of Science in Nursing and is an RN. Pastor Heath graduated with a Bachelor of Arts in Biblical Counseling. The Lord led the Holmes to First Baptist Church of Pinedale in May 2025. Today, Tessa serves as the nurse at Redcliff Bible Camp, as well as in the music ministry, women’s Bible studies, and other areas of ministry at FBC. Pastor Heath serves as the Assistant Pastor, primarily leading the youth and music ministries.",
       verse: "Rejoicing in hope; patient in tribulation; continuing instant in prayer;",
       verseRef: "Romans 12:12 (KJV)",
       image: "/images/pastors/holmes-couple.jpg"
