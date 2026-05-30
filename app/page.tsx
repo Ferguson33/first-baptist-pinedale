@@ -67,19 +67,24 @@ export default function Home() {
     }
     loadSermonTeaser();
 
-    // Mobile resilience: refetch when the page becomes visible again
+    // Mobile resilience + re-fetch sermon settings when returning to tab
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         fetchProgress();
+        loadSermonTeaser();
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
-    window.addEventListener('focus', fetchProgress);
+    const handleFocus = () => {
+      fetchProgress();
+      loadSermonTeaser();
+    };
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('focus', fetchProgress);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
@@ -177,8 +182,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* This Week at First Baptist */}
-        <div className="max-w-4xl mx-auto px-6 pb-8">
+        {/* This Week at First Baptist - Main Service + Sunday School + Youth */}
+        <div className="max-w-5xl mx-auto px-6 pb-8">
           <div className="bg-[var(--color-cream)] border border-[var(--color-gold)]/30 rounded-3xl p-8">
             <div className="text-center mb-6">
               <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)]">THIS WEEK AT FIRST BAPTIST</div>
@@ -186,7 +191,8 @@ export default function Home() {
             </div>
 
             {/* Main Service */}
-            <div className="text-center mb-6">
+            <div className="mb-6">
+              <div className="uppercase tracking-[2px] text-xs text-[var(--color-gold-dark)] mb-1">MAIN SERVICE</div>
               {sermonTeaser.upcoming_date && (
                 <div className="text-sm text-[var(--color-gold-dark)] mb-1">
                   {new Date(sermonTeaser.upcoming_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -203,7 +209,7 @@ export default function Home() {
             </div>
 
             {/* Main Sunday School */}
-            <div className="text-center mb-6 border-t border-[var(--color-gold)]/20 pt-6">
+            <div className="mb-6 border-t border-[var(--color-gold)]/20 pt-6">
               <div className="uppercase tracking-[2px] text-xs text-[var(--color-gold-dark)] mb-1">SUNDAY SCHOOL</div>
               <div className="text-xl font-semibold text-[var(--color-navy)]">
                 {sermonTeaser.sunday_school_lesson || "This Week's Lesson"}
@@ -216,7 +222,7 @@ export default function Home() {
             </div>
 
             {/* Youth Sunday School */}
-            <div className="text-center border-t border-[var(--color-gold)]/20 pt-6">
+            <div className="border-t border-[var(--color-gold)]/20 pt-6">
               <div className="uppercase tracking-[2px] text-xs text-[var(--color-gold-dark)] mb-1">YOUTH SUNDAY SCHOOL</div>
               {sermonTeaser.youth_sunday_school_date && (
                 <div className="text-sm text-[var(--color-gold-dark)] mb-1">
