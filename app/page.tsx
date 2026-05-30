@@ -213,6 +213,34 @@ export default function Home() {
           </div>
         )}
 
+        {/* Youth Sunday School - What's happening this week (placed above the sermon login box) */}
+        {(sermonTeaser.youth_sunday_school_lesson || sermonTeaser.youth_sunday_school_reference) && (
+          <div className="max-w-4xl mx-auto px-6 pb-8">
+            <div className="bg-[var(--color-cream)] border border-[var(--color-gold)]/30 rounded-3xl p-8">
+              <div className="text-center mb-6">
+                <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)]">YOUTH MINISTRY</div>
+                <h3 className="text-3xl font-semibold tracking-tight mt-2 text-[var(--color-navy)]">Youth Sunday School</h3>
+              </div>
+
+              <div className="max-w-2xl mx-auto text-center">
+                {sermonTeaser.youth_sunday_school_date && (
+                  <div className="text-sm text-[var(--color-gold-dark)] mb-2">
+                    {new Date(sermonTeaser.youth_sunday_school_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </div>
+                )}
+                <div className="text-2xl font-semibold text-[var(--color-navy)]">
+                  {sermonTeaser.youth_sunday_school_lesson}
+                </div>
+                {sermonTeaser.youth_sunday_school_reference && (
+                  <div className="text-lg text-[var(--color-gold-dark)] mt-1">
+                    {sermonTeaser.youth_sunday_school_reference}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Video Access Teaser - requires login */}
         <div className="max-w-xl mx-auto mt-8">
           <div className="bg-[var(--color-navy)] text-white rounded-3xl p-8 text-center">
@@ -233,34 +261,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-
-      {/* Youth Sunday School - What's happening this week */}
-      {(sermonTeaser.youth_sunday_school_lesson || sermonTeaser.youth_sunday_school_reference) && (
-        <div className="max-w-4xl mx-auto px-6 pb-12">
-          <div className="bg-[var(--color-cream)] border border-[var(--color-gold)]/30 rounded-3xl p-8">
-            <div className="text-center mb-6">
-              <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)]">YOUTH MINISTRY</div>
-              <h3 className="text-3xl font-semibold tracking-tight mt-2 text-[var(--color-navy)]">Youth Sunday School</h3>
-            </div>
-
-            <div className="max-w-2xl mx-auto text-center">
-              {sermonTeaser.youth_sunday_school_date && (
-                <div className="text-sm text-[var(--color-gold-dark)] mb-2">
-                  {new Date(sermonTeaser.youth_sunday_school_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                </div>
-              )}
-              <div className="text-2xl font-semibold text-[var(--color-navy)]">
-                {sermonTeaser.youth_sunday_school_lesson}
-              </div>
-              {sermonTeaser.youth_sunday_school_reference && (
-                <div className="text-lg text-[var(--color-gold-dark)] mt-1">
-                  {sermonTeaser.youth_sunday_school_reference}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* BUILDING PROJECT HIGHLIGHT */}
       <div className="bg-[var(--color-cream)] py-16 border-y">
