@@ -73,8 +73,8 @@ export default function Home() {
           <div className="flex items-center justify-center gap-3">
             <Clock className="text-[var(--color-gold-dark)] w-5 h-5" />
             <div>
-              <div className="font-semibold text-[var(--color-navy)]">Sunday Worship</div>
-              <div className="text-[var(--color-stone-light)]">11:00 AM</div>
+              <div className="font-semibold text-[var(--color-navy)]">Sunday Breakfast</div>
+              <div className="text-[var(--color-stone-light)]">9:45 AM — Fellowship</div>
             </div>
           </div>
           <div className="flex items-center justify-center gap-3">
@@ -87,8 +87,8 @@ export default function Home() {
           <div className="flex items-center justify-center gap-3">
             <Clock className="text-[var(--color-gold-dark)] w-5 h-5" />
             <div>
-              <div className="font-semibold text-[var(--color-navy)]">Sunday Breakfast</div>
-              <div className="text-[var(--color-stone-light)]">9:45 AM — Fellowship</div>
+              <div className="font-semibold text-[var(--color-navy)]">Sunday Morning Worship</div>
+              <div className="text-[var(--color-stone-light)]">11:00 AM</div>
             </div>
           </div>
           <div className="flex items-center justify-center gap-3">
