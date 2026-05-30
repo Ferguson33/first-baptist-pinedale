@@ -183,8 +183,13 @@ export default function Home() {
           <h2 className="text-4xl font-semibold tracking-tighter mt-2 text-[var(--color-navy)]">This Sunday’s Message</h2>
         </div>
 
-        {/* Upcoming Sermon Info */}
+        {/* Upcoming Sermon Info with Date */}
         <div className="text-center mb-8">
+          {sermonTeaser.upcoming_date && (
+            <div className="text-sm text-[var(--color-gold-dark)] mb-1">
+              {new Date(sermonTeaser.upcoming_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </div>
+          )}
           <div className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">
             {sermonTeaser.upcoming_title}
           </div>
@@ -192,6 +197,21 @@ export default function Home() {
             {sermonTeaser.upcoming_reference}
           </div>
         </div>
+
+        {/* Main Sunday School */}
+        {(sermonTeaser.sunday_school_lesson || sermonTeaser.sunday_school_reference) && (
+          <div className="text-center mb-8">
+            <div className="uppercase tracking-[2px] text-xs text-[var(--color-gold-dark)] mb-1">SUNDAY SCHOOL</div>
+            <div className="text-2xl font-semibold text-[var(--color-navy)]">
+              {sermonTeaser.sunday_school_lesson}
+            </div>
+            {sermonTeaser.sunday_school_reference && (
+              <div className="text-lg text-[var(--color-gold-dark)] mt-1">
+                {sermonTeaser.sunday_school_reference}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Video Access Teaser - requires login */}
         <div className="max-w-xl mx-auto mt-8">
@@ -230,7 +250,7 @@ export default function Home() {
                 </div>
               )}
               <div className="text-2xl font-semibold text-[var(--color-navy)]">
-                {sermonTeaser.youth_sunday_school_lesson || "This Week's Lesson"}
+                {sermonTeaser.youth_sunday_school_lesson}
               </div>
               {sermonTeaser.youth_sunday_school_reference && (
                 <div className="text-lg text-[var(--color-gold-dark)] mt-1">
