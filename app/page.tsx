@@ -111,7 +111,7 @@ export default function Home() {
             
             <div className="mt-8 flex gap-4">
               <Link href="/sermons" className="inline-flex items-center gap-2 px-7 py-3.5 bg-[var(--color-navy)] text-white rounded-full font-semibold hover:bg-black">
-                Watch Full Sermon <Play className="w-4 h-4" />
+                Watch Full Sermon
               </Link>
               <Link href="/sermons" className="inline-flex items-center gap-2 px-7 py-3.5 border border-[var(--color-navy)]/30 rounded-full font-medium hover:bg-[var(--color-cream)]">
                 Browse Archive

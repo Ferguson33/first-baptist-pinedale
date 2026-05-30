@@ -20,7 +20,9 @@ export default function PlanYourVisit() {
           <div className="space-y-1 text-[var(--color-stone)]">
             <div>Sunday Breakfast Fellowship — 9:45 AM</div>
             <div>Sunday School (all ages) — 10:15 AM</div>
+            <div>Teen Sunday School (6th–12th grade) — 10:15 AM</div>
             <div>Sunday Morning Worship — 11:00 AM</div>
+            <div>Junior Church (ages 4–5th grade) — during Sunday Morning Worship</div>
             <div>Nursery available during Sunday School and Worship</div>
           </div>
           <div className="mt-3 text-xs text-[var(--color-stone-light)]">

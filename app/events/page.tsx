@@ -26,8 +26,18 @@ export default function EventsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-x-8 gap-y-1 md:items-start">
+              <div className="font-semibold text-[var(--color-navy)]">Teen Sunday School</div>
+              <div className="text-[var(--color-stone)]">10:15 AM — 6th grade through 12th grade</div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-x-8 gap-y-1 md:items-start">
               <div className="font-semibold text-[var(--color-navy)]">Morning Worship</div>
               <div className="text-[var(--color-stone)]">11:00 AM — Pastor Ted York preaches verse by verse through the Bible.</div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-x-8 gap-y-1 md:items-start">
+              <div className="font-semibold text-[var(--color-navy)]">Junior Church</div>
+              <div className="text-[var(--color-stone)]">During Sunday Morning Worship — Ages 4 through 5th grade</div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-x-8 gap-y-1 md:items-start border-t pt-6 mt-2">
