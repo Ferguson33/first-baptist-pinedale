@@ -8,21 +8,44 @@ import { supabase } from '@/lib/supabase';
 export default function Home() {
   const [physicalProgress, setPhysicalProgress] = useState(68);
 
-  useEffect(() => {
-    const fetchProgress = async () => {
+  const fetchProgress = async () => {
+    try {
       const { data, error } = await supabase
         .from('building_progress')
-        .select('physical_percent, funds_raised, funds_goal, physical_note')
+        .select('physical_percent')
         .eq('id', 1)
         .single();
 
       if (error) {
         console.error('Error fetching home progress:', error);
+        // Keep whatever value we have (don't reset to 68 on transient failures)
       } else if (data?.physical_percent !== undefined) {
         setPhysicalProgress(data.physical_percent);
       }
-    };
+    } catch (err) {
+      console.error('Unexpected error fetching home progress:', err);
+    }
+  };
+
+  useEffect(() => {
     fetchProgress();
+
+    // Mobile resilience: refetch when the page becomes visible again
+    // (handles bfcache, tab switching, and stale sessions)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchProgress();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // Also refetch on window focus (helps on some mobile browsers)
+    window.addEventListener('focus', fetchProgress);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', fetchProgress);
+    };
   }, []);
 
   return (

@@ -28,8 +28,10 @@ export default function BuildingProject() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const fetchBuildingData = async () => {
-    setLoading(true);
+  const fetchBuildingData = async (isBackground = false) => {
+    // Only show the loading spinner on initial load, not on background refetches
+    if (!isBackground) setLoading(true);
+
     try {
       // Fetch progress (single row)
       const { data: progressData, error: progressError } = await supabase
@@ -40,6 +42,7 @@ export default function BuildingProject() {
 
       if (progressError) {
         console.error('Error fetching building progress:', progressError);
+        // Do NOT reset progress on error — keep last known good values
       } else if (progressData) {
         setProgress(progressData);
       }
@@ -52,18 +55,46 @@ export default function BuildingProject() {
 
       if (photosError) {
         console.error('Error fetching building photos:', photosError);
+        // Do NOT clear photos on error
       } else if (photosData) {
         setPhotos(photosData);
       }
     } catch (error) {
       console.error('Error fetching building data:', error);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchBuildingData();
+
+    // Strong mobile resilience:
+    // Refetch when tab becomes visible (handles bfcache, app switch, sleep/wake)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchBuildingData(true); // background refetch, no loading spinner
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // Also on window focus (common on mobile browsers)
+    const handleFocus = () => fetchBuildingData(true);
+    window.addEventListener('focus', handleFocus);
+
+    // Refetch on bfcache restore (browser back/forward)
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        fetchBuildingData(true);
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow as EventListener);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('pageshow', handlePageShow as EventListener);
+    };
   }, []);
 
   // Gallery keyboard navigation
@@ -159,14 +190,14 @@ export default function BuildingProject() {
         <div className="flex items-center justify-between mb-5">
           <div className="font-semibold text-2xl tracking-tight">Construction Photo Journal</div>
           <button 
-            onClick={fetchBuildingData}
+            onClick={() => fetchBuildingData()}
             className="text-xs px-3 py-1 border border-[var(--color-gold)]/40 rounded hover:bg-[var(--color-cream)] transition"
           >
             Refresh
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {loading ? (
+          {loading && photos.length === 0 ? (
             <div className="col-span-full text-center py-12 text-[var(--color-stone-light)]">Loading photos...</div>
           ) : photos.length > 0 ? (
             photos.map((p) => (
