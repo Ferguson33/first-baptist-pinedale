@@ -21,6 +21,20 @@ export default function Home() {
     youth_sunday_school_date: "",
   });
 
+  // Safely format YYYY-MM-DD strings from Supabase as local dates
+  // (avoids JavaScript treating them as UTC and shifting by a day)
+  function formatLocalDate(dateString: string | null | undefined) {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-').map(Number);
+    if (!year || !month || !day) return '';
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  }
+
   const fetchProgress = async () => {
     try {
       const { data, error } = await supabase
@@ -195,7 +209,7 @@ export default function Home() {
               <div className="uppercase tracking-[2px] text-xs text-[var(--color-gold-dark)] mb-1">MAIN SERVICE</div>
               {sermonTeaser.upcoming_date && (
                 <div className="text-sm text-[var(--color-gold-dark)] mb-1">
-                  {new Date(sermonTeaser.upcoming_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  {formatLocalDate(sermonTeaser.upcoming_date)}
                 </div>
               )}
               <div className="text-2xl font-semibold text-[var(--color-navy)]">
@@ -226,7 +240,7 @@ export default function Home() {
               <div className="uppercase tracking-[2px] text-xs text-[var(--color-gold-dark)] mb-1">YOUTH SUNDAY SCHOOL</div>
               {sermonTeaser.youth_sunday_school_date && (
                 <div className="text-sm text-[var(--color-gold-dark)] mb-1">
-                  {new Date(sermonTeaser.youth_sunday_school_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  {formatLocalDate(sermonTeaser.youth_sunday_school_date)}
                 </div>
               )}
               <div className="text-xl font-semibold text-[var(--color-navy)]">
