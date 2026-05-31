@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { MapPin, Phone, Mail, Clock } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, Facebook } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -35,6 +35,19 @@ export function Footer() {
           <div className="flex items-center gap-3">
             <Mail className="w-4 h-4 flex-shrink-0 text-[var(--color-gold)]" />
             <a href="mailto:Firstbaptist646@gmail.com" className="hover:text-white">Firstbaptist646@gmail.com</a>
+          </div>
+
+          {/* Facebook link */}
+          <div className="flex items-center gap-3">
+            <Facebook className="w-4 h-4 flex-shrink-0 text-[var(--color-gold)]" />
+            <a 
+              href="https://www.facebook.com/profile.php?id=61579510665461" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:text-white"
+            >
+              Facebook
+            </a>
           </div>
         </div>
 
