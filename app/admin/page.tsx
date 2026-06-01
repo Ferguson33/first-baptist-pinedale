@@ -513,8 +513,6 @@ export default function AdminDashboard() {
       const description = prompt("Description (optional)?", "") || null;
       const location = prompt("Location (optional)?", "") || null;
 
-      console.log('[Events] Attempting insert with client:', supabase); // debug
-
       const { error } = await supabase.from('events').insert({
         title,
         date,
@@ -524,27 +522,18 @@ export default function AdminDashboard() {
       });
 
       if (error) {
-        console.error('[Events] Insert error:', error);
-        toast.error("Failed to add event: " + (error.message || JSON.stringify(error)));
+        console.error('Failed to add event:', error);
+        toast.error("Failed to add event: " + (error.message || 'Unknown error'));
       } else {
-        toast.success("Event added! It should now appear on the public Events page (hard refresh / new tab).", { duration: 6000 });
+        toast.success("Event added!");
         fetchEvents();
 
-        // Force the public /events page to pick up the new data immediately
-        try {
-          const res = await fetch('/api/revalidate?secret=dev-only-insecure&path=/events', { method: 'POST' });
-          if (res.ok) {
-            toast.success("Also triggered refresh of the public Events page.");
-          } else {
-            console.warn('Revalidation returned non-ok', await res.text());
-          }
-        } catch (e) {
-          console.warn('Revalidation call failed', e);
-        }
+        // Trigger public page refresh (non-blocking)
+        fetch('/api/revalidate?path=/events', { method: 'POST' }).catch(() => {});
       }
     } catch (err: any) {
-      console.error('[Events] Unexpected error in addEvent:', err);
-      toast.error("Failed to add event: " + (err?.message || 'Unknown error (check console)'));
+      console.error('Unexpected error in addEvent:', err);
+      toast.error("Failed to add event");
     }
   }
 
@@ -572,31 +561,18 @@ export default function AdminDashboard() {
         .eq('id', ev.id);
 
       if (error) {
-        console.error('[Events] Update error:', error);
-        toast.error("Failed to update event: " + (error.message || JSON.stringify(error)));
+        console.error('Failed to update event:', error);
+        toast.error("Failed to update event");
       } else {
         toast.success("Event updated!");
         fetchEvents();
 
-        // Force the public /events page to pick up the change immediately
-        try {
-          const res = await fetch('/api/revalidate?secret=dev-only-insecure&path=/events', { method: 'POST' });
-          const json = await res.json().catch(() => ({}));
-          if (res.ok) {
-            toast.success("Revalidation triggered for public /events page. Check the public page (hard refresh + new tab).");
-            console.log('[Admin Events] Revalidation response:', json);
-          } else {
-            toast.error("Revalidation call failed (see console)");
-            console.error('[Admin Events] Revalidation failed:', json);
-          }
-        } catch (e) {
-          console.error('[Admin Events] Revalidation network error', e);
-          toast.error("Could not reach revalidation endpoint (see console)");
-        }
+        // Trigger public page refresh (non-blocking)
+        fetch('/api/revalidate?path=/events', { method: 'POST' }).catch(() => {});
       }
     } catch (err: any) {
-      console.error('[Events] Unexpected error in editEvent:', err);
-      toast.error("Failed to update event: " + (err?.message || 'Unknown error (check console)'));
+      console.error('Unexpected error in editEvent:', err);
+      toast.error("Failed to update event");
     }
   }
 
@@ -607,31 +583,18 @@ export default function AdminDashboard() {
       const { error } = await supabase.from('events').delete().eq('id', id);
 
       if (error) {
-        console.error('[Events] Delete error:', error);
-        toast.error("Failed to delete event: " + (error.message || JSON.stringify(error)));
+        console.error('Failed to delete event:', error);
+        toast.error("Failed to delete event");
       } else {
         toast.success("Event deleted");
         fetchEvents();
 
-        // Force the public /events page to pick up the change immediately
-        try {
-          const res = await fetch('/api/revalidate?secret=dev-only-insecure&path=/events', { method: 'POST' });
-          const json = await res.json().catch(() => ({}));
-          if (res.ok) {
-            toast.success("Revalidation triggered for public /events page. Check the public page (hard refresh + new tab).");
-            console.log('[Admin Events] Revalidation response:', json);
-          } else {
-            toast.error("Revalidation call failed (see console)");
-            console.error('[Admin Events] Revalidation failed:', json);
-          }
-        } catch (e) {
-          console.error('[Admin Events] Revalidation network error', e);
-          toast.error("Could not reach revalidation endpoint (see console)");
-        }
+        // Trigger public page refresh (non-blocking)
+        fetch('/api/revalidate?path=/events', { method: 'POST' }).catch(() => {});
       }
     } catch (err: any) {
-      console.error('[Events] Unexpected error in deleteEvent:', err);
-      toast.error("Failed to delete event: " + (err?.message || 'Unknown error (check console)'));
+      console.error('Unexpected error in deleteEvent:', err);
+      toast.error("Failed to delete event");
     }
   }
 

@@ -4,21 +4,16 @@ import { createClient } from '@supabase/supabase-js';
 // Force Node runtime for reliable FormData / File handling + service role uploads
 export const runtime = 'nodejs';
 
-// === YOUTH SERVER ROUTE v2 (FULL UPLOAD) ===
-// Handles BOTH Storage upload + youth_photos INSERT using service role.
-// This bypasses ALL RLS for admin photo adds to albums.
-// Client must send Authorization: Bearer <access_token> + multipart FormData with 'file'.
+// Youth photo upload route (admin only).
+// Uses service role for storage + DB insert to bypass RLS.
 
 export async function POST(request: NextRequest) {
-  const routeVersion = 'SERVER ROUTE v2 - FULL FILE HANDLER';
-  console.log(`%c=== ${routeVersion} RECEIVED REQUEST (V3-SERVICE-ROLE-CHECK) ===`, 'color: #00ff00; font-weight: bold');
 
   try {
     // Get the user's session from the request (sent by the browser client)
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
-      console.log('v2 route: missing auth header');
-      return NextResponse.json({ error: 'Unauthorized - no Authorization header' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const supabaseUser = createClient(
@@ -57,19 +52,11 @@ export async function POST(request: NextRequest) {
     console.log('Profile lookup error:', profileErr);
     console.log('=== END LAST TRY DIAGNOSTIC ===');
 
-    // TEMPORARY BYPASS SWITCH - set to true to skip the admin role check for testing
-    // IMPORTANT: Set this back to false after testing
-    const BYPASS_ADMIN_CHECK_FOR_TESTING = true;  // TEMPORARILY ENABLED so we can test album uploads while we debug the role check
-
-    if (!BYPASS_ADMIN_CHECK_FOR_TESTING && profile?.role !== 'admin') {
+    if (profile?.role !== 'admin') {
       console.log('v2 route: not admin (or profile row missing)', { userId: user.id, profile });
       return NextResponse.json({ 
-        error: 'Forbidden - Admin access required (ROUTE-V3-SERVICE-ROLE-CHECK)' 
+        error: 'Forbidden - Admin access required' 
       }, { status: 403 });
-    }
-
-    if (BYPASS_ADMIN_CHECK_FOR_TESTING) {
-      console.log('!!! WARNING: ADMIN CHECK IS TEMPORARILY BYPASSED !!!');
     }
 
     console.log(`%c=== ${routeVersion} JWT validated + admin confirmed for ${user.email} ===`, 'color: #00ff00');

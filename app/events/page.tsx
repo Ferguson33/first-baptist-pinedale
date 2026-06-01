@@ -41,37 +41,7 @@ export default async function EventsPage() {
 
   const spotlightEvents = data ?? [];
 
-  // TEMPORARY DEBUG - remove after we confirm data flow
-  console.log('[PUBLIC /events] Anon key fetch result:', {
-    count: spotlightEvents.length,
-    events: spotlightEvents.map(e => ({ id: e.id, title: e.title, date: e.date })),
-    error: error?.message,
-    timestamp: new Date().toISOString()
-  });
-
   return (
-    <>
-      <EventsClient spotlightEvents={spotlightEvents as SpotlightEvent[]} />
-
-      {/* TEMPORARY DEBUG PANEL - visible on the public page */}
-      <div className="max-w-4xl mx-auto px-6 pb-20 text-xs text-stone-500 border-t pt-8 mt-8">
-        <div className="font-mono">
-          DEBUG: Fetched <strong>{spotlightEvents.length}</strong> event(s) from Supabase (anon key) at {new Date().toLocaleTimeString()}
-        </div>
-        {spotlightEvents.length > 0 && (
-          <ul className="mt-2 space-y-1">
-            {spotlightEvents.map(ev => (
-              <li key={ev.id}>
-                • {ev.title} — {ev.date} {ev.time ? `(${ev.time})` : ''}
-              </li>
-            ))}
-          </ul>
-        )}
-        {error && <div className="text-red-600 mt-1">Error: {error.message}</div>}
-        <div className="text-[10px] mt-2 text-stone-400">
-          (This debug panel is temporary. Hard refresh to see latest fetch.)
-        </div>
-      </div>
-    </>
+    <EventsClient spotlightEvents={spotlightEvents as SpotlightEvent[]} />
   );
 }
