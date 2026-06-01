@@ -62,8 +62,6 @@ export default function AdminDashboard() {
   ]);
   const [buildingPhotos, setBuildingPhotos] = useState<any[]>([]);
   const [youthPhotos, setYouthPhotos] = useState<any[]>([]);
-  const [youthAlbums, setYouthAlbums] = useState<any[]>([]);
-  const [selectedYouthAlbumId, setSelectedYouthAlbumId] = useState<string | null>(null);
   const [directory, setDirectory] = useState<LocalMember[]>([
     { id: 'm1', name: "Robert & Linda Thompson", spouse: "Linda", phone: "(307) 555-0182", approved: true }
   ]);
@@ -206,67 +204,48 @@ export default function AdminDashboard() {
       // Could open a modal in a full version
     }
     else if (type === 'youth') {
-      // === YOUTH SERVER ROUTE v2: FULL UPLOAD ===
-      // Sends raw file(s) via FormData to /api/admin/youth/upload-photo
-      // Server does BOTH storage.upload + youth_photos INSERT with service role (no client RLS)
-      const albumId = selectedYouthAlbumId;
-
-      // === DEBUG: Check who the client thinks is logged in ===
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      console.log('%c[Youth Upload Debug] Current Supabase User:', 'color: #ff9800; font-weight: bold', currentUser);
-      console.log('%c[Youth Upload Debug] User ID:', 'color: #ff9800', currentUser?.id);
-      console.log('%c[Youth Upload Debug] Selected Album ID:', 'color: #ff9800', albumId);
-
-      // LOUD MARKER - proves the v2 client code is running
-      console.log('%c=== YOUTH ALBUMS SERVER ROUTE v2 (CLIENT) - SENDING FILES TO /api/admin/youth/upload-photo ===', 'color: lime; font-size: 15px; font-weight: bold; background: #111');
-
-      // Get fresh access token to send to our protected API route
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        toast.error("No active session token. Please log out and log back in as admin.");
-        return;
-      }
-
+      // Simple direct upload (flat list, no albums)
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) continue;
 
         try {
-          toast.loading(`Uploading ${file.name} via server v2...`, { id: 'youth-upload' });
+          toast.loading(`Uploading ${file.name}...`, { id: 'youth-upload' });
 
-          // No caption prompt for youth album uploads (user preference)
-          const formData = new FormData();
-          formData.append('file', file);
-          if (albumId) formData.append('album_id', albumId);
-          // caption intentionally left out / null — not needed for albums
+          const fileExt = file.name.split('.').pop();
+          const fileName = `youth-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+          const filePath = `youth/${fileName}`;
 
-          // Call server route - server will do storage + DB with service role
-          const response = await fetch('/api/admin/youth/upload-photo', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              // DO NOT set Content-Type — browser must set the multipart boundary automatically
-            },
-            body: formData,
-          });
+          const { error: uploadError } = await supabase.storage
+            .from('youth-photos')
+            .upload(filePath, file);
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('%c[Server Route v2] HTTP error response:', 'color:red', errorData);
-            throw new Error(errorData.error || `Server returned ${response.status}`);
-          }
+          if (uploadError) throw uploadError;
 
-          const result = await response.json().catch(() => ({}));
-          console.log('%c[Server Route v2] SUCCESS response from server:', 'color:lime', result);
+          const { data: urlData } = supabase.storage
+            .from('youth-photos')
+            .getPublicUrl(filePath);
+
+          const caption = prompt(`Caption for ${file.name} (optional)`) || "";
+
+          const { data: insertData, error: insertError } = await supabase
+            .from('youth_photos')
+            .insert({
+              url: urlData.publicUrl,
+              caption: caption || null,
+            })
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+
+          setYouthPhotos(prev => [insertData, ...prev]);
         } catch (error: any) {
-          console.error('%c[Youth Upload v2 Debug] Full error:', 'color: red; font-weight: bold', error);
-          console.error('Youth upload v2 error:', error);
+          console.error('Youth upload error:', error);
           toast.error(`Failed to upload ${file.name}: ${error.message || error}`);
         }
       }
 
-      toast.success("Youth photos uploaded via Server Route v2!", { id: 'youth-upload' });
-      fetchYouthPhotos();
+      toast.success("Youth photo uploaded!", { id: 'youth-upload' });
     }
   };
 
@@ -387,7 +366,6 @@ export default function AdminDashboard() {
     }
     if (tab === 'youth') {
       fetchYouthPhotos();
-      fetchYouthAlbums();
       loadSermonSettings();
     }
     if (tab === 'sermons') {
@@ -423,67 +401,7 @@ export default function AdminDashboard() {
     }
   }
 
-  async function fetchYouthAlbums() {
-    const { data, error } = await supabase
-      .from('youth_albums')
-      .select('*')
-      .order('date', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching youth albums:', error);
-    } else {
-      setYouthAlbums(data || []);
-    }
-  }
-
-  async function createYouthAlbum() {
-    const title = prompt("Album title? (e.g. 'Summer 2025 Youth Camp')");
-    if (!title) return;
-
-    const date = prompt("Date (YYYY-MM-DD) or leave blank?", new Date().toISOString().split('T')[0]);
-
-    const { data, error } = await supabase
-      .from('youth_albums')
-      .insert({
-        title,
-        date: date || null,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      toast.error("Failed to create album: " + error.message);
-    } else {
-      toast.success("Album created!");
-      setYouthAlbums(prev => [data, ...prev]);
-      setSelectedYouthAlbumId(data.id); // Auto-select the new album for uploads
-    }
-  }
-
-  async function deleteYouthAlbum(id: string, title: string) {
-    if (!confirm(`Delete album "${title}" and all its photos? This cannot be undone.`)) return;
-
-    try {
-      // Because of ON DELETE CASCADE on the foreign key, photos will be deleted automatically
-      const { error } = await supabase.from('youth_albums').delete().eq('id', id);
-
-      if (error) throw error;
-
-      toast.success("Album deleted");
-      setYouthAlbums(prev => prev.filter((a: any) => a.id !== id));
-
-      // If the deleted album was selected, clear selection
-      if (selectedYouthAlbumId === id) {
-        setSelectedYouthAlbumId(null);
-      }
-
-      // Refresh photos in case some were cascade-deleted
-      fetchYouthPhotos();
-    } catch (error: any) {
-      console.error(error);
-      toast.error("Failed to delete album: " + (error.message || "Unknown error"));
-    }
-  }
 
   // === Sermon Settings (Pastor Note + Upcoming Sermon) ===
   async function loadSermonSettings() {
@@ -1116,93 +1034,25 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Photos section */}
+          {/* Photos section - Simple flat list (no albums) */}
           <div>
             <div className="flex justify-between mb-6">
               <div>
-                <div className="font-semibold text-2xl">Youth Ministry Photos (Albums)</div>
-                <div className="text-sm text-[var(--color-stone-light)]">Create albums first, then select one above and drag photos into it. Photos will appear grouped on the public Youth page.</div>
+                <div className="font-semibold text-2xl">Youth Ministry Photos</div>
+                <div className="text-sm text-[var(--color-stone-light)]">Drag photos here. They will appear on the public Youth page.</div>
               </div>
-              <div className="flex gap-3">
-                <button 
-                  onClick={createYouthAlbum}
-                  className="admin-big-button px-4 bg-[var(--color-navy)] text-white rounded-2xl text-sm"
-                >
-                  + Create New Album
-                </button>
-                <button 
-                  onClick={async () => {
-                    await fetchYouthPhotos();
-                    await fetchYouthAlbums();
-                    toast.success("Youth data refreshed");
-                  }} 
-                  className="admin-big-button px-4 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
-                >
-                  Refresh Data
-                </button>
-              </div>
-            </div>
-
-          {/* Album selector for uploads */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">
-              Upload photos to this album: 
-              <span className="text-[var(--color-stone-light)] text-xs ml-2">(Make sure you ran youth-albums-setup.sql in Supabase)</span>
-            </label>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setSelectedYouthAlbumId(null)}
-                className={`px-4 py-2 rounded-full text-sm border ${!selectedYouthAlbumId ? 'bg-[var(--color-navy)] text-white' : 'hover:bg-[var(--color-cream)]'}`}
+              <button 
+                onClick={async () => {
+                  await fetchYouthPhotos();
+                  toast.success("Youth photos refreshed");
+                }} 
+                className="admin-big-button px-4 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
               >
-                No Album (Uncategorized)
+                Refresh
               </button>
-              {youthAlbums.map((album: any) => (
-                <button
-                  key={album.id}
-                  onClick={() => setSelectedYouthAlbumId(album.id)}
-                  className={`px-4 py-2 rounded-full text-sm border ${selectedYouthAlbumId === album.id ? 'bg-[var(--color-navy)] text-white' : 'hover:bg-[var(--color-cream)]'}`}
-                >
-                  {album.title}
-                  {album.date && ` (${new Date(album.date).getFullYear()})`}
-                </button>
-              ))}
-              {youthAlbums.length === 0 && (
-                <span className="text-sm text-[var(--color-stone-light)]">No albums yet — create one above.</span>
-              )}
             </div>
-          </div>
 
-          {/* Album Management - list with delete */}
-          {youthAlbums.length > 0 && (
-            <div className="mb-6 bg-white border border-[var(--color-gold)]/20 rounded-3xl p-6">
-              <div className="font-medium mb-3 text-sm">Manage Albums</div>
-              <div className="space-y-2">
-                {youthAlbums.map((album: any) => (
-                  <div key={album.id} className="flex items-center justify-between border rounded-xl px-4 py-2 text-sm">
-                    <div>
-                      <span className="font-medium">{album.title}</span>
-                      {album.date && (
-                        <span className="ml-2 text-[var(--color-stone-light)]">
-                          {new Date(album.date).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => deleteYouthAlbum(album.id, album.title)}
-                      className="text-red-600 hover:text-red-700 text-xs px-3 py-1 rounded hover:bg-red-50"
-                    >
-                      Delete Album
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[10px] text-[var(--color-stone-light)] mt-3">
-                Deleting an album will also delete all photos inside it.
-              </p>
-            </div>
-          )}
-
-          {/* BIG DRAG & DROP ZONE - exact same style as Building */}
+          {/* BIG DRAG & DROP ZONE */}
           <div 
             className="dropzone dropzone-large mb-6" 
             onDragOver={handleDragOver} 
@@ -1216,14 +1066,10 @@ export default function AdminDashboard() {
           >
             <Upload className="w-10 h-10 text-[var(--color-gold-dark)] mb-4" />
             <div className="font-semibold text-xl">
-              {selectedYouthAlbumId 
-                ? `Add Photos to Selected Album (Server Route v2)` 
-                : "Drag & Drop New Youth Photos Here"}
+              Drag &amp; Drop Youth Photos Here
             </div>
             <div className="text-[var(--color-stone-light)] mt-1">
-              {selectedYouthAlbumId 
-                ? "Server Route v2 — full upload (storage + DB) via service role • no client RLS" 
-                : "or click to browse • JPG or PNG recommended"}
+              or click to browse • JPG or PNG recommended
             </div>
             <input 
               id="youth-upload" 
@@ -1234,41 +1080,37 @@ export default function AdminDashboard() {
             />
           </div>
 
-          {/* Current Youth Photos - grid styled to match Building admin tab */}
+          {/* Current Youth Photos - flat grid */}
           <div className="bg-white p-8 rounded-3xl">
-            <div className="font-semibold mb-4">All Youth Photos (with album info)</div>
+            <div className="font-semibold mb-4">Youth Photos</div>
             {youthPhotos.length === 0 ? (
               <div className="text-[var(--color-stone-light)] py-4">No youth photos yet. Drag photos into the box above to get started.</div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {youthPhotos.map((photo: any) => {
-                  const album = youthAlbums.find((a: any) => a.id === photo.album_id);
-                  return (
-                    <div key={photo.id} className="group relative rounded-2xl overflow-hidden border aspect-video bg-[var(--color-cream)]">
-                      <img 
-                        src={photo.url} 
-                        alt={photo.caption || ""} 
-                        className="w-full h-full object-contain p-1" 
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 p-3 text-xs text-white">
-                        {photo.caption || (album ? album.title : "No album")}
-                      </div>
-                      
-                      {/* Delete button */}
-                      <button
-                        onClick={() => deleteYouthPhoto(photo.id, photo.url)}
-                        className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
-                      >
-                        Delete
-                      </button>
+                {youthPhotos.map((photo: any) => (
+                  <div key={photo.id} className="group relative rounded-2xl overflow-hidden border aspect-video bg-[var(--color-cream)]">
+                    <img 
+                      src={photo.url} 
+                      alt={photo.caption || ""} 
+                      className="w-full h-full object-contain p-1" 
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 p-3 text-xs text-white">
+                      {photo.caption || "Youth photo"}
                     </div>
-                  );
-                })}
+                    
+                    <button
+                      onClick={() => deleteYouthPhoto(photo.id, photo.url)}
+                      className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
 
-          <div className="admin-help mt-4">Photos you add here will appear on the public Youth Ministry page with a beautiful gallery and lightbox (same style as the Building Project).</div>
+          <div className="admin-help mt-4">Photos you add here will appear on the public Youth Ministry page.</div>
           </div> {/* close photos section */}
         </div>
       )}
