@@ -15,6 +15,15 @@ export default function YouthMinistry() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  // Youth-specific content from sermon_settings
+  const [youthContent, setYouthContent] = useState({
+    youth_pastor_note: "",
+    youth_sunday_school_lesson: "",
+    youth_sunday_school_reference: "",
+    youth_sunday_school_date: "",
+    youth_google_doc_url: "",
+  });
+
   const fetchPhotos = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -30,8 +39,40 @@ export default function YouthMinistry() {
     setLoading(false);
   };
 
+  // Local date formatter (same as homepage)
+  function formatLocalDate(dateString: string | null | undefined) {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-').map(Number);
+    if (!year || !month || !day) return '';
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  }
+
+  const fetchYouthContent = async () => {
+    const { data } = await supabase
+      .from('sermon_settings')
+      .select('youth_pastor_note, youth_sunday_school_lesson, youth_sunday_school_reference, youth_sunday_school_date, youth_google_doc_url')
+      .eq('id', 1)
+      .single();
+
+    if (data) {
+      setYouthContent({
+        youth_pastor_note: data.youth_pastor_note || "",
+        youth_sunday_school_lesson: data.youth_sunday_school_lesson || "",
+        youth_sunday_school_reference: data.youth_sunday_school_reference || "",
+        youth_sunday_school_date: data.youth_sunday_school_date || "",
+        youth_google_doc_url: data.youth_google_doc_url || "",
+      });
+    }
+  };
+
   useEffect(() => {
     fetchPhotos();
+    fetchYouthContent();
   }, []);
 
   // Gallery keyboard navigation + body scroll lock
@@ -77,6 +118,70 @@ export default function YouthMinistry() {
           Real faith for real life in the high country.
         </p>
       </div>
+
+      {/* Youth Pastor Note */}
+      {youthContent.youth_pastor_note && (
+        <div className="mb-12">
+          <div className="text-center mb-5">
+            <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)]">FROM OUR YOUTH PASTOR</div>
+            <h2 className="text-3xl font-semibold tracking-tight mt-2 text-[var(--color-navy)]">Note from the Youth Pastor</h2>
+          </div>
+          <div className="max-w-3xl mx-auto bg-[var(--color-cream)] border-l-4 border-[var(--color-gold)] pl-8 pr-6 py-7 rounded-r-3xl">
+            <p className="text-[17px] leading-relaxed text-[var(--color-stone)] italic">
+              “{youthContent.youth_pastor_note}”
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* This Week in Youth Sunday School */}
+      {(youthContent.youth_sunday_school_lesson || youthContent.youth_sunday_school_date) && (
+        <div className="max-w-2xl mx-auto mb-14">
+          <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8 text-center">
+            <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)] mb-1">THIS WEEK IN YOUTH</div>
+            <h3 className="text-2xl font-semibold tracking-tight text-[var(--color-navy)]">Youth Sunday School</h3>
+
+            {youthContent.youth_sunday_school_date && (
+              <div className="text-[var(--color-gold-dark)] mt-3 text-sm font-medium">
+                {formatLocalDate(youthContent.youth_sunday_school_date)}
+              </div>
+            )}
+
+            {youthContent.youth_sunday_school_lesson && (
+              <div className="mt-4 text-xl font-medium text-[var(--color-navy)]">
+                {youthContent.youth_sunday_school_lesson}
+              </div>
+            )}
+
+            {youthContent.youth_sunday_school_reference && (
+              <div className="mt-1 text-[var(--color-stone)]">
+                {youthContent.youth_sunday_school_reference}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Optional Google Doc Embed */}
+      {youthContent.youth_google_doc_url && (
+        <div className="mb-14">
+          <div className="mb-5">
+            <div className="font-semibold text-2xl tracking-tight">Youth Resources</div>
+            <p className="text-sm text-[var(--color-stone-light)]">Additional information and documents for our youth and families.</p>
+          </div>
+          <div className="bg-white border border-[var(--color-gold)]/10 rounded-2xl overflow-hidden shadow-sm">
+            <iframe
+              src={youthContent.youth_google_doc_url}
+              width="100%"
+              height="900"
+              frameBorder="0"
+              title="Youth Resources"
+              className="w-full block"
+              style={{ minHeight: '600px', border: 'none' }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Photo Gallery - Matches Building Project style */}
       <div className="mt-8">

@@ -19,6 +19,8 @@ export default function Home() {
     youth_sunday_school_lesson: "",
     youth_sunday_school_reference: "",
     youth_sunday_school_date: "",
+    youth_pastor_note: "",
+    youth_google_doc_url: "",
   });
 
   // Safely format YYYY-MM-DD strings from Supabase as local dates
@@ -61,7 +63,7 @@ export default function Home() {
     async function loadSermonTeaser() {
       const { data } = await supabase
         .from('sermon_settings')
-        .select('pastor_note, upcoming_title, upcoming_reference, upcoming_date, sunday_school_lesson, sunday_school_reference, youth_sunday_school_lesson, youth_sunday_school_reference, youth_sunday_school_date')
+        .select('pastor_note, upcoming_title, upcoming_reference, upcoming_date, sunday_school_lesson, sunday_school_reference, youth_sunday_school_lesson, youth_sunday_school_reference, youth_sunday_school_date, youth_pastor_note, youth_google_doc_url')
         .eq('id', 1)
         .single();
 
@@ -76,6 +78,8 @@ export default function Home() {
           youth_sunday_school_lesson: data.youth_sunday_school_lesson || "",
           youth_sunday_school_reference: data.youth_sunday_school_reference || "",
           youth_sunday_school_date: data.youth_sunday_school_date || "",
+          youth_pastor_note: data.youth_pastor_note || "",
+          youth_google_doc_url: data.youth_google_doc_url || "",
         });
       }
     }

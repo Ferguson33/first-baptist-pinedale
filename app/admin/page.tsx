@@ -87,6 +87,8 @@ export default function AdminDashboard() {
     youth_sunday_school_lesson: "",
     youth_sunday_school_reference: "",
     youth_sunday_school_date: "",
+    youth_pastor_note: "",
+    youth_google_doc_url: "",
   });
   const [savingSermonSettings, setSavingSermonSettings] = useState(false);
 
@@ -340,7 +342,7 @@ export default function AdminDashboard() {
     { id: 'overview', label: 'Overview', icon: TrendingUp },
     { id: 'sermons', label: 'Sermons', icon: BookOpen },
     { id: 'building', label: 'Building Project', icon: Image },
-    { id: 'youth', label: 'Youth Photos', icon: Image },
+    { id: 'youth', label: 'Youth Group', icon: Image },
     { id: 'members', label: 'Member Directory', icon: Users },
     { id: 'events', label: 'Events', icon: Calendar },
     { id: 'guide', label: 'Pastor Quick Guide', icon: CheckCircle },
@@ -357,6 +359,7 @@ export default function AdminDashboard() {
     }
     if (tab === 'youth') {
       fetchYouthPhotos();
+      loadSermonSettings();
     }
     if (tab === 'sermons') {
       loadSermonSettings();
@@ -412,6 +415,8 @@ export default function AdminDashboard() {
         youth_sunday_school_lesson: data.youth_sunday_school_lesson || "",
         youth_sunday_school_reference: data.youth_sunday_school_reference || "",
         youth_sunday_school_date: data.youth_sunday_school_date || "",
+        youth_pastor_note: data.youth_pastor_note || "",
+        youth_google_doc_url: data.youth_google_doc_url || "",
       });
     }
   }
@@ -430,6 +435,8 @@ export default function AdminDashboard() {
         youth_sunday_school_lesson: sermonSettings.youth_sunday_school_lesson || null,
         youth_sunday_school_reference: sermonSettings.youth_sunday_school_reference || null,
         youth_sunday_school_date: sermonSettings.youth_sunday_school_date || null,
+        youth_pastor_note: sermonSettings.youth_pastor_note || null,
+        youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', 1);
@@ -837,9 +844,54 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* YOUTH PHOTOS - Admin upload and management (identical experience to Building Project tab) */}
+      {/* YOUTH GROUP - Sunday School + Pastor Note + Photo management */}
       {activeTab === 'youth' && (
         <div className="space-y-10">
+          {/* Note from the Youth Pastor */}
+          <div>
+            <div className="mb-4">
+              <div className="font-semibold text-2xl">Note from the Youth Pastor</div>
+              <div className="text-sm text-[var(--color-stone-light)]">
+                This will appear prominently on the Youth Ministry page.
+              </div>
+            </div>
+
+            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8">
+              <textarea
+                value={sermonSettings.youth_pastor_note}
+                onChange={(e) => setSermonSettings({ ...sermonSettings, youth_pastor_note: e.target.value })}
+                rows={5}
+                className="w-full border border-[var(--color-gold)]/30 rounded-2xl p-4 text-sm"
+                placeholder="Example: Hey teens! This week we're talking about..."
+              />
+              <p className="text-xs text-[var(--color-stone-light)] mt-2">This note will be shown on the /youth page.</p>
+            </div>
+          </div>
+
+          {/* Google Doc Embed for Youth Page */}
+          <div>
+            <div className="mb-4">
+              <div className="font-semibold text-2xl">Youth Google Doc Embed</div>
+              <div className="text-sm text-[var(--color-stone-light)]">
+                Optional: Embed a Google Doc on the Youth Ministry page (similar to Member Directory / Prayer Bulletin).
+              </div>
+            </div>
+
+            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8">
+              <label className="block font-medium mb-2 text-sm">Google Doc Publish Link (embed URL)</label>
+              <input
+                type="text"
+                value={sermonSettings.youth_google_doc_url}
+                onChange={(e) => setSermonSettings({ ...sermonSettings, youth_google_doc_url: e.target.value })}
+                className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm"
+                placeholder="https://docs.google.com/document/d/e/XXXXXXXXXXXXXXXX/pub?embedded=true"
+              />
+              <p className="text-xs text-[var(--color-stone-light)] mt-2">
+                Paste the "Publish to web" embed link here. Leave blank to hide the section on the Youth page.
+              </p>
+            </div>
+          </div>
+
           {/* Youth Sunday School - same structure as main service */}
           <div>
             <div className="mb-4">
