@@ -92,7 +92,7 @@ export default function AdminDashboard() {
   });
   const [savingSermonSettings, setSavingSermonSettings] = useState(false);
 
-  // Real members from Supabase (for Member Approval)
+  // Real members from Supabase (for approval / access control)
   const [realMembers, setRealMembers] = useState<any[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null); // For viewing full profile in modal
@@ -343,7 +343,7 @@ export default function AdminDashboard() {
     { id: 'sermons', label: 'Sermons', icon: BookOpen },
     { id: 'building', label: 'Building Project', icon: Image },
     { id: 'youth', label: 'Youth Group', icon: Image },
-    { id: 'members', label: 'Member Directory', icon: Users },
+    { id: 'members', label: 'Members', icon: Users },
     { id: 'events', label: 'Events', icon: Calendar },
     { id: 'guide', label: 'Pastor Quick Guide', icon: CheckCircle },
   ];
@@ -605,7 +605,7 @@ export default function AdminDashboard() {
             <ol className="space-y-3 text-sm text-[var(--color-stone)] list-decimal list-inside">
               <li>Upload new construction photos in the Building tab</li>
               <li>Add this week’s sermon (title + YouTube link + thumbnail)</li>
-              <li>Approve new member directory requests</li>
+              <li>Approve new members in the Members tab</li>
               <li>Update building progress percentages anytime</li>
             </ol>
             <div className="mt-6 text-[10px] font-mono bg-[var(--color-cream)] p-3 rounded">TIP: Use the printable Pastor Quick Guide tab for a one-page cheat sheet you can keep by your desk.</div>
@@ -873,7 +873,7 @@ export default function AdminDashboard() {
             <div className="mb-4">
               <div className="font-semibold text-2xl">Youth Google Doc Embed</div>
               <div className="text-sm text-[var(--color-stone-light)]">
-                Optional: Embed a Google Doc on the Youth Ministry page (similar to Member Directory / Prayer Bulletin).
+                Optional: Embed a Google Doc on the Youth Ministry page (similar to the Member Directory and Prayer Bulletin pages).
               </div>
             </div>
 
@@ -1024,11 +1024,11 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* MEMBER DIRECTORY MANAGEMENT - Now using real Supabase data */}
+      {/* MEMBERS - Approve access to private areas (using Supabase profiles) */}
       {activeTab === 'members' && (
         <div>
           <div className="flex justify-between items-center mb-6">
-            <div className="font-semibold text-2xl">Member Directory — Approve New People</div>
+            <div className="font-semibold text-2xl">Members — Approve New Access</div>
             <button 
               onClick={fetchMembers} 
               disabled={loadingMembers}
@@ -1098,7 +1098,7 @@ export default function AdminDashboard() {
             })}
           </div>
 
-          <div className="mt-6 text-sm">When you approve someone they gain access to the Member Directory and Prayer Bulletin.</div>
+          <div className="mt-6 text-sm">When you approve someone they gain access to the Members Portal, Prayer Bulletin, and other private areas.</div>
         </div>
       )}
 
