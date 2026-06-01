@@ -529,6 +529,9 @@ export default function AdminDashboard() {
       } else {
         toast.success("Event added! It should now appear on the public Events page (hard refresh / new tab).", { duration: 6000 });
         fetchEvents();
+
+        // Force the public /events page to pick up the new data immediately
+        fetch('/api/revalidate?secret=dev-only-insecure&path=/events', { method: 'POST' }).catch(() => {});
       }
     } catch (err: any) {
       console.error('[Events] Unexpected error in addEvent:', err);
@@ -565,6 +568,9 @@ export default function AdminDashboard() {
       } else {
         toast.success("Event updated!");
         fetchEvents();
+
+        // Force the public /events page to pick up the change immediately
+        fetch('/api/revalidate?secret=dev-only-insecure&path=/events', { method: 'POST' }).catch(() => {});
       }
     } catch (err: any) {
       console.error('[Events] Unexpected error in editEvent:', err);
@@ -584,6 +590,9 @@ export default function AdminDashboard() {
       } else {
         toast.success("Event deleted");
         fetchEvents();
+
+        // Force the public /events page to pick up the change immediately
+        fetch('/api/revalidate?secret=dev-only-insecure&path=/events', { method: 'POST' }).catch(() => {});
       }
     } catch (err: any) {
       console.error('[Events] Unexpected error in deleteEvent:', err);
