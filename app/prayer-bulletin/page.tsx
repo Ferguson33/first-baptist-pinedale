@@ -66,18 +66,20 @@ export default function PrayerBulletin() {
         </div>
       </div>
 
-      {/* Embedded Google Doc - main content area */}
-      <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm mb-10">
-        <iframe
-          // TODO: Replace PLACEHOLDER with the actual published Google Doc embed URL for the Prayer Bulletin
-          src="https://docs.google.com/document/d/e/PLACEHOLDER_PRAYER_BULLETIN/pub?embedded=true"
-          width="100%"
-          height="1100"
-          frameBorder="0"
-          title="Prayer Bulletin"
-          className="w-full block"
-          style={{ minHeight: '700px', border: 'none' }}
-        />
+      {/* Coming Soon Notice */}
+      <div className="mb-6 rounded-2xl border border-[var(--color-gold)]/30 bg-[var(--color-cream)] p-6 text-center">
+        <div className="font-semibold text-[var(--color-navy)] mb-2">Prayer Bulletin — Coming Soon</div>
+        <p className="text-sm text-[var(--color-stone)]">
+          We’re currently setting up the private Prayer Bulletin for members. 
+          Check back soon or contact the church office for updates.
+        </p>
+      </div>
+
+      {/* Placeholder for future Google Doc embed */}
+      <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm mb-10 opacity-60 pointer-events-none">
+        <div className="p-8 text-center text-[var(--color-stone-light)]">
+          Prayer Bulletin content will appear here once configured.
+        </div>
       </div>
 
       <div className="text-xs text-center mt-8 text-[var(--color-stone-light)]">

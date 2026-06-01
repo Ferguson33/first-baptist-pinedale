@@ -48,7 +48,7 @@ export default function MemberProfilePage() {
             href="/prayer-bulletin" 
             className="px-8 py-3 border border-[var(--color-gold)]/40 hover:bg-[var(--color-cream)] rounded-2xl font-medium"
           >
-            Prayer Bulletin
+            Prayer Bulletin <span className="text-xs align-super text-[var(--color-gold-dark)]">(Coming Soon)</span>
           </Link>
         </div>
       </div>

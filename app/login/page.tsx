@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -14,6 +14,24 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
   const router = useRouter();
+  const { user, profile, loading: authLoading } = useAuth();
+
+  // Smart post-login redirect based on role
+  useEffect(() => {
+    if (authLoading) return;
+
+    // Only redirect if we just successfully logged in (user exists and we're not still loading)
+    if (user && profile) {
+      if (profile.role === 'admin') {
+        router.push('/admin');
+      } else if (profile.role === 'approved') {
+        router.push('/'); // Normal members go to homepage for now
+      } else {
+        // pending users
+        router.push('/');
+      }
+    }
+  }, [user, profile, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,9 +42,9 @@ export default function LoginPage() {
         const res = await signIn(email, password);
         if (res.error) {
           toast.error(res.error);
-        } else {
-          router.push('/members/directory');
+          setLoading(false);
         }
+        // Redirection is handled by useEffect below once profile loads
       } else {
         if (!fullName) {
           toast.error("Please enter your full name");
@@ -36,9 +54,11 @@ export default function LoginPage() {
         const res = await signUp(email, password, fullName);
         if (res.error) {
           toast.error(res.error);
+          setLoading(false);
         } else {
           toast.success("Account created! Your membership request is now pending pastor approval.");
-          router.push('/members/directory');
+          // New signups are pending → send to homepage
+          router.push('/');
         }
       }
     } finally {

@@ -109,7 +109,7 @@ export function Navbar() {
                               <Users className="w-4 h-4" /> Member Directory
                             </Link>
                             <Link href="/prayer-bulletin" className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)]" onClick={() => setShowUserMenu(false)}>
-                              <BookOpen className="w-4 h-4" /> Prayer Bulletin
+                              <BookOpen className="w-4 h-4" /> Prayer Bulletin <span className="text-[10px] text-[var(--color-gold-dark)] font-medium">(Coming Soon)</span>
                             </Link>
                           </>
                         )}
@@ -192,7 +192,9 @@ export function Navbar() {
               {showMemberLinks && (
                 <>
                   <Link href="/members/directory" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>Member Directory</Link>
-                  <Link href="/prayer-bulletin" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>Prayer Bulletin</Link>
+                  <Link href="/prayer-bulletin" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>
+                    Prayer Bulletin <span className="text-[10px] text-[var(--color-gold-dark)]">(Coming Soon)</span>
+                  </Link>
                 </>
               )}
 
