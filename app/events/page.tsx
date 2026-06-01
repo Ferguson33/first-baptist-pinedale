@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
 interface SpotlightEvent {
   id: string;
@@ -11,26 +12,39 @@ interface SpotlightEvent {
   location?: string | null;
 }
 
+// Create a completely isolated client for public data only.
+// This prevents the "multiple GoTrueClient" auth pollution from affecting public fetches.
+const publicSupabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: {
+        // Ensure we never send any Authorization header for this client
+      },
+    },
+  }
+);
+
 export default function EventsPage() {
   const [spotlightEvents, setSpotlightEvents] = useState<SpotlightEvent[]>([]);
 
   useEffect(() => {
     const fetchSpotlightEvents = async () => {
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/events?select=*&order=date.asc`;
+      const { data, error } = await publicSupabase
+        .from('events')
+        .select('*')
+        .order('date', { ascending: true });
 
-      const response = await fetch(url, {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          // Intentionally do NOT send Authorization header.
-          // This avoids 401s caused by stale auth tokens from multiple Supabase clients.
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      if (error) {
+        console.error('Failed to fetch events:', error);
+      } else if (data) {
         setSpotlightEvents(data);
-      } else {
-        console.error('Failed to fetch events:', response.status);
       }
     };
 
