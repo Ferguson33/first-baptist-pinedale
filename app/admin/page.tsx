@@ -89,6 +89,7 @@ export default function AdminDashboard() {
     youth_sunday_school_date: "",
     youth_pastor_note: "",
     youth_google_doc_url: "",
+    live_video_id: "",
   });
   const [savingSermonSettings, setSavingSermonSettings] = useState(false);
 
@@ -417,6 +418,7 @@ export default function AdminDashboard() {
         youth_sunday_school_date: data.youth_sunday_school_date || "",
         youth_pastor_note: data.youth_pastor_note || "",
         youth_google_doc_url: data.youth_google_doc_url || "",
+        live_video_id: data.live_video_id || "",
       });
     }
   }
@@ -437,6 +439,7 @@ export default function AdminDashboard() {
         youth_sunday_school_date: sermonSettings.youth_sunday_school_date || null,
         youth_pastor_note: sermonSettings.youth_pastor_note || null,
         youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
+        live_video_id: sermonSettings.live_video_id || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', 1);
@@ -492,6 +495,28 @@ export default function AdminDashboard() {
       toast.success("Sermon added!");
       fetchRealSermons();
     }
+  }
+
+  // Track which sermon is currently being deleted (for loading state)
+  const [deletingSermonId, setDeletingSermonId] = useState<string | null>(null);
+
+  async function deleteRealSermon(id: string, title: string) {
+    if (!confirm(`Delete sermon "${title}"?\n\nThis cannot be undone.`)) return;
+
+    setDeletingSermonId(id);
+
+    // Note: If you later store real thumbnails in Supabase Storage (instead of YouTube thumbnails),
+    // you would also delete the file here using supabase.storage.from('sermons').remove([...])
+    const { error } = await supabase.from('sermons').delete().eq('id', id);
+
+    if (error) {
+      toast.error("Failed to delete sermon: " + error.message);
+    } else {
+      toast.success("Sermon deleted");
+      fetchRealSermons();
+    }
+
+    setDeletingSermonId(null);
   }
 
   async function deleteYouthPhoto(id: string, url: string) {
@@ -712,6 +737,31 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          {/* Live Stream Management */}
+          <div>
+            <div className="mb-4">
+              <div className="font-semibold text-2xl">Live Stream</div>
+              <div className="text-sm text-[var(--color-stone-light)]">
+                Enter the YouTube Video ID (or full URL) for the current live service. Approved members will see the live player on the Sermons page.
+              </div>
+            </div>
+
+            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8">
+              <label className="block font-medium mb-2 text-sm">Live YouTube Video ID or URL</label>
+              <input
+                type="text"
+                value={sermonSettings.live_video_id}
+                onChange={(e) => setSermonSettings({ ...sermonSettings, live_video_id: e.target.value })}
+                className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm font-mono"
+                placeholder="e.g. dQw4w9wg or https://www.youtube.com/watch?v=dQw4w9wg"
+              />
+              <p className="text-xs text-[var(--color-stone-light)] mt-2">
+                <strong>Simplest way:</strong> Go to YouTube Studio → Go live (as Unlisted). Copy the video URL or ID, paste it here, and save. 
+                The live player will appear instantly on the Sermons page for approved members. Clear this field when the stream ends.
+              </p>
+            </div>
+          </div>
+
           {/* Real Archived Sermons Management */}
           <div>
             <div className="flex justify-between items-center mb-6">
@@ -719,20 +769,52 @@ export default function AdminDashboard() {
                 <div className="font-semibold text-2xl">Archived Sermons</div>
                 <div className="text-sm text-[var(--color-stone-light)]">These will be visible only to signed-in approved members on the Sermons page.</div>
               </div>
-              <button onClick={addRealSermon} className="admin-big-button flex items-center gap-2 bg-[var(--color-navy)] text-white px-6 rounded-2xl"><Plus className="w-5 h-5" /> Add Sermon</button>
+              <div className="flex gap-3">
+                <button 
+                  onClick={fetchRealSermons} 
+                  disabled={loadingSermons}
+                  className="admin-big-button px-4 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
+                >
+                  Refresh
+                </button>
+                <button 
+                  onClick={addRealSermon} 
+                  className="admin-big-button flex items-center gap-2 bg-[var(--color-navy)] text-white px-6 rounded-2xl"
+                >
+                  <Plus className="w-5 h-5" /> Add Sermon
+                </button>
+              </div>
             </div>
 
             {loadingSermons ? (
               <div className="text-center py-8 text-[var(--color-stone-light)]">Loading...</div>
             ) : realSermons.length > 0 ? (
               <div className="grid md:grid-cols-2 gap-4">
-                {realSermons.map((s: any) => (
-                  <div key={s.id} className="bg-white border rounded-2xl p-5">
-                    <div className="font-semibold text-[var(--color-navy)]">{s.title}</div>
-                    <div className="text-sm mt-1 text-[var(--color-stone)]">{s.preacher} • {new Date(s.date).toLocaleDateString()}</div>
-                    <div className="text-xs mt-2 text-[var(--color-gold-dark)] truncate font-mono">{s.video_url}</div>
-                  </div>
-                ))}
+                {realSermons.map((s: any) => {
+                  const isDeleting = deletingSermonId === s.id;
+                  return (
+                    <div key={s.id} className="bg-white border rounded-2xl p-5 relative group">
+                      <button
+                        onClick={() => deleteRealSermon(s.id, s.title)}
+                        disabled={isDeleting}
+                        className="absolute top-3 right-3 p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                        title="Delete this sermon"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+
+                      <div className="font-semibold text-[var(--color-navy)] pr-10">{s.title}</div>
+                      <div className="text-sm mt-1 text-[var(--color-stone)]">
+                        {s.preacher} • {new Date(s.date).toLocaleDateString()}
+                      </div>
+                      <div className="text-xs mt-2 text-[var(--color-gold-dark)] truncate font-mono">{s.video_url}</div>
+
+                      {isDeleting && (
+                        <div className="mt-3 text-xs text-red-600">Deleting...</div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8 text-[var(--color-stone-light)] border rounded-2xl">

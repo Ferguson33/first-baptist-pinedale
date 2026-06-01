@@ -17,6 +17,7 @@ interface Sermon {
 export default function SermonsPage() {
   const { isApprovedMember, user } = useAuth();
   const [sermons, setSermons] = useState<Sermon[]>([]);
+  const [liveVideoId, setLiveVideoId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,7 +41,29 @@ export default function SermonsPage() {
     }
 
     fetchSermons();
+    fetchLiveSettings();
   }, [isApprovedMember]);
+
+  async function fetchLiveSettings() {
+    const { data } = await supabase
+      .from('sermon_settings')
+      .select('live_video_id')
+      .eq('id', 1)
+      .single();
+
+    if (data?.live_video_id) {
+      const id = extractVideoId(data.live_video_id);
+      setLiveVideoId(id);
+    } else {
+      setLiveVideoId(null);
+    }
+  }
+
+  function extractVideoId(urlOrId: string): string | null {
+    if (!urlOrId) return null;
+    const match = urlOrId.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    return match ? match[1] : urlOrId.length === 11 ? urlOrId : null;
+  }
 
   // Public view - not logged in or not approved
   if (!isApprovedMember) {
@@ -86,6 +109,28 @@ export default function SermonsPage() {
           Welcome, member. Here are Pastor Ted’s messages for the church family.
         </p>
       </div>
+
+      {/* Live Stream Section */}
+      {liveVideoId && (
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="px-3 py-1 bg-red-600 text-white text-xs font-bold tracking-widest rounded">LIVE</div>
+            <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-navy)]">Live Worship</h2>
+          </div>
+          <div className="aspect-video rounded-3xl overflow-hidden border border-[var(--color-gold)]/20 bg-black">
+            <iframe
+              src={`https://www.youtube.com/embed/${liveVideoId}?autoplay=0`}
+              title="Live Service"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full"
+            />
+          </div>
+          <p className="text-center text-xs text-[var(--color-stone-light)] mt-2">
+            Live stream is active. Refresh the page if the stream hasn't started yet.
+          </p>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12 text-[var(--color-stone-light)]">Loading sermons...</div>
