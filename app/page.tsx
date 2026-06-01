@@ -280,7 +280,7 @@ export default function Home() {
             {/* Pastor Ted & Teresa York */}
             <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm">
               <div className="aspect-video bg-black">
-                {/* TODO: Replace with the final YouTube video ID for Ted & Teresa */}
+                {/* TODO: Replace with the final YouTube video ID for Pastor Ted & Teresa */}
                 <iframe
                   src={`https://www.youtube.com/embed/${PASTOR_YORK_VIDEO_ID}`}
                   title="Meet Pastor Ted &amp; Teresa York"
@@ -292,7 +292,7 @@ export default function Home() {
               <div className="p-6">
                 <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)]">Lead Pastor</div>
                 <div className="font-semibold text-2xl tracking-tight text-[var(--color-navy)] mt-1">
-                  Ted &amp; Teresa York
+                  Pastor Ted &amp; Teresa York
                 </div>
               </div>
             </div>
@@ -300,7 +300,7 @@ export default function Home() {
             {/* Pastor Heath & Tessa Holmes */}
             <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm">
               <div className="aspect-video bg-black">
-                {/* TODO: Replace with the final YouTube video ID for Heath &amp; Tessa */}
+                {/* TODO: Replace with the final YouTube video ID for Pastor Heath &amp; Tessa */}
                 <iframe
                   src={`https://www.youtube.com/embed/${PASTOR_HOLMES_VIDEO_ID}`}
                   title="Meet Pastor Heath &amp; Tessa Holmes"
@@ -312,7 +312,7 @@ export default function Home() {
               <div className="p-6">
                 <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)]">Assistant Pastor / Youth &amp; Music</div>
                 <div className="font-semibold text-2xl tracking-tight text-[var(--color-navy)] mt-1">
-                  Heath &amp; Tessa Holmes
+                  Pastor Heath &amp; Tessa Holmes
                 </div>
               </div>
             </div>
