@@ -86,3 +86,18 @@ export type Event = {
 // Note: The old DirectoryMember and Family types were removed as the site
 // moved to Google Docs for the Member Directory.
 
+export type YouthAlbum = {
+  id: string;
+  title: string;
+  date: string | null;
+  created_at: string;
+};
+
+export type YouthPhoto = {
+  id: string;
+  url: string;
+  caption: string | null;
+  album_id: string | null;
+  uploaded_at: string;
+};
+

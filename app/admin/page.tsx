@@ -62,6 +62,7 @@ export default function AdminDashboard() {
   ]);
   const [buildingPhotos, setBuildingPhotos] = useState<any[]>([]);
   const [youthPhotos, setYouthPhotos] = useState<any[]>([]);
+  const [youthAlbums, setYouthAlbums] = useState<any[]>([]);
   const [directory, setDirectory] = useState<LocalMember[]>([
     { id: 'm1', name: "Robert & Linda Thompson", spouse: "Linda", phone: "(307) 555-0182", approved: true }
   ]);
@@ -204,42 +205,48 @@ export default function AdminDashboard() {
       // Could open a modal in a full version
     }
     else if (type === 'youth') {
-      // Youth photo upload
-      try {
-        toast.loading("Uploading youth photo...", { id: 'youth-upload' });
-        
-        const file = files[0];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `youth-${Date.now()}.${fileExt}`;
-        const filePath = `youth/${fileName}`;
+      // Youth photo upload - now supports multiple files
+      const albumId = prompt("Enter Album ID to add these photos to (leave blank for now, or copy from admin albums list):") || null;
 
-        const { error: uploadError } = await supabase.storage
-          .from('youth-photos')
-          .upload(filePath, file);
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith('image/')) continue;
 
-        if (uploadError) throw uploadError;
+        try {
+          toast.loading(`Uploading ${file.name}...`, { id: 'youth-upload' });
 
-        const { data: urlData } = supabase.storage
-          .from('youth-photos')
-          .getPublicUrl(filePath);
+          const fileExt = file.name.split('.').pop();
+          const fileName = `youth-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+          const filePath = `youth/${fileName}`;
 
-        const caption = prompt("Enter a caption for this photo (optional)") || "";
+          const { error: uploadError } = await supabase.storage
+            .from('youth-photos')
+            .upload(filePath, file);
 
-        const { error: insertError } = await supabase
-          .from('youth_photos')
-          .insert({
-            url: urlData.publicUrl,
-            caption: caption || null,
-          });
+          if (uploadError) throw uploadError;
 
-        if (insertError) throw insertError;
+          const { data: urlData } = supabase.storage
+            .from('youth-photos')
+            .getPublicUrl(filePath);
 
-        toast.success("Youth photo uploaded!", { id: 'youth-upload' });
-        fetchYouthPhotos();
-      } catch (error: any) {
-        console.error('Youth upload error:', error);
-        toast.error("Failed to upload youth photo: " + (error.message || "Check bucket and policies"), { id: 'youth-upload' });
+          const caption = prompt(`Caption for ${file.name} (optional)`) || "";
+
+          const { error: insertError } = await supabase
+            .from('youth_photos')
+            .insert({
+              url: urlData.publicUrl,
+              caption: caption || null,
+              album_id: albumId,
+            });
+
+          if (insertError) throw insertError;
+        } catch (error: any) {
+          console.error('Youth upload error:', error);
+          toast.error(`Failed to upload ${file.name}`);
+        }
       }
+
+      toast.success("Youth photos uploaded!", { id: 'youth-upload' });
+      fetchYouthPhotos();
     }
   };
 
@@ -360,6 +367,7 @@ export default function AdminDashboard() {
     }
     if (tab === 'youth') {
       fetchYouthPhotos();
+      fetchYouthAlbums();
       loadSermonSettings();
     }
     if (tab === 'sermons') {
@@ -392,6 +400,42 @@ export default function AdminDashboard() {
       toast.error("Failed to load youth photos");
     } else {
       setYouthPhotos(data || []);
+    }
+  }
+
+  async function fetchYouthAlbums() {
+    const { data, error } = await supabase
+      .from('youth_albums')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching youth albums:', error);
+    } else {
+      setYouthAlbums(data || []);
+    }
+  }
+
+  async function createYouthAlbum() {
+    const title = prompt("Album title? (e.g. 'Summer 2025 Youth Camp')");
+    if (!title) return;
+
+    const date = prompt("Date (YYYY-MM-DD) or leave blank?", new Date().toISOString().split('T')[0]);
+
+    const { data, error } = await supabase
+      .from('youth_albums')
+      .insert({
+        title,
+        date: date || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("Failed to create album: " + error.message);
+    } else {
+      toast.success("Album created!");
+      setYouthAlbums(prev => [data, ...prev]);
     }
   }
 
@@ -1035,9 +1079,16 @@ export default function AdminDashboard() {
               </div>
               <div className="flex gap-3">
                 <button 
+                  onClick={createYouthAlbum}
+                  className="admin-big-button px-4 bg-[var(--color-navy)] text-white rounded-2xl text-sm"
+                >
+                  + Create New Album
+                </button>
+                <button 
                   onClick={async () => {
                     await fetchYouthPhotos();
-                    toast.success("Youth photos refreshed");
+                    await fetchYouthAlbums();
+                    toast.success("Youth data refreshed");
                   }} 
                   className="admin-big-button px-4 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
                 >
