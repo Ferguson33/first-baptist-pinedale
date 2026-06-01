@@ -215,6 +215,9 @@ export default function AdminDashboard() {
       console.log('%c[Youth Upload Debug] User ID:', 'color: #ff9800', currentUser?.id);
       console.log('%c[Youth Upload Debug] Selected Album ID:', 'color: #ff9800', albumId);
 
+      // LOUD MARKER - only exists in the new server-route code path
+      console.log('%c=== YOUTH ALBUMS SERVER ROUTE v2 ACTIVE (using /api/admin/youth/upload-photo) ===', 'color: lime; font-size: 16px; font-weight: bold; background: black');
+
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) continue;
 
@@ -1211,12 +1214,12 @@ export default function AdminDashboard() {
             <Upload className="w-10 h-10 text-[var(--color-gold-dark)] mb-4" />
             <div className="font-semibold text-xl">
               {selectedYouthAlbumId 
-                ? `Add Photos to Selected Album` 
+                ? `Add Photos to Selected Album (Server Route v2)` 
                 : "Drag & Drop New Youth Photos Here"}
             </div>
             <div className="text-[var(--color-stone-light)] mt-1">
               {selectedYouthAlbumId 
-                ? "Photos will be added to the highlighted album above" 
+                ? "Using server-side upload with service role (bypasses RLS)" 
                 : "or click to browse • JPG or PNG recommended"}
             </div>
             <input 
