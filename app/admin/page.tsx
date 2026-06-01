@@ -242,7 +242,7 @@ export default function AdminDashboard() {
           if (insertError) throw insertError;
         } catch (error: any) {
           console.error('Youth upload error:', error);
-          toast.error(`Failed to upload ${file.name}`);
+          toast.error(`Failed to upload ${file.name}: ${error.message || error}`);
         }
       }
 
@@ -438,6 +438,31 @@ export default function AdminDashboard() {
       toast.success("Album created!");
       setYouthAlbums(prev => [data, ...prev]);
       setSelectedYouthAlbumId(data.id); // Auto-select the new album for uploads
+    }
+  }
+
+  async function deleteYouthAlbum(id: string, title: string) {
+    if (!confirm(`Delete album "${title}" and all its photos? This cannot be undone.`)) return;
+
+    try {
+      // Because of ON DELETE CASCADE on the foreign key, photos will be deleted automatically
+      const { error } = await supabase.from('youth_albums').delete().eq('id', id);
+
+      if (error) throw error;
+
+      toast.success("Album deleted");
+      setYouthAlbums(prev => prev.filter((a: any) => a.id !== id));
+
+      // If the deleted album was selected, clear selection
+      if (selectedYouthAlbumId === id) {
+        setSelectedYouthAlbumId(null);
+      }
+
+      // Refresh photos in case some were cascade-deleted
+      fetchYouthPhotos();
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Failed to delete album: " + (error.message || "Unknown error"));
     }
   }
 
@@ -1101,7 +1126,10 @@ export default function AdminDashboard() {
 
           {/* Album selector for uploads */}
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Upload photos to this album:</label>
+            <label className="block text-sm font-medium mb-2">
+              Upload photos to this album: 
+              <span className="text-[var(--color-stone-light)] text-xs ml-2">(Make sure you ran youth-albums-setup.sql in Supabase)</span>
+            </label>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setSelectedYouthAlbumId(null)}
@@ -1124,6 +1152,36 @@ export default function AdminDashboard() {
               )}
             </div>
           </div>
+
+          {/* Album Management - list with delete */}
+          {youthAlbums.length > 0 && (
+            <div className="mb-6 bg-white border border-[var(--color-gold)]/20 rounded-3xl p-6">
+              <div className="font-medium mb-3 text-sm">Manage Albums</div>
+              <div className="space-y-2">
+                {youthAlbums.map((album: any) => (
+                  <div key={album.id} className="flex items-center justify-between border rounded-xl px-4 py-2 text-sm">
+                    <div>
+                      <span className="font-medium">{album.title}</span>
+                      {album.date && (
+                        <span className="ml-2 text-[var(--color-stone-light)]">
+                          {new Date(album.date).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => deleteYouthAlbum(album.id, album.title)}
+                      className="text-red-600 hover:text-red-700 text-xs px-3 py-1 rounded hover:bg-red-50"
+                    >
+                      Delete Album
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-[var(--color-stone-light)] mt-3">
+                Deleting an album will also delete all photos inside it.
+              </p>
+            </div>
+          )}
 
           {/* BIG DRAG & DROP ZONE - exact same style as Building */}
           <div 
