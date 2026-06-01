@@ -206,15 +206,8 @@ export default function AdminDashboard() {
       // Could open a modal in a full version
     }
     else if (type === 'youth') {
-      // Upload via server route (service role) so RLS doesn't block admin uploads to albums
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-
-      if (!accessToken) {
-        toast.error("No active session. Please log in again.");
-        return;
-      }
-
+      // Direct client upload (same pattern that just started working for you)
+      // Includes album_id so photos go into the selected album
       const albumId = selectedYouthAlbumId;
 
       for (const file of Array.from(files)) {
@@ -223,24 +216,33 @@ export default function AdminDashboard() {
         const toastId = toast.loading(`Uploading ${file.name}...`);
 
         try {
-          const formData = new FormData();
-          formData.append('file', file);
-          if (albumId) formData.append('album_id', albumId);
-          // No caption prompt — user requested no captions during upload
+          const fileExt = file.name.split('.').pop();
+          const fileName = `youth-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+          const filePath = `youth/${fileName}`;
 
-          const response = await fetch('/api/admin/youth/upload-photo', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-            },
-            body: formData,
-          });
+          const { error: uploadError } = await supabase.storage
+            .from('youth-photos')
+            .upload(filePath, file);
 
-          if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error || `Server error ${response.status}`);
-          }
+          if (uploadError) throw uploadError;
 
+          const { data: urlData } = supabase.storage
+            .from('youth-photos')
+            .getPublicUrl(filePath);
+
+          const { data: insertData, error: insertError } = await supabase
+            .from('youth_photos')
+            .insert({
+              url: urlData.publicUrl,
+              caption: null,           // no captions on upload, per your request
+              album_id: albumId || null,
+            })
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+
+          setYouthPhotos(prev => [insertData, ...prev]);
           toast.success("Uploaded!", { id: toastId });
         } catch (error: any) {
           console.error('Youth upload error:', error);
@@ -248,7 +250,7 @@ export default function AdminDashboard() {
         }
       }
 
-      // Refresh after batch
+      // Refresh list after the batch finishes
       fetchYouthPhotos();
     }
   };
