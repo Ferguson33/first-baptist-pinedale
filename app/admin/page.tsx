@@ -531,7 +531,16 @@ export default function AdminDashboard() {
         fetchEvents();
 
         // Force the public /events page to pick up the new data immediately
-        fetch('/api/revalidate?secret=dev-only-insecure&path=/events', { method: 'POST' }).catch(() => {});
+        try {
+          const res = await fetch('/api/revalidate?secret=dev-only-insecure&path=/events', { method: 'POST' });
+          if (res.ok) {
+            toast.success("Also triggered refresh of the public Events page.");
+          } else {
+            console.warn('Revalidation returned non-ok', await res.text());
+          }
+        } catch (e) {
+          console.warn('Revalidation call failed', e);
+        }
       }
     } catch (err: any) {
       console.error('[Events] Unexpected error in addEvent:', err);
@@ -570,7 +579,14 @@ export default function AdminDashboard() {
         fetchEvents();
 
         // Force the public /events page to pick up the change immediately
-        fetch('/api/revalidate?secret=dev-only-insecure&path=/events', { method: 'POST' }).catch(() => {});
+        try {
+          const res = await fetch('/api/revalidate?secret=dev-only-insecure&path=/events', { method: 'POST' });
+          if (res.ok) {
+            toast.success("Also triggered refresh of the public Events page.");
+          }
+        } catch (e) {
+          console.warn('Revalidation call failed', e);
+        }
       }
     } catch (err: any) {
       console.error('[Events] Unexpected error in editEvent:', err);
@@ -592,7 +608,14 @@ export default function AdminDashboard() {
         fetchEvents();
 
         // Force the public /events page to pick up the change immediately
-        fetch('/api/revalidate?secret=dev-only-insecure&path=/events', { method: 'POST' }).catch(() => {});
+        try {
+          const res = await fetch('/api/revalidate?secret=dev-only-insecure&path=/events', { method: 'POST' });
+          if (res.ok) {
+            toast.success("Also triggered refresh of the public Events page.");
+          }
+        } catch (e) {
+          console.warn('Revalidation call failed', e);
+        }
       }
     } catch (err: any) {
       console.error('[Events] Unexpected error in deleteEvent:', err);
