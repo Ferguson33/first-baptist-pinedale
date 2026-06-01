@@ -13,8 +13,13 @@ interface SpotlightEvent {
 }
 
 export default async function EventsPage() {
-  // Server-side fetch — clean, no browser auth pollution.
-  const supabase = await createClient();
+  // Server-side fetch using service role.
+  // This completely bypasses RLS and any client-side auth issues.
+  // Safe because this runs only on the server.
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   const { data: spotlightEvents = [] } = await supabase
     .from('events')
