@@ -47,7 +47,7 @@ export default function MissionsPage() {
         <div className="text-[var(--color-gold-dark)] text-xs tracking-[3px]">OUR HEART FOR THE WORLD</div>
         <h1 className="text-6xl tracking-tighter font-semibold mt-3 text-[var(--color-navy)]">Missions</h1>
         <p className="mt-4 text-xl text-[var(--color-stone)]">
-          We support 15 missionaries around the world through Faith Promise giving.
+          We support 15 missionaries around the world at $150 per month each through Faith Promise giving.
         </p>
       </div>
 
