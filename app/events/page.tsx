@@ -21,10 +21,16 @@ export default async function EventsPage() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { data: spotlightEvents = [] } = await supabase
+  const { data, error } = await supabase
     .from('events')
     .select('*')
     .order('date', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching spotlight events for static render:', error);
+  }
+
+  const spotlightEvents = data ?? [];
 
   return (
     <EventsClient spotlightEvents={spotlightEvents as SpotlightEvent[]} />
