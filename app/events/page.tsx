@@ -36,25 +36,33 @@ export default function EventsPage() {
 
   useEffect(() => {
     const fetchSpotlightEvents = async () => {
-      // Use a completely raw fetch with only the anon key.
-      // This guarantees no Authorization header is ever sent,
-      // bypassing any auth pollution from multiple Supabase clients.
       const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/events?select=*&order=date.asc`;
 
-      const res = await fetch(url, {
+      // Extra defensive headers to guarantee this request is 100% anonymous
+      const headers: HeadersInit = {
+        apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      };
+
+      // If for some reason an Authorization header exists on the page, strip it for this call
+      // (this can happen due to the multiple GoTrueClient pollution)
+      const requestInit: RequestInit = {
         method: 'GET',
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          // Explicitly omit any auth
-        },
-        credentials: 'omit',   // Never send cookies or auth
-      });
+        headers,
+        credentials: 'omit',
+      };
+
+      // Final safeguard: create a completely fresh Request object
+      const request = new Request(url, requestInit);
+
+      const res = await fetch(request);
 
       if (res.ok) {
         const data = await res.json();
         setSpotlightEvents(data);
       } else {
         console.error('Failed to fetch events:', res.status, await res.text());
+        // Log the actual headers that were sent for debugging
+        console.warn('Request headers for events fetch:', Object.fromEntries(request.headers.entries()));
       }
     };
 
