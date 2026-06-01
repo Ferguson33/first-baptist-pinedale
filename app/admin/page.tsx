@@ -483,86 +483,111 @@ export default function AdminDashboard() {
 
   // === Events (Spotlight / Special Events for public Events page) ===
   async function fetchEvents() {
-    const { data, error } = await supabase
-      .from('events')
-      .select('*')
-      .order('date', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .order('date', { ascending: true });
 
-    if (error) {
-      console.error('Error fetching events:', error);
-      toast.error("Failed to load events");
-    } else {
-      setEvents(data || []);
+      if (error) {
+        console.error('Error fetching events:', error);
+        toast.error("Failed to load events: " + (error.message || error));
+      } else {
+        setEvents(data || []);
+      }
+    } catch (err: any) {
+      console.error('Unexpected error in fetchEvents:', err);
+      toast.error("Failed to load events: " + (err?.message || 'Unknown error'));
     }
   }
 
   async function addEvent() {
-    const title = prompt("Event title?");
-    if (!title) return;
+    try {
+      const title = prompt("Event title?");
+      if (!title) return;
 
-    const date = prompt("Date (YYYY-MM-DD)?", new Date().toISOString().split('T')[0]);
-    if (!date) return;
+      const date = prompt("Date (YYYY-MM-DD)?", new Date().toISOString().split('T')[0]);
+      if (!date) return;
 
-    const time = prompt("Time (optional)?", "") || null;
-    const description = prompt("Description (optional)?", "") || null;
-    const location = prompt("Location (optional)?", "") || null;
+      const time = prompt("Time (optional)?", "") || null;
+      const description = prompt("Description (optional)?", "") || null;
+      const location = prompt("Location (optional)?", "") || null;
 
-    const { error } = await supabase.from('events').insert({
-      title,
-      date,
-      time,
-      description,
-      location,
-    });
+      console.log('[Events] Attempting insert with client:', supabase); // debug
 
-    if (error) {
-      toast.error("Failed to add event: " + error.message);
-    } else {
-      toast.success("Event added!");
-      fetchEvents();
+      const { error } = await supabase.from('events').insert({
+        title,
+        date,
+        time,
+        description,
+        location,
+      });
+
+      if (error) {
+        console.error('[Events] Insert error:', error);
+        toast.error("Failed to add event: " + (error.message || JSON.stringify(error)));
+      } else {
+        toast.success("Event added!");
+        fetchEvents();
+      }
+    } catch (err: any) {
+      console.error('[Events] Unexpected error in addEvent:', err);
+      toast.error("Failed to add event: " + (err?.message || 'Unknown error (check console)'));
     }
   }
 
   async function editEvent(ev: any) {
-    const title = prompt("New title?", ev.title);
-    if (title === null) return;
+    try {
+      const title = prompt("New title?", ev.title);
+      if (title === null) return;
 
-    const date = prompt("New date (YYYY-MM-DD)?", ev.date);
-    if (date === null) return;
+      const date = prompt("New date (YYYY-MM-DD)?", ev.date);
+      if (date === null) return;
 
-    const time = prompt("New time (optional)?", ev.time || "");
-    const description = prompt("New description (optional)?", ev.description || "");
-    const location = prompt("New location (optional)?", ev.location || "");
+      const time = prompt("New time (optional)?", ev.time || "");
+      const description = prompt("New description (optional)?", ev.description || "");
+      const location = prompt("New location (optional)?", ev.location || "");
 
-    const { error } = await supabase
-      .from('events')
-      .update({
-        title,
-        date,
-        time: time || null,
-        description: description || null,
-        location: location || null,
-      })
-      .eq('id', ev.id);
+      const { error } = await supabase
+        .from('events')
+        .update({
+          title,
+          date,
+          time: time || null,
+          description: description || null,
+          location: location || null,
+        })
+        .eq('id', ev.id);
 
-    if (error) {
-      toast.error("Failed to update event: " + error.message);
-    } else {
-      toast.success("Event updated!");
-      fetchEvents();
+      if (error) {
+        console.error('[Events] Update error:', error);
+        toast.error("Failed to update event: " + (error.message || JSON.stringify(error)));
+      } else {
+        toast.success("Event updated!");
+        fetchEvents();
+      }
+    } catch (err: any) {
+      console.error('[Events] Unexpected error in editEvent:', err);
+      toast.error("Failed to update event: " + (err?.message || 'Unknown error (check console)'));
     }
   }
 
   async function deleteEvent(id: string, title: string) {
-    if (!confirm(`Delete event "${title}"?`)) return;
+    try {
+      if (!confirm(`Delete event "${title}"?`)) return;
 
-    const { error } = await supabase.from('events').delete().eq('id', id);
+      const { error } = await supabase.from('events').delete().eq('id', id);
 
-    if (error) {
-      toast.error("Failed to delete event");
-    } else {
-      toast.success("Event deleted");
-      fetchEvents();
+      if (error) {
+        console.error('[Events] Delete error:', error);
+        toast.error("Failed to delete event: " + (error.message || JSON.stringify(error)));
+      } else {
+        toast.success("Event deleted");
+        fetchEvents();
+      }
+    } catch (err: any) {
+      console.error('[Events] Unexpected error in deleteEvent:', err);
+      toast.error("Failed to delete event: " + (err?.message || 'Unknown error (check console)'));
     }
   }
 
