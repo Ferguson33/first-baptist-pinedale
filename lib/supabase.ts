@@ -30,8 +30,9 @@ export type Profile = {
   spouse_birthdate?: string;
   notes?: string;
 
-  // Family system
-  family_id?: string;
+  // Deprecated / removed features (kept in DB only)
+  // family_id?: string;
+  // prayer_auto_approve?: boolean;
 };
 
 export type Sermon = {
