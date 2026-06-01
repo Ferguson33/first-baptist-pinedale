@@ -12,16 +12,21 @@ interface SpotlightEvent {
 }
 
 export default async function EventsPage() {
-  // Server-side fetch using a clean server client.
-  // This completely bypasses any browser auth pollution / multiple GoTrueClient issues.
-  const supabase = await createClient();
-
-  const { data: spotlightEvents = [] } = await supabase
-    .from('events')
-    .select('*')
-    .order('date', { ascending: true });
+  // Temporary placeholder event so we can establish the display first.
+  // This will be replaced later with real data from the admin.
+  const placeholderEvents: SpotlightEvent[] = [
+    {
+      id: 'placeholder-1',
+      title: 'Special Christmas Eve Service',
+      date: '2025-12-24',
+      time: '6:00 PM',
+      description: 'Join us for a beautiful candlelight service celebrating the birth of Christ. All are welcome.',
+      location: 'Sanctuary',
+      image_url: null,
+    },
+  ];
 
   return (
-    <EventsClient spotlightEvents={spotlightEvents as SpotlightEvent[]} />
+    <EventsClient spotlightEvents={placeholderEvents} />
   );
 }
