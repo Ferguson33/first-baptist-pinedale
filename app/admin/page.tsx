@@ -581,11 +581,17 @@ export default function AdminDashboard() {
         // Force the public /events page to pick up the change immediately
         try {
           const res = await fetch('/api/revalidate?secret=dev-only-insecure&path=/events', { method: 'POST' });
+          const json = await res.json().catch(() => ({}));
           if (res.ok) {
-            toast.success("Also triggered refresh of the public Events page.");
+            toast.success("Revalidation triggered for public /events page. Check the public page (hard refresh + new tab).");
+            console.log('[Admin Events] Revalidation response:', json);
+          } else {
+            toast.error("Revalidation call failed (see console)");
+            console.error('[Admin Events] Revalidation failed:', json);
           }
         } catch (e) {
-          console.warn('Revalidation call failed', e);
+          console.error('[Admin Events] Revalidation network error', e);
+          toast.error("Could not reach revalidation endpoint (see console)");
         }
       }
     } catch (err: any) {
@@ -610,11 +616,17 @@ export default function AdminDashboard() {
         // Force the public /events page to pick up the change immediately
         try {
           const res = await fetch('/api/revalidate?secret=dev-only-insecure&path=/events', { method: 'POST' });
+          const json = await res.json().catch(() => ({}));
           if (res.ok) {
-            toast.success("Also triggered refresh of the public Events page.");
+            toast.success("Revalidation triggered for public /events page. Check the public page (hard refresh + new tab).");
+            console.log('[Admin Events] Revalidation response:', json);
+          } else {
+            toast.error("Revalidation call failed (see console)");
+            console.error('[Admin Events] Revalidation failed:', json);
           }
         } catch (e) {
-          console.warn('Revalidation call failed', e);
+          console.error('[Admin Events] Revalidation network error', e);
+          toast.error("Could not reach revalidation endpoint (see console)");
         }
       }
     } catch (err: any) {
