@@ -22,12 +22,12 @@ export default async function EventsPage() {
   // Ensure this is never cached — always fetch the latest events from the DB.
   unstable_noStore();
 
-  // Server-side fetch using service role.
-  // This completely bypasses RLS and any client-side auth issues.
-  // Safe because this runs only on the server.
+  // Public read using the anon key.
+  // We have a proper "Public can view events" policy (TO public USING true),
+  // so the anon key has SELECT access. This is the correct way for public data.
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
   const { data, error } = await supabase
@@ -42,7 +42,7 @@ export default async function EventsPage() {
   const spotlightEvents = data ?? [];
 
   // TEMPORARY DEBUG - remove after we confirm data flow
-  console.log('[PUBLIC /events] Service role fetch result:', {
+  console.log('[PUBLIC /events] Anon key fetch result:', {
     count: spotlightEvents.length,
     events: spotlightEvents.map(e => ({ id: e.id, title: e.title, date: e.date })),
     error: error?.message,
@@ -56,7 +56,7 @@ export default async function EventsPage() {
       {/* TEMPORARY DEBUG PANEL - visible on the public page */}
       <div className="max-w-4xl mx-auto px-6 pb-20 text-xs text-stone-500 border-t pt-8 mt-8">
         <div className="font-mono">
-          DEBUG: Fetched <strong>{spotlightEvents.length}</strong> event(s) from Supabase (service role) at {new Date().toLocaleTimeString()}
+          DEBUG: Fetched <strong>{spotlightEvents.length}</strong> event(s) from Supabase (anon key) at {new Date().toLocaleTimeString()}
         </div>
         {spotlightEvents.length > 0 && (
           <ul className="mt-2 space-y-1">
