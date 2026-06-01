@@ -1,9 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-
-const supabase = createClient();
 
 interface SpotlightEvent {
   id: string;
@@ -19,13 +16,21 @@ export default function EventsPage() {
 
   useEffect(() => {
     const fetchSpotlightEvents = async () => {
-      const { data } = await supabase
-        .from('events')
-        .select('*')
-        .order('date', { ascending: true });
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/events?select=*&order=date.asc`;
 
-      if (data) {
+      const response = await fetch(url, {
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          // Intentionally do NOT send Authorization header.
+          // This avoids 401s caused by stale auth tokens from multiple Supabase clients.
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
         setSpotlightEvents(data);
+      } else {
+        console.error('Failed to fetch events:', response.status);
       }
     };
 
