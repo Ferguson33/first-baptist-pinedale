@@ -54,6 +54,11 @@ export default function EventsPage() {
       // Final safeguard: create a completely fresh Request object
       const request = new Request(url, requestInit);
 
+      // Ultra-defensive: explicitly delete any Authorization header that might have leaked
+      // from other Supabase clients on the page (due to the multiple GoTrueClient warning).
+      request.headers.delete('authorization');
+      request.headers.delete('Authorization');
+
       const res = await fetch(request);
 
       if (res.ok) {
