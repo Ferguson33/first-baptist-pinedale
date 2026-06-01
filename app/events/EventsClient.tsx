@@ -1,6 +1,6 @@
-import React from 'react';
-import { createClient } from '@/lib/supabase/server';
-import EventsClient from './EventsClient';
+"use client";
+
+import React, { useState } from 'react';
 
 interface SpotlightEvent {
   id: string;
@@ -11,20 +11,45 @@ interface SpotlightEvent {
   location?: string | null;
 }
 
-export default async function EventsPage() {
-  // Server-side fetch using a clean server client.
-  // This completely bypasses any browser auth pollution / multiple GoTrueClient issues.
-  const supabase = await createClient();
-
-  const { data: spotlightEvents = [] } = await supabase
-    .from('events')
-    .select('*')
-    .order('date', { ascending: true });
-
-  return (
-    <EventsClient spotlightEvents={spotlightEvents as SpotlightEvent[]} />
-  );
+interface EventsClientProps {
+  spotlightEvents: SpotlightEvent[];
 }
+
+export default function EventsClient({ spotlightEvents }: EventsClientProps) {
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Only show spotlight if there are events
+  const hasSpotlight = spotlightEvents.length > 0;
+
+  const openGallery = (index: number) => {
+    setCurrentIndex(index);
+    setGalleryOpen(true);
+  };
+
+  const closeGallery = () => {
+    setGalleryOpen(false);
+  };
+
+  // Keyboard navigation for lightbox
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!galleryOpen) return;
+
+      if (e.key === 'Escape') {
+        closeGallery();
+      }
+      if (e.key === 'ArrowLeft') {
+        setCurrentIndex((prev) => (prev === 0 ? spotlightEvents.length - 1 : prev - 1));
+      }
+      if (e.key === 'ArrowRight') {
+        setCurrentIndex((prev) => (prev === spotlightEvents.length - 1 ? 0 : prev + 1));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [galleryOpen, spotlightEvents.length]);
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-16">
@@ -37,14 +62,15 @@ export default async function EventsPage() {
       </div>
 
       {/* Spotlight / Special Events - Only shows when admin adds something */}
-      {spotlightEvents.length > 0 && (
+      {hasSpotlight && (
         <div className="mb-12">
           <div className="uppercase text-xs tracking-[3px] text-[var(--color-gold-dark)] mb-3">Special Notice</div>
           <div className="space-y-4">
-            {spotlightEvents.map((event) => (
+            {spotlightEvents.map((event, index) => (
               <div 
                 key={event.id} 
-                className="bg-[var(--color-navy)] text-white rounded-3xl p-6 md:p-8 shadow-lg border border-[var(--color-gold)]/30"
+                onClick={() => openGallery(index)}
+                className="bg-[var(--color-navy)] text-white rounded-3xl p-6 md:p-8 shadow-lg border border-[var(--color-gold)]/30 cursor-pointer hover:shadow-xl transition"
               >
                 <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div>
@@ -108,7 +134,6 @@ export default async function EventsPage() {
               <div className="font-semibold text-[var(--color-navy)]">Nursery</div>
               <div className="text-[var(--color-stone)]">
                 Available during Sunday School and the morning service.
-                {/* TODO: Replace this placeholder link with the actual Google Calendar share link for nursery scheduling */}
                 <div className="mt-2">
                   <a
                     href="https://calendar.google.com/calendar/embed?src=jncferguson18%40gmail.com&ctz=America%2FDenver"
@@ -136,7 +161,6 @@ export default async function EventsPage() {
           Special events, fellowships, and activities will appear here once our church calendar is set up.
         </p>
 
-        {/* Placeholder for Google Calendar Embed */}
         <div className="border-2 border-dashed border-[var(--color-gold)]/40 rounded-3xl p-10 md:p-16 bg-[var(--color-cream)] text-center min-h-[420px] flex flex-col items-center justify-center">
           <div className="max-w-md">
             <div className="font-semibold text-xl text-[var(--color-navy)] mb-3">
@@ -162,7 +186,79 @@ export default async function EventsPage() {
         </ul>
       </div>
 
+      {/* Photo Gallery Lightbox for Spotlight Events */}
+      {galleryOpen && spotlightEvents.length > 0 && (
+        <div 
+          className="fixed inset-0 bg-black/95 z-[70] flex flex-col"
+          onClick={closeGallery}
+        >
+          <div className="flex-shrink-0 h-14 flex items-center justify-between px-4 bg-black/70 z-[80]">
+            <div className="text-white text-sm">
+              {currentIndex + 1} / {spotlightEvents.length}
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); closeGallery(); }}
+              className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-[var(--color-navy)] text-3xl font-bold hover:bg-[var(--color-gold)] hover:text-white shadow-lg transition"
+            >
+              ×
+            </button>
+          </div>
 
+          <div 
+            className="flex-1 flex items-center justify-center p-4 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {spotlightEvents.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentIndex((prev) => (prev === 0 ? spotlightEvents.length - 1 : prev - 1));
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white text-4xl hover:text-[var(--color-gold)] transition z-10"
+              >
+                ‹
+              </button>
+            )}
+
+            <div className="flex flex-col items-center max-w-[95vw] max-h-[calc(100vh-120px)]">
+              <img 
+                src={spotlightEvents[currentIndex]?.image_url || '/placeholder-event.jpg'} 
+                alt={spotlightEvents[currentIndex]?.title} 
+                className="max-w-full max-h-[70vh] object-contain bg-[var(--color-cream)] shadow-2xl" 
+              />
+              <div className="mt-4 text-center text-white">
+                <div className="text-xl font-semibold">{spotlightEvents[currentIndex]?.title}</div>
+                <div className="text-[var(--color-gold-light)]">
+                  {new Date(spotlightEvents[currentIndex].date).toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                  {spotlightEvents[currentIndex].time && ` • ${spotlightEvents[currentIndex].time}`}
+                </div>
+              </div>
+            </div>
+
+            {spotlightEvents.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentIndex((prev) => (prev === spotlightEvents.length - 1 ? 0 : prev + 1));
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white text-4xl hover:text-[var(--color-gold)] transition z-10"
+              >
+                ›
+              </button>
+            )}
+          </div>
+
+          {spotlightEvents.length > 1 && (
+            <div className="flex-shrink-0 pb-4 text-center text-white/60 text-xs">
+              Use ← → arrow keys or click the arrows to navigate
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
