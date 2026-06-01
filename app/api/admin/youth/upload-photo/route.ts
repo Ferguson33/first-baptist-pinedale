@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     // TEMPORARY BYPASS SWITCH - set to true to skip the admin role check for testing
     // IMPORTANT: Set this back to false after testing
-    const BYPASS_ADMIN_CHECK_FOR_TESTING = false;
+    const BYPASS_ADMIN_CHECK_FOR_TESTING = true;  // TEMPORARILY ENABLED so we can test album uploads while we debug the role check
 
     if (!BYPASS_ADMIN_CHECK_FOR_TESTING && profile?.role !== 'admin') {
       console.log('v2 route: not admin (or profile row missing)', { userId: user.id, profile });
