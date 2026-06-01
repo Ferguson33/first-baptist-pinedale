@@ -237,15 +237,21 @@ export default function AdminDashboard() {
 
           const caption = prompt(`Caption for ${file.name} (optional)`) || "";
 
-          const { error: insertError } = await supabase
-            .from('youth_photos')
-            .insert({
+          // Use server-side API route with service role key to bypass RLS issues
+          const response = await fetch('/api/admin/youth/upload-photo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
               url: urlData.publicUrl,
               caption: caption || null,
               album_id: albumId,
-            });
+            }),
+          });
 
-          if (insertError) throw insertError;
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to save photo metadata');
+          }
         } catch (error: any) {
           console.error('%c[Youth Upload Debug] Full error during insert:', 'color: red; font-weight: bold', error);
           console.error('Youth upload error:', error);
