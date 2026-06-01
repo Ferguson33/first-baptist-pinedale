@@ -36,15 +36,25 @@ export default function EventsPage() {
 
   useEffect(() => {
     const fetchSpotlightEvents = async () => {
-      const { data, error } = await publicSupabase
-        .from('events')
-        .select('*')
-        .order('date', { ascending: true });
+      // Use a completely raw fetch with only the anon key.
+      // This guarantees no Authorization header is ever sent,
+      // bypassing any auth pollution from multiple Supabase clients.
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/events?select=*&order=date.asc`;
 
-      if (error) {
-        console.error('Failed to fetch events:', error);
-      } else if (data) {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          // Explicitly omit any auth
+        },
+        credentials: 'omit',   // Never send cookies or auth
+      });
+
+      if (res.ok) {
+        const data = await res.json();
         setSpotlightEvents(data);
+      } else {
+        console.error('Failed to fetch events:', res.status, await res.text());
       }
     };
 
