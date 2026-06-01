@@ -26,40 +26,25 @@ export async function POST(request: NextRequest) {
     );
 
     if (userError || !user) {
-      console.log('v2 route: getUser failed', userError);
-      return NextResponse.json({ error: 'Unauthorized - invalid token' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    // ==================== LAST TRY DIAGNOSTIC ====================
-    console.log('=== LAST TRY DIAGNOSTIC - YOUTH UPLOAD ROUTE V3 ===');
-    console.log('NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
-    console.log('Service role key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
-    console.log('User ID from JWT:', user.id);
-    console.log('User email from JWT:', user.email);
 
     const supabaseAdminForCheck = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     );
 
-    const { data: profile, error: profileErr } = await supabaseAdminForCheck
+    const { data: profile } = await supabaseAdminForCheck
       .from('profiles')
-      .select('id, email, full_name, role')
+      .select('role')
       .eq('id', user.id)
       .single();
 
-    console.log('Profile lookup result:', profile);
-    console.log('Profile lookup error:', profileErr);
-    console.log('=== END LAST TRY DIAGNOSTIC ===');
-
     if (profile?.role !== 'admin') {
-      console.log('v2 route: not admin (or profile row missing)', { userId: user.id, profile });
-      return NextResponse.json({ 
-        error: 'Forbidden - Admin access required' 
-      }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    console.log(`%c=== ${routeVersion} JWT validated + admin confirmed for ${user.email} ===`, 'color: #00ff00');
+    console.log('Youth upload authorized for', user.email);
 
     // Parse multipart form data (file + optional album_id + caption)
     const formData = await request.formData();
@@ -71,11 +56,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided in form data' }, { status: 400 });
     }
 
-    console.log(`%c=== ${routeVersion} AUTH OK - processing file: ${file.name} (album: ${album_id || 'none'}) ===`, 'color: #00ff00; font-size: 13px');
+    console.log('Processing youth upload:', file.name);
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.error('v2 FATAL: SUPABASE_SERVICE_ROLE_KEY is not set in environment');
-      return NextResponse.json({ error: 'Server misconfiguration: service role key missing (set SUPABASE_SERVICE_ROLE_KEY in Vercel)' }, { status: 500 });
+      console.error('SUPABASE_SERVICE_ROLE_KEY is not set');
+      return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
     }
 
     // Create Supabase client with service role (bypasses ALL RLS for storage + table)
@@ -99,8 +84,8 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error('v2 SERVICE ROLE STORAGE UPLOAD ERROR:', uploadError);
-      return NextResponse.json({ error: 'Storage upload failed: ' + uploadError.message }, { status: 500 });
+      console.error('Youth storage upload error:', uploadError);
+      return NextResponse.json({ error: 'Storage upload failed' }, { status: 500 });
     }
 
     // Get public URL (service role client works the same)
@@ -122,13 +107,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error('v2 SERVICE ROLE DB INSERT ERROR:', insertError);
-      // Best effort cleanup of orphaned storage file
+      console.error('Youth DB insert error:', insertError);
       await supabaseAdmin.storage.from('youth-photos').remove([filePath]).catch(() => {});
-      return NextResponse.json({ error: 'DB insert failed: ' + insertError.message }, { status: 500 });
+      return NextResponse.json({ error: 'DB insert failed' }, { status: 500 });
     }
 
-    console.log(`%c=== ${routeVersion} SUCCESS === photo id=${insertData?.id} album=${album_id || 'uncategorized'}`, 'color: lime; font-weight: bold');
+    console.log('Youth photo uploaded successfully:', insertData?.id);
 
     return NextResponse.json({ 
       success: true, 
@@ -137,7 +121,7 @@ export async function POST(request: NextRequest) {
       album_id: album_id || null 
     });
   } catch (error: any) {
-    console.error('API route v2 uncaught error:', error);
-    return NextResponse.json({ error: error.message || 'Unknown server error in v2 route' }, { status: 500 });
+    console.error('Youth upload error:', error);
+    return NextResponse.json({ error: error.message || 'Upload failed' }, { status: 500 });
   }
 }
