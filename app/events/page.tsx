@@ -1,5 +1,5 @@
 import React from 'react';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import EventsClient from './EventsClient';
 
 interface SpotlightEvent {
