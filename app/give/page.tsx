@@ -32,6 +32,11 @@ export default function GivePage() {
             <div className="text-[10px] text-[var(--color-stone-light)] hidden sm:block">Secure • Powered by Zeffy</div>
           </div>
 
+          {/* Clear note about Zeffy fee */}
+          <div className="mb-4 px-1 text-[13px] text-[var(--color-stone)]">
+            Zeffy automatically includes an optional processing fee. You can set this to <span className="font-semibold">$0</span> before submitting your gift.
+          </div>
+
           <div className="rounded-2xl overflow-hidden border border-[var(--color-gold)]/15 bg-[#f9f7f2]">
             <iframe
               src="https://www.zeffy.com/en-US/donation-form/first-baptist-church-giving"
