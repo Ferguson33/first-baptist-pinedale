@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// Force redeploy to pick up SUPABASE_SERVICE_ROLE_KEY (added 2026-06-02)
+
 export async function POST(request: NextRequest) {
   try {
     // Get the user's session from the request (sent by the browser client)
