@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 
 interface Sermon {
   id: string;
@@ -15,6 +15,7 @@ interface Sermon {
 }
 
 export default function SermonsPage() {
+  const supabase = createClient();
   const { isApprovedMember, user } = useAuth();
   const [sermons, setSermons] = useState<Sermon[]>([]);
   const [liveVideoId, setLiveVideoId] = useState<string | null>(null);

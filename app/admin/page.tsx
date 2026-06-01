@@ -8,7 +8,6 @@ import {
   CheckCircle, XCircle, Trash2, Edit2, Plus 
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
 import { createClient } from '@/lib/supabase/client';
 import { format } from 'date-fns';
 
@@ -51,6 +50,7 @@ interface LocalEvent {
 }
 
 export default function AdminDashboard() {
+  const supabase = createClient();
   const { user, profile, isAdmin, loading } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');

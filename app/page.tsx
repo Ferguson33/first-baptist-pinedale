@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { ArrowRight, Clock, MapPin, Users, Heart } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 
 export default function Home() {
+  const supabase = createClient();
   const [physicalProgress, setPhysicalProgress] = useState<number | null>(null);
 
   // ============================================

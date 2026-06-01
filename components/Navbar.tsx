@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { Menu, X, User, LogOut, Shield, Users, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createClient } from '@/lib/supabase/client';
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);

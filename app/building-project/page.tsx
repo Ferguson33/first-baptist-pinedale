@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 
 interface BuildingProgress {
   physical_percent: number;
@@ -18,6 +18,7 @@ interface BuildingPhoto {
 }
 
 export default function BuildingProject() {
+  const supabase = createClient();
   const [progress, setProgress] = useState<BuildingProgress | null>(null);
   const [photos, setPhotos] = useState<BuildingPhoto[]>([]);
   const [loading, setLoading] = useState(true);
