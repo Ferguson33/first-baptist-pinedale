@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 
 interface Missionary {
   name: string;
@@ -29,29 +29,7 @@ const missionaries: Missionary[] = [
 ];
 
 export default function MissionsPage() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [countryFilter, setCountryFilter] = useState("");
   const [selectedMissionary, setSelectedMissionary] = useState<Missionary | null>(null);
-
-  const countries = useMemo(() => {
-    const unique = Array.from(new Set(missionaries.map(m => m.country))).sort();
-    return unique;
-  }, []);
-
-  const filteredMissionaries = useMemo(() => {
-    return missionaries.filter(m => {
-      const term = searchTerm.toLowerCase();
-      const matchesSearch = 
-        m.name.toLowerCase().includes(term) ||
-        m.field.toLowerCase().includes(term) ||
-        m.country.toLowerCase().includes(term) ||
-        m.org.toLowerCase().includes(term);
-
-      const matchesCountry = !countryFilter || m.country === countryFilter;
-
-      return matchesSearch && matchesCountry;
-    });
-  }, [searchTerm, countryFilter]);
 
   const getInitials = (name: string) => {
     return name
@@ -65,60 +43,17 @@ export default function MissionsPage() {
   return (
     <div className="max-w-6xl mx-auto px-6 py-16">
       {/* Header */}
-      <div className="text-center mb-12">
-        <div className="uppercase text-xs tracking-[3px] text-[var(--color-gold-dark)]">OUR HEART FOR THE WORLD</div>
-        <h1 className="text-6xl font-semibold tracking-tighter mt-3 text-[var(--color-navy)]">Missions</h1>
-        <p className="mt-4 text-xl text-[var(--color-stone)] max-w-2xl mx-auto">
-          We are committed to supporting those who are taking the gospel to the ends of the earth.
+      <div className="max-w-3xl mx-auto text-center mb-12">
+        <div className="text-[var(--color-gold-dark)] text-xs tracking-[3px]">OUR HEART FOR THE WORLD</div>
+        <h1 className="text-6xl tracking-tighter font-semibold mt-3 text-[var(--color-navy)]">Missions</h1>
+        <p className="mt-4 text-xl text-[var(--color-stone)]">
+          We support 15 missionaries around the world through Faith Promise giving.
         </p>
-      </div>
-
-      {/* Support Summary */}
-      <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-10 md:p-14 text-center mb-12">
-        <div className="max-w-md mx-auto">
-          <h2 className="text-2xl font-semibold text-[var(--color-navy)] mb-4">Our Mission Support</h2>
-          <p className="text-[var(--color-stone)]">
-            By God’s grace, through Faith Promise giving, this church supports <strong>15 missionaries</strong> worldwide at $150 per month each.
-          </p>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8 items-center justify-between">
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-          <input
-            type="text"
-            placeholder="Search by name, field, or organization..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-4 py-3 border border-[var(--color-gold)]/30 rounded-full text-sm w-full sm:w-80 focus:outline-none focus:border-[var(--color-gold)]"
-          />
-          <select
-            value={countryFilter}
-            onChange={(e) => setCountryFilter(e.target.value)}
-            className="px-4 py-3 border border-[var(--color-gold)]/30 rounded-full text-sm bg-white focus:outline-none focus:border-[var(--color-gold)]"
-          >
-            <option value="">All Countries</option>
-            {countries.map(country => (
-              <option key={country} value={country}>{country}</option>
-            ))}
-          </select>
-        </div>
-        <button 
-          onClick={() => { setSearchTerm(""); setCountryFilter(""); }}
-          className="px-5 py-3 text-sm border border-[var(--color-gold)]/40 rounded-full hover:bg-[var(--color-cream)] transition"
-        >
-          Clear Filters
-        </button>
-      </div>
-
-      <div className="text-sm text-[var(--color-stone-light)] mb-6">
-        Showing {filteredMissionaries.length} of {missionaries.length} missionaries
       </div>
 
       {/* Missionary Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredMissionaries.map((missionary, index) => (
+        {missionaries.map((missionary, index) => (
           <div 
             key={index}
             className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden hover:border-[var(--color-gold)]/40 transition-all group cursor-pointer"
@@ -174,12 +109,6 @@ export default function MissionsPage() {
           </div>
         ))}
       </div>
-
-      {filteredMissionaries.length === 0 && (
-        <div className="text-center py-12 text-[var(--color-stone-light)]">
-          No missionaries match your search.
-        </div>
-      )}
 
       {/* Footer note */}
       <div className="mt-16 text-center text-sm text-[var(--color-stone-light)]">
