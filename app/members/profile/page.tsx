@@ -39,16 +39,16 @@ export default function MemberProfilePage() {
 
         <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
           <Link 
-            href="/members" 
+            href="/members/directory" 
             className="px-8 py-3 bg-[var(--color-navy)] text-white rounded-2xl font-medium"
           >
-            View Member Directory
+            Member Directory
           </Link>
           <Link 
-            href="/members/directory" 
+            href="/prayer-bulletin" 
             className="px-8 py-3 border border-[var(--color-gold)]/40 hover:bg-[var(--color-cream)] rounded-2xl font-medium"
           >
-            Dedicated directory page
+            Prayer Bulletin
           </Link>
         </div>
       </div>

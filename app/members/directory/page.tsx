@@ -9,7 +9,7 @@ import Link from 'next/link';
  * Embeds the official First Baptist Church Directory Google Doc (published version).
  * Protected to approved members only.
  *
- * Primary embed is also shown on /members (portal home) for convenience.
+ * This is one of the primary destinations for approved members from the user menu.
  * This dedicated route provides a clean, distraction-free view + direct bookmarkable URL.
  *
  * To update the document the office uses the edit link.
@@ -37,7 +37,6 @@ export default function MemberDirectory() {
         <h1 className="text-4xl font-semibold tracking-tight mt-1">Member Directory</h1>
         <p className="text-[var(--color-stone)] text-sm mt-2 max-w-2xl">
           Current contact information for our church family. Maintained by the church office in Google Docs.
-          <span className="ml-2"><Link href="/members" className="underline hover:text-[var(--color-navy)]">Back to Members Portal home</Link></span>
         </p>
       </div>
 

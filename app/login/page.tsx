@@ -25,7 +25,7 @@ export default function LoginPage() {
         if (res.error) {
           toast.error(res.error);
         } else {
-          router.push('/members');
+          router.push('/members/directory');
         }
       } else {
         if (!fullName) {
@@ -38,7 +38,7 @@ export default function LoginPage() {
           toast.error(res.error);
         } else {
           toast.success("Account created! Your membership request is now pending pastor approval.");
-          router.push('/members');
+          router.push('/members/directory');
         }
       }
     } finally {

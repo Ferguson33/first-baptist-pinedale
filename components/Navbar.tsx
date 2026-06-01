@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { Menu, X, User, LogOut, Shield } from 'lucide-react';
+import { Menu, X, User, LogOut, Shield, Users, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 
@@ -103,15 +103,20 @@ export function Navbar() {
                           </div>
                         </div>
 
+                        {showMemberLinks && (
+                          <>
+                            <Link href="/members/directory" className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)]" onClick={() => setShowUserMenu(false)}>
+                              <Users className="w-4 h-4" /> Member Directory
+                            </Link>
+                            <Link href="/prayer-bulletin" className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)]" onClick={() => setShowUserMenu(false)}>
+                              <BookOpen className="w-4 h-4" /> Prayer Bulletin
+                            </Link>
+                          </>
+                        )}
+
                         {isAdmin && (
                           <Link href="/admin" className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)] text-[var(--color-navy)]" onClick={() => setShowUserMenu(false)}>
                             <Shield className="w-4 h-4" /> Admin Dashboard
-                          </Link>
-                        )}
-
-                        {showMemberLinks && (
-                          <Link href="/members" className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)]" onClick={() => setShowUserMenu(false)}>
-                            <User className="w-4 h-4" /> Members Portal
                           </Link>
                         )}
 
@@ -184,7 +189,10 @@ export function Navbar() {
               ))}
               
               {showMemberLinks && (
-                <Link href="/members" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>Members Portal</Link>
+                <>
+                  <Link href="/members/directory" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>Member Directory</Link>
+                  <Link href="/prayer-bulletin" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>Prayer Bulletin</Link>
+                </>
               )}
 
               {isAdmin && (
