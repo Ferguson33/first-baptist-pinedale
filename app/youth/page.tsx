@@ -75,6 +75,18 @@ export default function YouthMinistry() {
     });
   }
 
+  // Safe album date formatter (avoids timezone "losing a day" issues)
+  function formatAlbumDate(dateString: string | null | undefined) {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-').map(Number);
+    if (!year || !month || !day) return '';
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long' 
+    });
+  }
+
   const fetchYouthContent = async () => {
     const { data } = await supabase
       .from('sermon_settings')
@@ -277,7 +289,7 @@ export default function YouthMinistry() {
                     <div className="font-semibold text-xl tracking-tight">{album.title}</div>
                     {album.date && (
                       <div className="text-sm text-[var(--color-gold-dark)] mt-1">
-                        {new Date(album.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+                        {formatAlbumDate(album.date)}
                       </div>
                     )}
                     <div className="text-xs text-[var(--color-stone-light)] mt-2">

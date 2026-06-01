@@ -408,6 +408,18 @@ export default function AdminDashboard() {
     }
   }
 
+  // Safe album date formatter (prevents "losing a day" due to timezone)
+  function formatAlbumDate(dateString: string | null | undefined) {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-').map(Number);
+    if (!year || !month || !day) return '';
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long' 
+    });
+  }
+
   async function fetchYouthAlbums() {
     const { data, error } = await supabase
       .from('youth_albums')
@@ -1142,7 +1154,7 @@ export default function AdminDashboard() {
                     className={`px-4 py-2 rounded-full text-sm border ${selectedYouthAlbumId === album.id ? 'bg-[var(--color-navy)] text-white' : 'hover:bg-[var(--color-cream)]'}`}
                   >
                     {album.title}
-                    {album.date && ` (${new Date(album.date).getFullYear()})`}
+                    {album.date && ` — ${formatAlbumDate(album.date)}`}
                   </button>
                 ))}
               </div>
@@ -1157,7 +1169,7 @@ export default function AdminDashboard() {
                     <div key={album.id} className="flex items-center justify-between border rounded-xl px-4 py-2 text-sm">
                       <div>
                         <span className="font-medium">{album.title}</span>
-                        {album.date && <span className="ml-2 text-[var(--color-stone-light)]">{new Date(album.date).toLocaleDateString()}</span>}
+                        {album.date && <span className="ml-2 text-[var(--color-stone-light)]">{formatAlbumDate(album.date)}</span>}
                       </div>
                       <button
                         onClick={() => deleteYouthAlbum(album.id, album.title)}
