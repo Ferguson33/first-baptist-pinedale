@@ -35,26 +35,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized - invalid token' }, { status: 401 });
     }
 
-    // IMPORTANT: Use service role client for the profile role check.
-    // The plain anon client + getUser(token) does not reliably attach the user's JWT
-    // for subsequent PostgREST queries, so RLS on profiles can cause this lookup to fail
-    // even when the user really is an admin (this was producing the 403 you saw).
+    // ==================== LAST TRY DIAGNOSTIC ====================
+    console.log('=== LAST TRY DIAGNOSTIC - YOUTH UPLOAD ROUTE V3 ===');
+    console.log('NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log('Service role key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    console.log('User ID from JWT:', user.id);
+    console.log('User email from JWT:', user.email);
+
     const supabaseAdminForCheck = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.SUPABASE_SERVICE_ROLE_KEY || ''
     );
 
-    const { data: profile } = await supabaseAdminForCheck
+    const { data: profile, error: profileErr } = await supabaseAdminForCheck
       .from('profiles')
-      .select('role')
+      .select('id, email, full_name, role')
       .eq('id', user.id)
       .single();
 
-    if (profile?.role !== 'admin') {
+    console.log('Profile lookup result:', profile);
+    console.log('Profile lookup error:', profileErr);
+    console.log('=== END LAST TRY DIAGNOSTIC ===');
+
+    // TEMPORARY BYPASS SWITCH - set to true to skip the admin role check for testing
+    // IMPORTANT: Set this back to false after testing
+    const BYPASS_ADMIN_CHECK_FOR_TESTING = false;
+
+    if (!BYPASS_ADMIN_CHECK_FOR_TESTING && profile?.role !== 'admin') {
       console.log('v2 route: not admin (or profile row missing)', { userId: user.id, profile });
       return NextResponse.json({ 
         error: 'Forbidden - Admin access required (ROUTE-V3-SERVICE-ROLE-CHECK)' 
       }, { status: 403 });
+    }
+
+    if (BYPASS_ADMIN_CHECK_FOR_TESTING) {
+      console.log('!!! WARNING: ADMIN CHECK IS TEMPORARILY BYPASSED !!!');
     }
 
     console.log(`%c=== ${routeVersion} JWT validated + admin confirmed for ${user.email} ===`, 'color: #00ff00');
