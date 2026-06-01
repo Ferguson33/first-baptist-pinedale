@@ -12,6 +12,11 @@ interface SpotlightEvent {
   image_url?: string | null;
 }
 
+// Force the page to be dynamic (fresh fetch on every request).
+// This ensures that events created in the admin appear on the public
+// /events page immediately instead of being frozen at build time.
+export const dynamic = 'force-dynamic';
+
 export default async function EventsPage() {
   // Server-side fetch using service role.
   // This completely bypasses RLS and any client-side auth issues.
