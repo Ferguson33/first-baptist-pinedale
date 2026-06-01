@@ -25,8 +25,8 @@ export default function MembersPortal() {
         <p className="text-lg text-[var(--color-stone)] mt-2">Thank you for being part of our church family.</p>
       </div>
 
-      {/* Three main cards - evenly spaced and balanced */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+      {/* Two main cards - clean and simple */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 max-w-4xl">
         <Link 
           href="/members/directory" 
           className="block border bg-white p-7 sm:p-8 rounded-3xl hover:border-[var(--color-gold)] h-full flex flex-col"
@@ -43,23 +43,6 @@ export default function MembersPortal() {
           <div className="font-semibold text-2xl">Prayer Bulletin</div>
           <p className="text-sm mt-2 flex-1">Current prayer focuses and updates (maintained in Google Doc).</p>
           <div className="mt-auto pt-6 text-xs text-[var(--color-gold-dark)]">VIEW THE BULLETIN →</div>
-        </Link>
-
-        <Link 
-          href="/members/profile" 
-          className="block border bg-white p-7 sm:p-8 rounded-3xl hover:border-[var(--color-gold)] h-full flex flex-col"
-        >
-          <div className="font-semibold text-2xl">My Profile</div>
-          <div className="text-sm mt-4 space-y-1 text-[var(--color-stone)] flex-1">
-            <div><span className="font-medium">Name:</span> {profile?.full_name}</div>
-            <div><span className="font-medium">Email:</span> {profile?.email}</div>
-            <div><span className="font-medium">Status:</span> {profile?.role === 'approved' ? 'Approved Member' : profile?.role}</div>
-          </div>
-          <div className="text-xs mt-6 text-[var(--color-gold-dark)] font-medium">
-            {profile?.role === 'pending' 
-              ? "Complete your profile while waiting for approval →" 
-              : "Update your photo, birthdate, anniversary, and contact info →"}
-          </div>
         </Link>
       </div>
     </div>
