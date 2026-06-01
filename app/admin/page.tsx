@@ -209,6 +209,12 @@ export default function AdminDashboard() {
       // Youth photo upload - supports multiple files + selected album
       const albumId = selectedYouthAlbumId;
 
+      // === DEBUG: Check who the client thinks is logged in ===
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      console.log('%c[Youth Upload Debug] Current Supabase User:', 'color: #ff9800; font-weight: bold', currentUser);
+      console.log('%c[Youth Upload Debug] User ID:', 'color: #ff9800', currentUser?.id);
+      console.log('%c[Youth Upload Debug] Selected Album ID:', 'color: #ff9800', albumId);
+
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) continue;
 
@@ -241,6 +247,7 @@ export default function AdminDashboard() {
 
           if (insertError) throw insertError;
         } catch (error: any) {
+          console.error('%c[Youth Upload Debug] Full error during insert:', 'color: red; font-weight: bold', error);
           console.error('Youth upload error:', error);
           toast.error(`Failed to upload ${file.name}: ${error.message || error}`);
         }
