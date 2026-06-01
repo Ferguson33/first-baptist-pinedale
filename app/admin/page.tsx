@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 import { format } from 'date-fns';
 
 // Types for admin
