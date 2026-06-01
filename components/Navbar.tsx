@@ -120,13 +120,11 @@ export function Navbar() {
                           </Link>
                         )}
 
-                        {/* Reliable Sign Out - clears everything aggressively */}
                         <button
-                          onClick={() => {
-                            signOut();
-                            Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
-                            Object.keys(sessionStorage).forEach(k => sessionStorage.removeItem(k));
+                          onClick={async () => {
+                            await signOut();
                             setShowUserMenu(false);
+                            // Use router for clean navigation if possible, but window.location is fine for full reset
                             window.location.href = '/';
                           }}
                           className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-red-50 text-red-700 border-t mt-1"

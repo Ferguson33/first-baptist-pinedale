@@ -6,7 +6,7 @@ import { ArrowRight, Clock, MapPin, Users, Heart } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function Home() {
-  const [physicalProgress, setPhysicalProgress] = useState(68);
+  const [physicalProgress, setPhysicalProgress] = useState<number | null>(null);
 
   // ============================================
   // MEET THE PASTORS - YouTube Video IDs
@@ -54,7 +54,7 @@ export default function Home() {
 
       if (error) {
         console.error('Error fetching home progress:', error);
-        // Keep whatever value we have (don't reset to 68 on transient failures)
+        // On error, leave as null (will show "..." or last value if we add state)
       } else if (data?.physical_percent !== undefined) {
         setPhysicalProgress(data.physical_percent);
       }
@@ -334,12 +334,12 @@ export default function Home() {
           <div className="mt-8 max-w-md mx-auto">
             <div className="flex justify-between text-sm mb-2 font-medium">
               <div>Physical Progress</div>
-              <div className="text-[var(--color-gold-dark)]">{physicalProgress}%</div>
+              <div className="text-[var(--color-gold-dark)]">{physicalProgress ?? '...'}%</div>
             </div>
             <div className="h-3 bg-white rounded-full overflow-hidden">
               <div 
                 className="h-full bg-gradient-to-r from-[var(--color-gold)] to-[var(--color-gold-dark)] rounded-full transition-all" 
-                style={{ width: `${physicalProgress}%` }} 
+                style={{ width: `${physicalProgress ?? 0}%` }} 
               />
             </div>
           </div>
