@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { Menu, X, User, LogOut, Shield, Heart } from 'lucide-react';
+import { Menu, X, User, LogOut, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 
@@ -110,17 +110,9 @@ export function Navbar() {
                         )}
 
                         {showMemberLinks && (
-                          <>
-                            <Link href="/members" className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)]" onClick={() => setShowUserMenu(false)}>
-                              <User className="w-4 h-4" /> Members Portal
-                            </Link>
-                            <Link href="/prayer-bulletin" className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)]" onClick={() => setShowUserMenu(false)}>
-                              <Heart className="w-4 h-4" /> Prayer Bulletin
-                            </Link>
-                            <Link href="/members/directory" className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)]" onClick={() => setShowUserMenu(false)}>
-                              Member Directory
-                            </Link>
-                          </>
+                          <Link href="/members" className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)]" onClick={() => setShowUserMenu(false)}>
+                            <User className="w-4 h-4" /> Members Portal
+                          </Link>
                         )}
 
                         {/* Reliable Sign Out - clears everything aggressively */}
@@ -192,11 +184,7 @@ export function Navbar() {
               ))}
               
               {showMemberLinks && (
-                <>
-                  <Link href="/prayer-bulletin" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>Prayer Bulletin</Link>
-                  <Link href="/members" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>Members Portal</Link>
-                  <Link href="/members/directory" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>Directory</Link>
-                </>
+                <Link href="/members" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>Members Portal</Link>
               )}
 
               {isAdmin && (
