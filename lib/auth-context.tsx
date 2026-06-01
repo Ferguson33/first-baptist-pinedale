@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Show friendly message on login
           if (event === 'SIGNED_IN') {
             if (prof?.role === 'pending') {
-              toast.info("Welcome! Your membership is pending approval. You'll get access to the Prayer Wall and Directory soon.");
+              toast.info("Welcome! Your membership is pending approval. You'll get access to the Prayer Bulletin and Directory soon.");
             } else if (prof?.role === 'admin') {
               toast.success("Welcome back, Pastor! You have full admin access.");
             } else if (prof?.role === 'approved') {

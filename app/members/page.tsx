@@ -38,12 +38,12 @@ export default function MembersPortal() {
         </Link>
 
         <Link 
-          href="/prayer-wall" 
+          href="/prayer-bulletin" 
           className="block border bg-white p-7 sm:p-8 rounded-3xl hover:border-[var(--color-gold)] h-full flex flex-col"
         >
-          <div className="font-semibold text-2xl">Prayer Wall</div>
-          <p className="text-sm mt-2 flex-1">Submit and view prayer requests from the body.</p>
-          <div className="mt-auto pt-6 text-xs text-[var(--color-gold-dark)]">SHARE REQUESTS WITH THE CHURCH →</div>
+          <div className="font-semibold text-2xl">Prayer Bulletin</div>
+          <p className="text-sm mt-2 flex-1">Current prayer focuses and updates (maintained in Google Doc).</p>
+          <div className="mt-auto pt-6 text-xs text-[var(--color-gold-dark)]">VIEW THE BULLETIN →</div>
         </Link>
 
         <Link 

@@ -19,7 +19,7 @@ export default function PastorQuickGuide() {
         <div>
           <div className="font-bold tracking-wider text-[var(--color-gold-dark)] mb-1">DAILY / WEEKLY TASKS</div>
           <ul className="space-y-1 text-[var(--color-stone)]">
-            <li>1. Check Admin Dashboard → Prayer tab for new requests (approve or hide)</li>
+            <li>1. Maintain the Prayer Bulletin Google Doc (content appears on the Prayer Bulletin page)</li>
             <li>2. Check Admin → Members tab for new membership requests</li>
             <li>3. Add Sunday’s sermon by Friday (title + YouTube embed + photo)</li>
             <li>4. Update Building Project progress after any milestone</li>
@@ -48,14 +48,14 @@ export default function PastorQuickGuide() {
 
           <div className="mt-6">
             <div className="font-bold tracking-wider text-[var(--color-gold-dark)] mb-1">MEMBER APPROVALS</div>
-            <p className="text-[var(--color-stone)]">When someone signs up on the website they appear as “Pending”. Approve them in the Members tab so they can see the private Directory and submit prayers.</p>
+            <p className="text-[var(--color-stone)]">When someone signs up on the website they appear as “Pending”. Approve them in the Members tab so they can see the private Directory and Prayer Bulletin.</p>
           </div>
         </div>
       </div>
 
       <div className="mt-8 pt-6 border-t">
         <div className="font-bold tracking-wider text-[var(--color-gold-dark)] mb-1">SUPABASE SETUP (ONE-TIME)</div>
-        <div className="text-xs text-[var(--color-stone)]">1. Create free project at supabase.com<br />2. Copy URL + anon key into .env.local<br />3. Run the SQL schema from README.md in the SQL Editor<br />4. Create 4 storage buckets: sermons, building-photos, prayer-photos, member-photos (make public)<br />5. Enable email signups in Authentication settings</div>
+        <div className="text-xs text-[var(--color-stone)]">1. Create free project at supabase.com<br />2. Copy URL + anon key into .env.local<br />3. Run the SQL schema from README.md in the SQL Editor<br />4. Create storage buckets: sermons, building-photos, youth-photos, member-photos (make public)<br />5. Enable email signups in Authentication settings</div>
       </div>
 
       <div className="mt-8 text-center text-[10px] text-[var(--color-stone-light)]">

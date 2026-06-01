@@ -306,7 +306,7 @@ export default function Home() {
       <div className="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-3 gap-6">
         {[
           { title: "Join Us Sunday", desc: "Everyone is welcome. Come as you are. Coffee & fellowship.", href: "/visit", icon: Users },
-          { title: "Prayer Wall", desc: "Share your requests with our church family. We truly believe in the power of prayer.", href: "/prayer-wall", icon: Heart },
+          { title: "Prayer Bulletin", desc: "Current prayer focuses and updates for our church family.", href: "/prayer-bulletin", icon: Heart },
           { title: "Youth Ministry", desc: "Real faith for real life. For students grades 6–12.", href: "/youth", icon: Users },
         ].map((card, idx) => (
           <Link key={idx} href={card.href} className="group block border border-[var(--color-gold)]/30 hover:border-[var(--color-gold)] bg-white p-8 rounded-2xl transition">

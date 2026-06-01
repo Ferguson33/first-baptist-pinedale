@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { 
-  Upload, Users, BookOpen, Image, Heart, Calendar, TrendingUp, 
+  Upload, Users, BookOpen, Image, Calendar, TrendingUp, 
   CheckCircle, XCircle, Trash2, Edit2, Plus 
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,7 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 
 // Types for admin
-type AdminTab = 'overview' | 'sermons' | 'building' | 'youth' | 'prayer' | 'members' | 'events' | 'guide';
+type AdminTab = 'overview' | 'sermons' | 'building' | 'youth' | 'members' | 'events' | 'guide';
 
 interface LocalSermon {
   id: string;
@@ -28,14 +28,6 @@ interface LocalBuildingPhoto {
   id: string;
   url: string;
   caption: string;
-}
-
-interface LocalPrayer {
-  id: string;
-  requester_name: string;
-  request_text: string;
-  status: 'pending' | 'approved' | 'hidden';
-  created_at: string;
 }
 
 interface LocalMember {
@@ -70,7 +62,6 @@ export default function AdminDashboard() {
   ]);
   const [buildingPhotos, setBuildingPhotos] = useState<any[]>([]);
   const [youthPhotos, setYouthPhotos] = useState<any[]>([]);
-  // prayers local state removed - now using realPrayers from Supabase for the approval tab
   const [directory, setDirectory] = useState<LocalMember[]>([
     { id: 'm1', name: "Robert & Linda Thompson", spouse: "Linda", phone: "(307) 555-0182", approved: true }
   ]);
@@ -99,17 +90,10 @@ export default function AdminDashboard() {
   });
   const [savingSermonSettings, setSavingSermonSettings] = useState(false);
 
-  // Live counts for Overview (notifications-style)
-  const [pendingPrayerCount, setPendingPrayerCount] = useState(0);
-
-  // Real members from Supabase (for Option 1 - Member Approval)
+  // Real members from Supabase (for Member Approval)
   const [realMembers, setRealMembers] = useState<any[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null); // For viewing full profile in modal
-
-  // Real prayers from Supabase (for Prayer Wall approval flow)
-  const [realPrayers, setRealPrayers] = useState<any[]>([]);
-  const [loadingPrayers, setLoadingPrayers] = useState(false);
 
   // Real sermons from Supabase (for Admin management)
   const [realSermons, setRealSermons] = useState<any[]>([]);
@@ -142,117 +126,6 @@ export default function AdminDashboard() {
     } else {
       toast.success("Member approved!");
       fetchMembers(); // refresh list
-    }
-  }
-
-  async function togglePrayerTrust(userId: string, currentValue: boolean) {
-    const newValue = !currentValue;
-    const { error } = await supabase
-      .from('profiles')
-      .update({ prayer_auto_approve: newValue })
-      .eq('id', userId);
-
-    if (error) {
-      toast.error("Failed to update prayer trust setting");
-      console.error(error);
-    } else {
-      toast.success(newValue 
-        ? "Member can now post prayers directly (no review needed)" 
-        : "Member's prayers will now require approval again");
-      fetchMembers();
-    }
-  }
-
-  async function fetchRealPrayers() {
-    setLoadingPrayers(true);
-    const { data, error } = await supabase
-      .from('prayer_requests')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      toast.error("Failed to load prayer requests");
-      console.error('fetchRealPrayers FULL error:', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-        status: (error as any).status,
-      });
-      setRealPrayers([]);
-    } else {
-      setRealPrayers(data || []);
-    }
-    setLoadingPrayers(false);
-  }
-
-  async function approveRealPrayer(id: string) {
-    const { error } = await supabase
-      .from('prayer_requests')
-      .update({ status: 'approved' })
-      .eq('id', id);
-
-    if (error) {
-      toast.error("Failed to approve prayer");
-      console.error('approveRealPrayer error:', error);
-    } else {
-      toast.success("Prayer request approved and now visible on the Prayer Wall");
-      fetchRealPrayers();
-      fetchPendingPrayerCount(); // keep Overview count fresh
-    }
-  }
-
-  async function hideRealPrayer(id: string) {
-    const { error } = await supabase
-      .from('prayer_requests')
-      .update({ status: 'hidden' })
-      .eq('id', id);
-
-    if (error) {
-      toast.error("Failed to hide prayer");
-      console.error('hideRealPrayer error:', error);
-    } else {
-      toast.info("Prayer request hidden from public view");
-      fetchRealPrayers();
-      fetchPendingPrayerCount();
-    }
-  }
-
-  async function deleteRealPrayer(id: string) {
-    if (!confirm("Delete this prayer request permanently? This cannot be undone.")) {
-      return;
-    }
-
-    const { error } = await supabase
-      .from('prayer_requests')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      toast.error("Failed to delete prayer");
-      console.error('deleteRealPrayer error:', error);
-    } else {
-      toast.success("Prayer request permanently deleted");
-      fetchRealPrayers();
-      fetchPendingPrayerCount();
-    }
-  }
-
-  async function fetchPendingPrayerCount() {
-    const { count, error } = await supabase
-      .from('prayer_requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending');
-
-    if (error) {
-      console.error('Failed to load pending prayer count (FULL):', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-      });
-    } else {
-      setPendingPrayerCount(count || 0);
     }
   }
 
@@ -367,11 +240,9 @@ export default function AdminDashboard() {
     }
   };
 
-  // Old local prayer actions removed - now using real Supabase functions (approveRealPrayer / hideRealPrayer)
-
   const approveMember = (id: string) => {
     setDirectory(prev => prev.map(m => m.id === id ? { ...m, approved: true } : m));
-    toast.success("Member approved. They now have access to the directory and prayer wall.");
+    toast.success("Member approved. They now have access to the directory and Prayer Bulletin.");
   };
 
   const addSermon = () => {
@@ -432,13 +303,6 @@ export default function AdminDashboard() {
     }
   }, [user, isAdmin, loading, router]);
 
-  // Fetch initial overview data (pending prayer count)
-  useEffect(() => {
-    if (!loading && isAdmin && activeTab === 'overview') {
-      fetchPendingPrayerCount();
-    }
-  }, [loading, isAdmin]);
-
   // Load building progress from Supabase
   const loadBuildingProgress = async () => {
     const { data, error } = await supabase
@@ -477,23 +341,15 @@ export default function AdminDashboard() {
     { id: 'sermons', label: 'Sermons', icon: BookOpen },
     { id: 'building', label: 'Building Project', icon: Image },
     { id: 'youth', label: 'Youth Photos', icon: Image },
-    { id: 'prayer', label: 'Prayer Requests', icon: Heart },
     { id: 'members', label: 'Member Directory', icon: Users },
     { id: 'events', label: 'Events', icon: Calendar },
     { id: 'guide', label: 'Pastor Quick Guide', icon: CheckCircle },
   ];
 
-  // Fetch pending count whenever we land on the prayer tab so the badge is fresh
   const handleTabChange = (tab: AdminTab) => {
     setActiveTab(tab);
     if (tab === 'members') {
       fetchMembers();
-    }
-    if (tab === 'overview' || tab === 'prayer') {
-      fetchPendingPrayerCount();
-    }
-    if (tab === 'prayer') {
-      fetchRealPrayers();
     }
     if (tab === 'building') {
       fetchBuildingPhotos();
@@ -715,11 +571,6 @@ export default function AdminDashboard() {
             className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition ${activeTab === tab.id ? 'border-[var(--color-gold)] text-[var(--color-navy)]' : 'border-transparent text-[var(--color-stone-light)] hover:text-[var(--color-navy)]'}`}
           >
             <tab.icon className="w-4 h-4" /> {tab.label}
-            {tab.id === 'prayer' && pendingPrayerCount > 0 && (
-              <span className="ml-1.5 px-1.5 py-px text-[10px] leading-none font-semibold bg-[var(--color-gold)] text-white rounded-full">
-                {pendingPrayerCount}
-              </span>
-            )}
             {tab.id === 'members' && realMembers.filter((m: any) => m.role === 'pending').length > 0 && (
               <span className="ml-1.5 px-1.5 py-px text-[10px] leading-none font-semibold bg-orange-500 text-white rounded-full">
                 {realMembers.filter((m: any) => m.role === 'pending').length}
@@ -735,7 +586,6 @@ export default function AdminDashboard() {
           <div className="admin-section bg-white p-8 rounded-3xl">
             <div className="font-semibold mb-4 flex items-center gap-2 text-lg"><TrendingUp className="text-[var(--color-gold-dark)]" /> Quick Stats</div>
             <div className="space-y-4 text-sm">
-              <div className="flex justify-between"><span>Pending Prayer Requests</span><span className="font-semibold">{pendingPrayerCount}</span></div>
               <div className="flex justify-between"><span>Pending Member Approvals</span><span className="font-semibold">{realMembers.filter((m: any) => m.role === 'pending').length || '—'}</span></div>
               <div className="flex justify-between"><span>Sermons Published</span><span className="font-semibold">{sermons.length}</span></div>
               <div className="flex justify-between"><span>Building Progress</span><span className="font-semibold">{progress.physical_percent}%</span></div>
@@ -748,7 +598,6 @@ export default function AdminDashboard() {
             <ol className="space-y-3 text-sm text-[var(--color-stone)] list-decimal list-inside">
               <li>Upload new construction photos in the Building tab</li>
               <li>Add this week’s sermon (title + YouTube link + thumbnail)</li>
-              <li>Review and approve new Prayer Wall submissions</li>
               <li>Approve new member directory requests</li>
               <li>Update building progress percentages anytime</li>
             </ol>
@@ -988,59 +837,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* PRAYER APPROVALS - Now using real Supabase data */}
-      {activeTab === 'prayer' && (
-        <div>
-          <div className="flex justify-between items-center mb-6">
-            <div className="font-semibold text-2xl">Prayer Wall — Approve or Hide</div>
-            <button 
-              onClick={fetchRealPrayers} 
-              disabled={loadingPrayers}
-              className="px-4 py-2 text-sm border rounded-full hover:bg-[var(--color-cream)]"
-            >
-              {loadingPrayers ? "Loading..." : "Refresh"}
-            </button>
-          </div>
-
-          {loadingPrayers && <div className="text-center py-8 text-[var(--color-stone-light)]">Loading prayer requests…</div>}
-
-          {!loadingPrayers && realPrayers.length === 0 && (
-            <div className="text-center py-6 text-[var(--color-stone-light)]">No prayer requests yet.</div>
-          )}
-
-          <div className="space-y-4">
-            {realPrayers.map((p: any) => (
-              <div key={p.id} className="bg-white border rounded-2xl p-6 flex flex-col md:flex-row gap-4 justify-between">
-                <div>
-                  <div className="font-semibold">{p.requester_name || (p.is_anonymous ? 'Anonymous' : 'Member')}</div>
-                  <div className="text-sm mt-2 pr-8">{p.request_text}</div>
-                  <div className="text-xs text-[var(--color-stone-light)] mt-3">{new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                </div>
-                <div className="flex gap-2 self-start items-center">
-                  {p.status === 'pending' && (
-                    <>
-                      <button onClick={() => approveRealPrayer(p.id)} className="flex items-center gap-1.5 px-5 py-2 bg-green-600 text-white rounded-full text-sm"><CheckCircle className="w-4 h-4" /> Approve</button>
-                      <button onClick={() => hideRealPrayer(p.id)} className="flex items-center gap-1.5 px-5 py-2 border rounded-full text-sm"><XCircle className="w-4 h-4" /> Hide</button>
-                    </>
-                  )}
-                  {p.status !== 'pending' && <div className="text-xs px-4 py-2 rounded bg-[var(--color-cream)]">{p.status}</div>}
-
-                  {/* Delete button - available for all prayers */}
-                  <button 
-                    onClick={() => deleteRealPrayer(p.id)} 
-                    className="flex items-center gap-1.5 px-3 py-2 text-red-600 hover:bg-red-50 rounded-full text-sm border border-red-200 hover:border-red-300"
-                    title="Delete permanently"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-6 admin-help">Only approved requests are visible to the public on the Prayer Wall. Hidden requests stay in the system but are not shown.</div>
-        </div>
-      )}
-
       {/* YOUTH PHOTOS - Admin upload and management (identical experience to Building Project tab) */}
       {activeTab === 'youth' && (
         <div className="space-y-10">
@@ -1232,19 +1028,6 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="flex items-center gap-4 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                    {/* Prayer Wall trust toggle - only for approved or admin members */}
-                    {m.role !== 'pending' && (
-                      <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={!!m.prayer_auto_approve}
-                          onChange={() => togglePrayerTrust(m.id, !!m.prayer_auto_approve)}
-                          className="w-4 h-4 accent-[var(--color-gold)]"
-                        />
-                        <span className="text-[var(--color-stone)]">Can post prayers without review</span>
-                      </label>
-                    )}
-
                     {m.role === 'pending' ? (
                       <button 
                         onClick={() => approveRealMember(m.id)} 
@@ -1263,7 +1046,7 @@ export default function AdminDashboard() {
             })}
           </div>
 
-          <div className="mt-6 text-sm">When you approve someone they gain access to the Member Directory and Prayer Wall. Check the box to let trusted members post prayers immediately without going through the review queue.</div>
+          <div className="mt-6 text-sm">When you approve someone they gain access to the Member Directory and Prayer Bulletin.</div>
         </div>
       )}
 
@@ -1367,7 +1150,7 @@ export default function AdminDashboard() {
           
           <div className="mt-10 text-xs space-y-1 text-[var(--color-stone-light)]">
             <div>• Update Building Progress anytime from the Building tab</div>
-            <div>• Approve prayers before they appear publicly</div>
+            <div>• Maintain the Prayer Bulletin Google Doc for the Prayer Bulletin page</div>
             <div>• Add YouTube links for sermons (embed format preferred)</div>
             <div>• Drag photos directly onto the big drop zones — no file naming required</div>
           </div>
