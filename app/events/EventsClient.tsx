@@ -9,6 +9,7 @@ interface SpotlightEvent {
   time?: string | null;
   description?: string | null;
   location?: string | null;
+  image_url?: string | null;
 }
 
 interface EventsClientProps {
