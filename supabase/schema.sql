@@ -52,7 +52,9 @@ create table if not exists building_progress (
 
 insert into building_progress (id) values (1) on conflict do nothing;
 
--- PRAYER REQUESTS
+-- PRAYER REQUESTS (LEGACY - Old Prayer Wall feature, replaced by Prayer Bulletin Google Doc)
+-- The table below and its policies are no longer used by the application.
+-- See supabase/cleanup-old-prayer-system.sql to drop it.
 create table if not exists prayer_requests (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users,
@@ -81,7 +83,7 @@ create policy "Public can read approved profiles" on profiles for select using (
 create policy "Users can read own profile" on profiles for select using (auth.uid() = id);
 
 -- =====================================================
--- PRAYER REQUESTS — RLS + GRANTS (run in SQL Editor)
+-- PRAYER REQUESTS — RLS + GRANTS (LEGACY - see cleanup-old-prayer-system.sql)
 -- =====================================================
 
 -- Enable RLS
@@ -150,15 +152,4 @@ WITH CHECK (
 );
 
 -- Storage buckets you must create in the Supabase dashboard:
--- building-photos, sermons, prayer-photos, member-photos (make them public for now)
-
--- =====================================================
--- PRAYER WALL TRUSTED POSTERS
--- =====================================================
--- The `prayer_auto_approve` column on profiles (see top of file) lets you
--- mark specific approved members as trusted.
--- When true, their prayer submissions are inserted with status='approved'
--- and appear immediately on the public Prayer Wall (no pending review).
--- This is controlled exclusively from the Admin Dashboard > Member Directory tab.
--- Use it only for people you completely trust (e.g. pastoral family).
-
+-- building-photos, sermons, youth-photos, member-photos (make them public)

@@ -1,5 +1,11 @@
 # Supabase Cleanup Notes (May 2025)
 
+## Prayer System Cleanup (latest)
+- Old `prayer_requests` table and `prayer_auto_approve` column are legacy from the removed Prayer Wall feature.
+- See `cleanup-old-prayer-system.sql` for optional removal.
+- `prayer-photos` storage bucket is no longer needed and can be deleted from the dashboard.
+
+
 ## What was cleaned up
 
 - Removed `directory_members` table definition from the main `schema.sql` (no longer used).

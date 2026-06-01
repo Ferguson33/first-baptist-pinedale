@@ -30,7 +30,7 @@ Open http://localhost:3000
 
 ---
 
-## Supabase Setup (Required for Login, Admin, Uploads, Prayer Wall, etc.)
+## Supabase Setup (Required for Login, Admin, Uploads, etc.)
 
 This site uses Supabase for authentication, database, and image storage. Follow these steps once:
 
@@ -50,14 +50,14 @@ Go to Supabase → SQL Editor → New Query, paste the entire contents of `supab
 
 ### 4. Create Storage Buckets (for photos & uploads)
 In Supabase Dashboard → Storage:
-Create four public buckets:
+Create the following public buckets:
 - `building-photos`
 - `sermons`
-- `prayer-photos`
+- `youth-photos`
 - `member-photos`
 
 For each bucket, set these policies (or make them public for the prototype):
-- `INSERT`: authenticated users
+- `INSERT`: authenticated users (admins)
 - `SELECT`: public (for photos to show on site)
 
 ### 5. Enable Email + Password Auth
@@ -119,18 +119,6 @@ create table building_progress (
   updated_at timestamptz default now()
 );
 
--- Prayer requests
-create table prayer_requests (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users,
-  requester_name text not null,
-  request_text text not null,
-  is_anonymous boolean default false,
-  photo_url text,
-  status text default 'pending' check (status in ('pending','approved','hidden')),
-  created_at timestamptz default now()
-);
-
 -- Events
 create table events (
   id uuid primary key default gen_random_uuid(),
@@ -145,7 +133,6 @@ create table events (
 
 -- Enable Row Level Security (recommended)
 alter table profiles enable row level security;
-alter table prayer_requests enable row level security;
 -- Add policies as needed for production
 ```
 

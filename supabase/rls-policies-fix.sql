@@ -3,7 +3,7 @@
 -- This fixes:
 --   • Approved members editing their own profile (including family_id link)
 --   • Approved members creating their own family ("Create My Family" was blocked)
---   • Approved members deleting their OWN prayers on the Prayer Wall
+--   • (old) Approved members deleting their own prayers on the Prayer Wall (no longer used)
 --   • Adding children to families, etc.
 -- ============================================================
 
@@ -170,7 +170,7 @@ USING (
 --   - Edit their full profile (photo, birthdate, spouse, notes, etc.)
 --   - Create a family from /members/profile
 --   - Add children to their family
---   - Delete their own prayers on the Prayer Wall (the Delete link will appear next to their entries)
+--   - (old) Delete their own prayers on the Prayer Wall (feature no longer exists)
 --
 -- If you still see "permission denied" errors after this, double-check that the tables exist
 -- and that you are running the statements as the project owner (not a limited role).

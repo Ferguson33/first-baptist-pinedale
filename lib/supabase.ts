@@ -20,7 +20,6 @@ export type Profile = {
   phone?: string;
   address?: string;
   joined_date?: string;
-  prayer_auto_approve?: boolean;
   created_at: string;
 
   // Extended fields added over time
@@ -32,7 +31,7 @@ export type Profile = {
 
   // Deprecated / removed features (kept in DB only)
   // family_id?: string;
-  // prayer_auto_approve?: boolean;
+  // prayer_auto_approve?: boolean;   // Was used for old Prayer Wall "trusted posters" feature
 };
 
 export type Sermon = {
@@ -61,16 +60,7 @@ export type BuildingProgress = {
   updated_at: string;
 };
 
-export type PrayerRequest = {
-  id: string;
-  user_id: string;
-  requester_name: string;
-  request_text: string;
-  is_anonymous: boolean;
-  photo_url?: string;
-  status: 'pending' | 'approved' | 'hidden';
-  created_at: string;
-};
+// PrayerRequest type removed - old Prayer Wall feature has been replaced by Prayer Bulletin (Google Doc)
 
 export type Event = {
   id: string;
