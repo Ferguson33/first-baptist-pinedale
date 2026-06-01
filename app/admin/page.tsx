@@ -204,41 +204,49 @@ export default function AdminDashboard() {
       // Could open a modal in a full version
     }
     else if (type === 'youth') {
-      // Simple direct upload (flat list, no albums)
+      // Upload via server route (uses service role to bypass RLS on youth_photos)
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+
+      if (!accessToken) {
+        toast.error("No active session. Please log in again as admin.");
+        return;
+      }
+
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) continue;
 
         try {
           toast.loading(`Uploading ${file.name}...`, { id: 'youth-upload' });
 
-          const fileExt = file.name.split('.').pop();
-          const fileName = `youth-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
-          const filePath = `youth/${fileName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from('youth-photos')
-            .upload(filePath, file);
-
-          if (uploadError) throw uploadError;
-
-          const { data: urlData } = supabase.storage
-            .from('youth-photos')
-            .getPublicUrl(filePath);
-
           const caption = prompt(`Caption for ${file.name} (optional)`) || "";
 
-          const { data: insertData, error: insertError } = await supabase
-            .from('youth_photos')
-            .insert({
-              url: urlData.publicUrl,
+          const formData = new FormData();
+          formData.append('file', file);
+          if (caption) formData.append('caption', caption);
+
+          const response = await fetch('/api/admin/youth/upload-photo', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `Server error ${response.status}`);
+          }
+
+          const result = await response.json().catch(() => ({}));
+          // Optimistically add to local list (the route returns id/url in some versions)
+          if (result.url) {
+            setYouthPhotos(prev => [{
+              id: result.id || Date.now().toString(),
+              url: result.url,
               caption: caption || null,
-            })
-            .select()
-            .single();
-
-          if (insertError) throw insertError;
-
-          setYouthPhotos(prev => [insertData, ...prev]);
+            }, ...prev]);
+          }
         } catch (error: any) {
           console.error('Youth upload error:', error);
           toast.error(`Failed to upload ${file.name}: ${error.message || error}`);
@@ -246,6 +254,8 @@ export default function AdminDashboard() {
       }
 
       toast.success("Youth photo uploaded!", { id: 'youth-upload' });
+      // Refresh to ensure we have the real record
+      fetchYouthPhotos();
     }
   };
 
