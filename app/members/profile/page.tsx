@@ -39,16 +39,16 @@ export default function MemberProfilePage() {
 
         <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
           <Link 
-            href="/members/directory" 
+            href="/members" 
             className="px-8 py-3 bg-[var(--color-navy)] text-white rounded-2xl font-medium"
           >
             View Member Directory
           </Link>
           <Link 
-            href="/members" 
+            href="/members/directory" 
             className="px-8 py-3 border border-[var(--color-gold)]/40 hover:bg-[var(--color-cream)] rounded-2xl font-medium"
           >
-            Back to Members Portal
+            Dedicated directory page
           </Link>
         </div>
       </div>

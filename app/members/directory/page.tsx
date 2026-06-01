@@ -4,13 +4,17 @@ import { useAuth } from '@/lib/auth-context';
 import Link from 'next/link';
 
 /**
- * Member Directory Page
+ * Member Directory Page (dedicated view)
  * 
- * This page is now a simple, isolated Google Doc embed.
- * It does NOT pull data from Supabase or interact with the profile/family system.
- * 
- * Replace the src below with your actual Google Doc "Publish to web" embed URL.
- * Example format: https://docs.google.com/document/d/e/XXXXX/pub?embedded=true
+ * Embeds the official First Baptist Church Directory Google Doc (published version).
+ * Protected to approved members only.
+ *
+ * Primary embed is also shown on /members (portal home) for convenience.
+ * This dedicated route provides a clean, distraction-free view + direct bookmarkable URL.
+ *
+ * To update the document the office uses the edit link.
+ * To get the embed URL: in the Google Doc (edit mode) → File → Share → Publish to web → Publish.
+ * Then use https://docs.google.com/document/d/e/<ID>/pub?embedded=true
  */
 
 export default function MemberDirectory() {
@@ -28,18 +32,30 @@ export default function MemberDirectory() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
-      {/* Very clean page — the Google Doc embed is the only content */}
+      <div className="mb-6">
+        <div className="text-xs uppercase tracking-[2px] text-[var(--color-gold-dark)]">OFFICIAL CHURCH DIRECTORY</div>
+        <h1 className="text-4xl font-semibold tracking-tight mt-1">Member Directory</h1>
+        <p className="text-[var(--color-stone)] text-sm mt-2 max-w-2xl">
+          Current contact information for our church family. Maintained by the church office in Google Docs.
+          <span className="ml-2"><Link href="/members" className="underline hover:text-[var(--color-navy)]">Back to Members Portal home</Link></span>
+        </p>
+      </div>
+
       <div className="bg-white border border-[var(--color-gold)]/10 rounded-2xl overflow-hidden shadow-sm">
         <iframe
-          // TODO: Replace PLACEHOLDER with your actual Google Doc "Publish to web" embed URL
-          src="https://docs.google.com/document/d/e/PLACEHOLDER_PUBLISH_LINK/pub?embedded=true"
+          // Google Doc must be published first (File → Share → Publish to web)
+          src="https://docs.google.com/document/d/e/16PgxfcMPyZqOO7WxdsXS5Uu4RXSl0Ywc4cN3KMM5oaA/pub?embedded=true"
           width="100%"
           height="1300"
           frameBorder="0"
-          title="Member Directory"
+          title="First Baptist Church Directory"
           className="w-full block"
           style={{ minHeight: '800px', border: 'none' }}
         />
+      </div>
+
+      <div className="mt-4 text-xs text-[var(--color-stone-light)] text-center">
+        Updates made in the master Google Doc appear here for all approved members.
       </div>
     </div>
   );
