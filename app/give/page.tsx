@@ -13,7 +13,18 @@ export default function GivePage() {
       </div>
 
       <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-5 sm:p-8 md:p-12">
-        {/* Quick Options - Stacks nicely on mobile */}
+        {/* Trust Banner */}
+        <div className="mb-6 sm:mb-8 rounded-2xl border border-[var(--color-gold)]/30 bg-[var(--color-cream)] p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="font-semibold text-[var(--color-navy)] text-base sm:text-lg">Your gift is secure.</div>
+            <div className="text-sm text-[var(--color-stone)]">
+              We partner with <span className="font-semibold">Zeffy</span>, a trusted donation platform used by thousands of churches and nonprofits across North America. 
+              You never enter your card details on our website — everything is processed securely on Zeffy’s platform.
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Options */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8 text-center text-sm">
           <div className="bg-[var(--color-cream)] p-4 sm:p-5 rounded-2xl">
             <div className="font-semibold text-[var(--color-navy)]">One-Time Gift</div>
@@ -25,7 +36,7 @@ export default function GivePage() {
           </div>
         </div>
 
-        {/* ZEFFY GIVING FORM - Cleaner mobile presentation */}
+        {/* ZEFFY GIVING FORM */}
         <div>
           <div className="flex items-center justify-between mb-3 px-1">
             <div className="font-semibold text-lg text-[var(--color-navy)]">Give Online</div>
@@ -53,13 +64,24 @@ export default function GivePage() {
               }}
             />
           </div>
-          <p className="text-center text-[10px] text-[var(--color-stone-light)] mt-2">The form below is secure and hosted by Zeffy (no fees to the church).</p>
+
+          <div className="mt-3 text-center text-[11px] text-[var(--color-stone-light)]">
+            Your donation is processed securely by Zeffy. First Baptist Church Pinedale never sees or stores your payment information.
+          </div>
         </div>
       </div>
 
-      <div className="text-center text-xs mt-6 sm:mt-8 text-[var(--color-stone-light)] max-w-sm mx-auto px-4">
-        All gifts are tax-deductible. You will receive a year-end giving statement.<br className="hidden sm:block" />
-        Questions? Contact our treasurer at <a href="mailto:Firstbaptist646@gmail.com" className="underline">Firstbaptist646@gmail.com</a>.
+      <div className="mt-8 text-center text-sm text-[var(--color-stone-light)] max-w-md mx-auto px-4">
+        <p className="mb-2">
+          All gifts are tax-deductible. You will receive a year-end giving statement.
+        </p>
+        <p>
+          Questions? Contact our treasurer at{' '}
+          <a href="mailto:Firstbaptist646@gmail.com" className="underline">Firstbaptist646@gmail.com</a>.
+        </p>
+        <p className="mt-3 text-xs">
+          <a href="/privacy" className="underline">View our Privacy Policy</a>
+        </p>
       </div>
     </div>
   );

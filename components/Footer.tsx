@@ -69,7 +69,10 @@ export function Footer() {
 
       <div className="mt-14 pt-8 border-t border-white/10 text-center text-xs text-white/50 max-w-7xl mx-auto px-6">
         © {new Date().getFullYear()} First Baptist Church of Pinedale. All are welcome. <br className="sm:hidden" />
-        <span className="hidden sm:inline">·</span> “For where two or three are gathered together in my name, there am I in the midst of them.” — Matthew 18:20 (KJV)
+        <span className="hidden sm:inline">·</span>{' '}
+        <Link href="/privacy" className="hover:text-white/70 underline">Privacy Policy</Link>
+        <span className="hidden sm:inline"> · </span>
+        “For where two or three are gathered together in my name, there am I in the midst of them.” — Matthew 18:20 (KJV)
       </div>
     </footer>
   );
