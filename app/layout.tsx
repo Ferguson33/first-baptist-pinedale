@@ -26,7 +26,20 @@ export const metadata: Metadata = {
   openGraph: {
     title: "First Baptist Church Pinedale",
     description: "A warm, welcoming church in the heart of Wyoming. Sunday worship, youth ministry, prayer, and community.",
-    images: [{ url: "https://images.unsplash.com/photo-1507692049790-de58290a4334?w=1200&q=80" }],
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "First Baptist Church - Pinedale, Wyoming",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "First Baptist Church Pinedale",
+    description: "A warm, welcoming church in the heart of Wyoming. Sunday worship, youth ministry, prayer, and community.",
+    images: ["/og-image.jpg"],
   },
 };
 
