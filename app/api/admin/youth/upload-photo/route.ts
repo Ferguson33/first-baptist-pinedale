@@ -35,17 +35,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized - invalid token' }, { status: 401 });
     }
 
-    // Verify the user is an admin
-    const { data: profile } = await supabaseUser
+    // IMPORTANT: Use service role client for the profile role check.
+    // The plain anon client + getUser(token) does not reliably attach the user's JWT
+    // for subsequent PostgREST queries, so RLS on profiles can cause this lookup to fail
+    // even when the user really is an admin (this was producing the 403 you saw).
+    const supabaseAdminForCheck = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: profile } = await supabaseAdminForCheck
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single();
 
     if (profile?.role !== 'admin') {
-      console.log('v2 route: not admin', profile);
+      console.log('v2 route: not admin (or profile row missing)', { userId: user.id, profile });
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
+
+    console.log(`%c=== ${routeVersion} JWT validated + admin confirmed for ${user.email} ===`, 'color: #00ff00');
 
     // Parse multipart form data (file + optional album_id + caption)
     const formData = await request.formData();
