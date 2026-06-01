@@ -234,12 +234,11 @@ export default function AdminDashboard() {
         try {
           toast.loading(`Uploading ${file.name} via server v2...`, { id: 'youth-upload' });
 
-          const caption = prompt(`Caption for ${file.name} (optional)`) || "";
-
+          // No caption prompt for youth album uploads (user preference)
           const formData = new FormData();
           formData.append('file', file);
           if (albumId) formData.append('album_id', albumId);
-          if (caption) formData.append('caption', caption);
+          // caption intentionally left out / null — not needed for albums
 
           // Call server route - server will do storage + DB with service role
           const response = await fetch('/api/admin/youth/upload-photo', {

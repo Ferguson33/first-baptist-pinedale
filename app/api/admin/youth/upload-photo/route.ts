@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   const routeVersion = 'SERVER ROUTE v2 - FULL FILE HANDLER';
-  console.log(`%c=== ${routeVersion} RECEIVED REQUEST ===`, 'color: #00ff00; font-weight: bold');
+  console.log(`%c=== ${routeVersion} RECEIVED REQUEST (V3-SERVICE-ROLE-CHECK) ===`, 'color: #00ff00; font-weight: bold');
 
   try {
     // Get the user's session from the request (sent by the browser client)
@@ -52,7 +52,9 @@ export async function POST(request: NextRequest) {
 
     if (profile?.role !== 'admin') {
       console.log('v2 route: not admin (or profile row missing)', { userId: user.id, profile });
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+      return NextResponse.json({ 
+        error: 'Forbidden - Admin access required (ROUTE-V3-SERVICE-ROLE-CHECK)' 
+      }, { status: 403 });
     }
 
     console.log(`%c=== ${routeVersion} JWT validated + admin confirmed for ${user.email} ===`, 'color: #00ff00');
