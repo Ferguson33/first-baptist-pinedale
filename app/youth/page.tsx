@@ -3,15 +3,25 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
+interface YouthAlbum {
+  id: string;
+  title: string;
+  date: string | null;
+}
+
 interface YouthPhoto {
   id: string;
   url: string;
   caption: string | null;
+  album_id: string | null;
 }
 
 export default function YouthMinistry() {
+  const [albums, setAlbums] = useState<YouthAlbum[]>([]);
   const [photos, setPhotos] = useState<YouthPhoto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedAlbum, setSelectedAlbum] = useState<YouthAlbum | null>(null);
+  const [albumPhotos, setAlbumPhotos] = useState<YouthPhoto[]>([]);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -28,7 +38,7 @@ export default function YouthMinistry() {
     setLoading(true);
     const { data, error } = await supabase
       .from('youth_photos')
-      .select('id, url, caption')
+      .select('id, url, caption, album_id')
       .order('uploaded_at', { ascending: false });
 
     if (error) {
@@ -37,6 +47,19 @@ export default function YouthMinistry() {
       setPhotos(data);
     }
     setLoading(false);
+  };
+
+  const fetchAlbums = async () => {
+    const { data, error } = await supabase
+      .from('youth_albums')
+      .select('id, title, date')
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching youth albums:', error);
+    } else {
+      setAlbums(data || []);
+    }
   };
 
   // Local date formatter (same as homepage)
@@ -72,6 +95,7 @@ export default function YouthMinistry() {
 
   useEffect(() => {
     fetchPhotos();
+    fetchAlbums();
     fetchYouthContent();
   }, []);
 
@@ -86,14 +110,20 @@ export default function YouthMinistry() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!galleryOpen) return;
 
+      const currentPhotos = selectedAlbum ? albumPhotos : photos;
+
       if (e.key === 'Escape') {
-        setGalleryOpen(false);
+        if (selectedAlbum) {
+          closeAlbum();
+        } else {
+          setGalleryOpen(false);
+        }
       }
       if (e.key === 'ArrowLeft') {
-        setCurrentIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
+        setCurrentIndex((prev) => (prev === 0 ? currentPhotos.length - 1 : prev - 1));
       }
       if (e.key === 'ArrowRight') {
-        setCurrentIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1));
+        setCurrentIndex((prev) => (prev === currentPhotos.length - 1 ? 0 : prev + 1));
       }
     };
 
@@ -107,6 +137,24 @@ export default function YouthMinistry() {
   const openGallery = (index: number) => {
     setCurrentIndex(index);
     setGalleryOpen(true);
+  };
+
+  const openAlbum = (album: YouthAlbum) => {
+    const photosInAlbum = photos.filter(p => p.album_id === album.id);
+    if (photosInAlbum.length === 0) {
+      alert("This album has no photos yet.");
+      return;
+    }
+    setSelectedAlbum(album);
+    setAlbumPhotos(photosInAlbum);
+    setCurrentIndex(0);
+    setGalleryOpen(true);
+  };
+
+  const closeAlbum = () => {
+    setSelectedAlbum(null);
+    setAlbumPhotos([]);
+    setGalleryOpen(false);
   };
 
   return (
@@ -183,12 +231,15 @@ export default function YouthMinistry() {
         </div>
       )}
 
-      {/* Youth Photos - Simple Gallery */}
+      {/* Youth Photo Albums */}
       <div className="mt-8">
         <div className="flex items-center justify-between mb-5">
-          <div className="font-semibold text-2xl tracking-tight">Youth Photos</div>
+          <div className="font-semibold text-2xl tracking-tight">Youth Photo Albums</div>
           <button 
-            onClick={fetchPhotos}
+            onClick={async () => {
+              await fetchPhotos();
+              await fetchAlbums();
+            }}
             className="text-xs px-3 py-1 border border-[var(--color-gold)]/40 rounded hover:bg-[var(--color-cream)] transition"
           >
             Refresh
@@ -196,26 +247,50 @@ export default function YouthMinistry() {
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-[var(--color-stone-light)]">Loading photos...</div>
-        ) : photos.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {photos.map((photo, index) => (
-              <div 
-                key={photo.id}
-                onClick={() => openGallery(index)}
-                className="group aspect-video bg-[var(--color-cream)] rounded-2xl overflow-hidden border border-[var(--color-gold)]/10 cursor-pointer hover:shadow-md transition"
-              >
-                <img 
-                  src={photo.url} 
-                  alt={photo.caption || "Youth photo"} 
-                  className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
-                />
-              </div>
-            ))}
+          <div className="text-center py-12 text-[var(--color-stone-light)]">Loading albums...</div>
+        ) : albums.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {albums.map((album) => {
+              const photosInAlbum = photos.filter(p => p.album_id === album.id);
+              const coverPhoto = photosInAlbum[0];
+
+              return (
+                <div 
+                  key={album.id}
+                  onClick={() => openAlbum(album)}
+                  className="group border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden bg-white hover:shadow-md transition cursor-pointer"
+                >
+                  <div className="aspect-video bg-[var(--color-cream)] relative">
+                    {coverPhoto ? (
+                      <img 
+                        src={coverPhoto.url} 
+                        alt={album.title}
+                        className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[var(--color-stone-light)]">
+                        No photos yet
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-5">
+                    <div className="font-semibold text-xl tracking-tight">{album.title}</div>
+                    {album.date && (
+                      <div className="text-sm text-[var(--color-gold-dark)] mt-1">
+                        {new Date(album.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+                      </div>
+                    )}
+                    <div className="text-xs text-[var(--color-stone-light)] mt-2">
+                      {photosInAlbum.length} photo{photosInAlbum.length !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-12 text-[var(--color-stone-light)] border border-[var(--color-gold)]/20 rounded-3xl">
-            Youth photos will appear here once added.
+            Photo albums will appear here once added by the youth leaders.
           </div>
         )}
       </div>
@@ -224,21 +299,27 @@ export default function YouthMinistry() {
         Led by Heath &amp; Tessa Holmes. Parents are always welcome at youth events.
       </div>
 
-      {/* Photo Gallery Lightbox */}
-      {galleryOpen && photos.length > 0 && (
+      {/* Photo Gallery Lightbox - Album aware */}
+      {galleryOpen && (selectedAlbum ? albumPhotos.length > 0 : photos.length > 0) && (
         <div 
           className="fixed inset-0 bg-black/95 z-[70] flex flex-col"
-          onClick={() => setGalleryOpen(false)}
+          onClick={() => {
+            if (selectedAlbum) {
+              closeAlbum();
+            } else {
+              setGalleryOpen(false);
+            }
+          }}
         >
           {/* Top bar */}
           <div className="flex-shrink-0 h-14 flex items-center justify-between px-4 bg-black/70 z-[80]">
             <div className="text-white text-sm">
-              {currentIndex + 1} / {photos.length}
+              {selectedAlbum ? selectedAlbum.title + " — " : ""}{currentIndex + 1} / {(selectedAlbum ? albumPhotos : photos).length}
             </div>
             <button
               onClick={(e) => { 
                 e.stopPropagation(); 
-                setGalleryOpen(false); 
+                if (selectedAlbum) closeAlbum(); else setGalleryOpen(false); 
               }}
               className="w-11 h-11 flex items-center justify-center rounded-full bg-white text-[var(--color-navy)] text-3xl font-bold hover:bg-[var(--color-gold)] hover:text-white shadow-lg transition"
               aria-label="Close gallery"
@@ -252,11 +333,12 @@ export default function YouthMinistry() {
             className="flex-1 flex items-center justify-center p-4 relative"
             onClick={(e) => e.stopPropagation()}
           >
-            { photos.length > 1 && (
+            { (selectedAlbum ? albumPhotos : photos).length > 1 && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setCurrentIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1));
+                  const len = (selectedAlbum ? albumPhotos : photos).length;
+                  setCurrentIndex((prev) => (prev === 0 ? len - 1 : prev - 1));
                 }}
                 className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white text-4xl hover:text-[var(--color-gold)] transition z-10"
               >
@@ -266,22 +348,23 @@ export default function YouthMinistry() {
 
             <div className="flex flex-col items-center max-w-[95vw] max-h-[calc(100vh-120px)]">
               <img 
-                src={photos[currentIndex]?.url} 
-                alt={photos[currentIndex]?.caption || "Youth photo"} 
+                src={(selectedAlbum ? albumPhotos : photos)[currentIndex]?.url} 
+                alt={(selectedAlbum ? albumPhotos : photos)[currentIndex]?.caption || "Youth photo"} 
                 className="max-w-full max-h-[70vh] object-contain bg-[var(--color-cream)] shadow-2xl" 
               />
-              {photos[currentIndex]?.caption && (
+              {(selectedAlbum ? albumPhotos : photos)[currentIndex]?.caption && (
                 <div className="mt-4 px-6 py-2 bg-black/70 rounded text-center text-white text-base md:text-lg max-w-2xl">
-                  {photos[currentIndex]?.caption}
+                  {(selectedAlbum ? albumPhotos : photos)[currentIndex]?.caption}
                 </div>
               )}
             </div>
 
-            { photos.length > 1 && (
+            { (selectedAlbum ? albumPhotos : photos).length > 1 && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setCurrentIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1));
+                  const len = (selectedAlbum ? albumPhotos : photos).length;
+                  setCurrentIndex((prev) => (prev === len - 1 ? 0 : prev + 1));
                 }}
                 className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-white text-4xl hover:text-[var(--color-gold)] transition z-10"
               >
@@ -290,7 +373,7 @@ export default function YouthMinistry() {
             )}
           </div>
 
-          { photos.length > 1 && (
+          { (selectedAlbum ? albumPhotos : photos).length > 1 && (
             <div className="flex-shrink-0 pb-4 text-center text-white/60 text-xs">
               Use ← → arrow keys or click the arrows to navigate
             </div>
