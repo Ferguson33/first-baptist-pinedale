@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Legacy client - being phased out in favor of @supabase/ssr pattern
+// New code should import from ./supabase/client or ./supabase/server instead.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://YOUR-PROJECT-ID.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'YOUR-ANON-KEY-HERE';
 

@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.49.4",
     "@tailwindcss/postcss": "^4.3.0",
     "date-fns": "^4.1.0",

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { Menu, X, User, LogOut, Shield, Users, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -123,6 +123,7 @@ export function Navbar() {
                         {/* Reliable Sign Out - clears everything aggressively */}
                         <button
                           onClick={() => {
+                            const supabase = createClient();
                             supabase.auth.signOut();
                             Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
                             Object.keys(sessionStorage).forEach(k => sessionStorage.removeItem(k));
