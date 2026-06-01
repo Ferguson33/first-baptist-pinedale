@@ -208,9 +208,9 @@ export default function AdminDashboard() {
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) continue;
 
-        try {
-          toast.loading("Uploading photo...", { id: 'youth-upload' });
+        const toastId = toast.loading("Uploading photo...");
 
+        try {
           const fileExt = file.name.split('.').pop();
           const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
           const filePath = `youth/${fileName}`;
@@ -240,10 +240,10 @@ export default function AdminDashboard() {
 
           setYouthPhotos(prev => [insertData, ...prev]);
 
-          toast.success("Photo uploaded successfully!", { id: 'youth-upload' });
+          toast.success("Photo uploaded successfully!", { id: toastId });
         } catch (error: any) {
           console.error('Youth upload error:', error);
-          toast.error("Failed to upload photo: " + (error.message || "Unknown error"), { id: 'youth-upload' });
+          toast.error("Failed to upload photo: " + (error.message || "Unknown error"), { id: toastId });
         }
       }
     }
