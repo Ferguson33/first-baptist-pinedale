@@ -68,7 +68,7 @@ export default function AdminDashboard() {
   const [directory, setDirectory] = useState<LocalMember[]>([
     { id: 'm1', name: "Robert & Linda Thompson", spouse: "Linda", phone: "(307) 555-0182", approved: true }
   ]);
-  // Events state temporarily removed while we establish the public display first.
+  const [events, setEvents] = useState<any[]>([]);
 
   const [progress, setProgress] = useState({ 
     physical_percent: 68, 
@@ -378,7 +378,9 @@ export default function AdminDashboard() {
       loadSermonSettings();
       fetchRealSermons();
     }
-    // Events tab is currently in placeholder mode.
+    if (tab === 'events') {
+      fetchEvents();
+    }
   };
 
   async function fetchBuildingPhotos() {
@@ -479,8 +481,90 @@ export default function AdminDashboard() {
     }
   }
 
-  // Events functionality is temporarily disabled while we connect the pieces.
-  // The public Events page currently shows a placeholder event.
+  // === Events (Spotlight / Special Events for public Events page) ===
+  async function fetchEvents() {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching events:', error);
+      toast.error("Failed to load events");
+    } else {
+      setEvents(data || []);
+    }
+  }
+
+  async function addEvent() {
+    const title = prompt("Event title?");
+    if (!title) return;
+
+    const date = prompt("Date (YYYY-MM-DD)?", new Date().toISOString().split('T')[0]);
+    if (!date) return;
+
+    const time = prompt("Time (optional)?", "") || null;
+    const description = prompt("Description (optional)?", "") || null;
+    const location = prompt("Location (optional)?", "") || null;
+
+    const { error } = await supabase.from('events').insert({
+      title,
+      date,
+      time,
+      description,
+      location,
+    });
+
+    if (error) {
+      toast.error("Failed to add event: " + error.message);
+    } else {
+      toast.success("Event added!");
+      fetchEvents();
+    }
+  }
+
+  async function editEvent(ev: any) {
+    const title = prompt("New title?", ev.title);
+    if (title === null) return;
+
+    const date = prompt("New date (YYYY-MM-DD)?", ev.date);
+    if (date === null) return;
+
+    const time = prompt("New time (optional)?", ev.time || "");
+    const description = prompt("New description (optional)?", ev.description || "");
+    const location = prompt("New location (optional)?", ev.location || "");
+
+    const { error } = await supabase
+      .from('events')
+      .update({
+        title,
+        date,
+        time: time || null,
+        description: description || null,
+        location: location || null,
+      })
+      .eq('id', ev.id);
+
+    if (error) {
+      toast.error("Failed to update event: " + error.message);
+    } else {
+      toast.success("Event updated!");
+      fetchEvents();
+    }
+  }
+
+  async function deleteEvent(id: string, title: string) {
+    if (!confirm(`Delete event "${title}"?`)) return;
+
+    const { error } = await supabase.from('events').delete().eq('id', id);
+
+    if (error) {
+      toast.error("Failed to delete event");
+    } else {
+      toast.success("Event deleted");
+      fetchEvents();
+    }
+  }
 
   // === Sermon Settings (Pastor Note + Upcoming Sermon) ===
   async function loadSermonSettings() {
@@ -1401,22 +1485,58 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* EVENTS - Placeholder (coming soon) */}
+      {/* EVENTS - Spotlight / Special Events (visible on public /events page) */}
       {activeTab === 'events' && (
         <div>
-          <div className="font-semibold text-2xl mb-2">Spotlight Events</div>
-          <p className="text-[var(--color-stone-light)] mb-6">
-            This section will let you add special one-time events that appear prominently on the public Events page.
-          </p>
-
-          <div className="border border-dashed border-[var(--color-gold)]/40 rounded-3xl p-12 text-center bg-white">
-            <div className="text-2xl mb-2">📅</div>
-            <div className="font-semibold text-xl text-[var(--color-navy)] mb-2">Event Management Coming Soon</div>
-            <p className="text-[var(--color-stone)] max-w-md mx-auto">
-              We’re setting up the ability for admins to add rare or special events here. 
-              Once connected, they will automatically appear on the public Events page in a highlighted section.
-            </p>
+          <div className="flex justify-between mb-6">
+            <div>
+              <div className="font-semibold text-2xl">Spotlight Events</div>
+              <div className="text-sm text-[var(--color-stone-light)]">
+                These appear on the public Events page (above the weekly schedule) when added.
+              </div>
+            </div>
+            <button 
+              onClick={addEvent}
+              className="admin-big-button flex items-center gap-2 bg-[var(--color-navy)] text-white px-6 rounded-2xl"
+            >
+              <Plus /> Add Event
+            </button>
           </div>
+
+          {events.length === 0 ? (
+            <div className="text-[var(--color-stone-light)] py-8 text-center border border-dashed rounded-3xl">
+              No spotlight events yet. Add rare or special events here — they will show up on the public Events page.
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              {events.map((ev: any) => (
+                <div key={ev.id} className="border bg-white p-6 rounded-2xl relative group">
+                  <div className="font-semibold text-xl">{ev.title}</div>
+                  <div className="text-[var(--color-gold-dark)] mt-1">
+                    {new Date(ev.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                    {ev.time && ` • ${ev.time}`}
+                  </div>
+                  {ev.location && <div className="text-sm mt-1 text-[var(--color-stone)]">{ev.location}</div>}
+                  {ev.description && <p className="mt-3 text-sm">{ev.description}</p>}
+
+                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                    <button
+                      onClick={() => editEvent(ev)}
+                      className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => deleteEvent(ev.id, ev.title)}
+                      className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
