@@ -123,8 +123,7 @@ export function Navbar() {
                         {/* Reliable Sign Out - clears everything aggressively */}
                         <button
                           onClick={() => {
-                            const supabase = createClient();
-                            supabase.auth.signOut();
+                            signOut();
                             Object.keys(localStorage).filter(k => k.startsWith('sb-')).forEach(k => localStorage.removeItem(k));
                             Object.keys(sessionStorage).forEach(k => sessionStorage.removeItem(k));
                             setShowUserMenu(false);

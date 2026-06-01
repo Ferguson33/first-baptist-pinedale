@@ -18,22 +18,16 @@ interface BuildingPhoto {
 }
 
 export default function BuildingProject() {
-  const [progress, setProgress] = useState<BuildingProgress>({
-    physical_percent: 68,
-    funds_raised: 250000,
-    funds_goal: 451000,
-  });
+  const [progress, setProgress] = useState<BuildingProgress | null>(null);
   const [photos, setPhotos] = useState<BuildingPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const fetchBuildingData = async (isBackground = false) => {
-    // Only show the loading spinner on initial load, not on background refetches
     if (!isBackground) setLoading(true);
 
     try {
-      // Fetch progress (single row)
       const { data: progressData, error: progressError } = await supabase
         .from('building_progress')
         .select('physical_percent, funds_raised, funds_goal, physical_note')
@@ -42,12 +36,11 @@ export default function BuildingProject() {
 
       if (progressError) {
         console.error('Error fetching building progress:', progressError);
-        // Do NOT reset progress on error — keep last known good values
+        // On error, leave progress as null or previous — do not reset to defaults
       } else if (progressData) {
         setProgress(progressData);
       }
 
-      // Fetch photos
       const { data: photosData, error: photosError } = await supabase
         .from('building_photos')
         .select('id, url, caption')
@@ -55,7 +48,6 @@ export default function BuildingProject() {
 
       if (photosError) {
         console.error('Error fetching building photos:', photosError);
-        // Do NOT clear photos on error
       } else if (photosData) {
         setPhotos(photosData);
       }
@@ -68,33 +60,6 @@ export default function BuildingProject() {
 
   useEffect(() => {
     fetchBuildingData();
-
-    // Strong mobile resilience:
-    // Refetch when tab becomes visible (handles bfcache, app switch, sleep/wake)
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        fetchBuildingData(true); // background refetch, no loading spinner
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    // Also on window focus (common on mobile browsers)
-    const handleFocus = () => fetchBuildingData(true);
-    window.addEventListener('focus', handleFocus);
-
-    // Refetch on bfcache restore (browser back/forward)
-    const handlePageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) {
-        fetchBuildingData(true);
-      }
-    };
-    window.addEventListener('pageshow', handlePageShow as EventListener);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('pageshow', handlePageShow as EventListener);
-    };
   }, []);
 
   // Gallery keyboard navigation
@@ -117,16 +82,9 @@ export default function BuildingProject() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [galleryOpen, photos.length]);
 
-  // Refetch data when page is restored from bfcache (browser back/forward)
-  useEffect(() => {
-    const handlePageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) {
-        fetchBuildingData();
-      }
-    };
-    window.addEventListener('pageshow', handlePageShow as EventListener);
-    return () => window.removeEventListener('pageshow', handlePageShow as EventListener);
-  }, []);
+  // Note: Removed aggressive bfcache/visibility refetch listeners.
+  // They were causing the progress numbers to bounce back to defaults on reload/focus.
+  // Manual refresh button is still available.
 
   // Lock body scroll when gallery is open
   useEffect(() => {
@@ -153,31 +111,37 @@ export default function BuildingProject() {
         <div className="bg-white rounded-3xl p-8 border">
           <div className="flex justify-between text-sm mb-2">
             <div className="font-semibold">Physical Progress</div>
-            <div className="font-mono text-[var(--color-gold-dark)]">{progress.physical_percent}%</div>
+            <div className="font-mono text-[var(--color-gold-dark)]">
+              {progress ? `${progress.physical_percent}%` : '...'}
+            </div>
           </div>
           <div className="h-6 bg-[var(--color-cream)] rounded-full overflow-hidden">
             <motion.div 
               className="h-full bg-gradient-to-r from-[var(--color-gold)] to-[var(--color-gold-dark)]" 
               initial={{ width: 0 }} 
-              animate={{ width: `${progress.physical_percent}%` }} 
+              animate={{ width: progress ? `${progress.physical_percent}%` : '0%' }} 
               transition={{ duration: 1.4, ease: [0.34, 1.56, 0.64, 1] }}
             />
           </div>
           <div className="text-xs text-[var(--color-stone-light)] mt-2">
-            {progress.physical_note || "Steel, concrete, and framing are on schedule thanks to your faithful giving and many volunteer hours."}
+            {progress?.physical_note || "Steel, concrete, and framing are on schedule thanks to your faithful giving and many volunteer hours."}
           </div>
         </div>
 
         <div className="bg-white rounded-3xl p-8 border">
           <div className="flex justify-between text-sm mb-2">
             <div className="font-semibold">Funds Raised</div>
-            <div><span className="font-mono text-[var(--color-gold-dark)]">${progress.funds_raised.toLocaleString()}</span> <span className="text-xs text-[var(--color-stone-light)]">of ${progress.funds_goal.toLocaleString()}</span></div>
+            <div>
+              {progress ? (
+                <><span className="font-mono text-[var(--color-gold-dark)]">${progress.funds_raised.toLocaleString()}</span> <span className="text-xs text-[var(--color-stone-light)]">of ${progress.funds_goal.toLocaleString()}</span></>
+              ) : '...'}
+            </div>
           </div>
           <div className="h-6 bg-[var(--color-cream)] rounded-full overflow-hidden">
             <motion.div 
               className="h-full bg-[var(--color-navy)]" 
               initial={{ width: 0 }} 
-              animate={{ width: `${Math.min(100, (progress.funds_raised / progress.funds_goal) * 100)}%` }} 
+              animate={{ width: progress ? `${Math.min(100, (progress.funds_raised / progress.funds_goal) * 100)}%` : '0%' }} 
               transition={{ duration: 1.4, ease: [0.34, 1.56, 0.64, 1] }}
             />
           </div>

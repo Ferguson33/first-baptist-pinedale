@@ -133,12 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signOut() {
     await supabase.auth.signOut();
 
-    // Extra aggressive cleanup — removes any leftover Supabase tokens
-    if (typeof window !== 'undefined') {
-      Object.keys(localStorage)
-        .filter((key) => key.startsWith('sb-'))
-        .forEach((key) => localStorage.removeItem(key));
-    }
+    // Let the middleware handle cookie/session clearing on next request.
+    // Aggressive localStorage clearing can cause auth state to desync with the new SSR setup.
 
     setUser(null);
     setSession(null);
