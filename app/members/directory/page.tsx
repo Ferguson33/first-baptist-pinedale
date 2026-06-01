@@ -9,12 +9,10 @@ import Link from 'next/link';
  * Embeds the official First Baptist Church Directory Google Doc (published version).
  * Protected to approved members only.
  *
- * This is one of the primary destinations for approved members from the user menu.
- * This dedicated route provides a clean, distraction-free view + direct bookmarkable URL.
+ * This is one of the primary destinations linked from the user menu.
  *
- * To update the document the office uses the edit link.
- * To get the embed URL: in the Google Doc (edit mode) → File → Share → Publish to web → Publish.
- * Then use https://docs.google.com/document/d/e/<ID>/pub?embedded=true
+ * To update the document, the office edits it in Google Docs then re-publishes it.
+ * The embed URL format is: https://docs.google.com/document/d/e/<ID>/pub?embedded=true
  */
 
 export default function MemberDirectory() {

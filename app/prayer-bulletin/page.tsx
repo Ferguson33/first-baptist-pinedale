@@ -7,14 +7,12 @@ import { BookOpen, MessageCircle } from 'lucide-react';
 /**
  * Prayer Bulletin Page
  *
- * This page is now a read-only view with:
- * - Embedded Google Doc (maintained by the church office)
- * - Link to the official GroupMe prayer group
+ * This page shows the church's Prayer Bulletin as a Google Doc embed.
+ * It also links to the church's GroupMe prayer group.
  *
- * It requires an approved member login (same pattern as Member Directory).
+ * It requires an approved member login.
  *
- * TODO: Replace the iframe src with the real Google Doc "Publish to web" embed URL
- * Example: https://docs.google.com/document/d/e/XXXXXXXXXXXXXXXXXXXX/pub?embedded=true
+ * The Google Doc embed URL still needs to be filled in (see TODO below).
  */
 
 export default function PrayerBulletin() {
@@ -40,22 +38,8 @@ export default function PrayerBulletin() {
         </p>
       </div>
 
-      {/* Embedded Google Doc - main content area */}
-      <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm mb-10">
-        <iframe
-          // TODO: Replace PLACEHOLDER with the actual published Google Doc embed URL for the Prayer Bulletin
-          src="https://docs.google.com/document/d/e/PLACEHOLDER_PRAYER_BULLETIN/pub?embedded=true"
-          width="100%"
-          height="1100"
-          frameBorder="0"
-          title="Prayer Bulletin"
-          className="w-full block"
-          style={{ minHeight: '700px', border: 'none' }}
-        />
-      </div>
-
-      {/* GroupMe Section */}
-      <div className="bg-[var(--color-cream)] border border-[var(--color-gold)]/30 rounded-3xl p-8 md:p-10">
+      {/* GroupMe Section - moved to top per request */}
+      <div className="bg-[var(--color-cream)] border border-[var(--color-gold)]/30 rounded-3xl p-8 md:p-10 mb-10">
         <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-8">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3">
@@ -80,6 +64,20 @@ export default function PrayerBulletin() {
         <div className="mt-5 text-xs text-[var(--color-stone-light)]">
           Private group for First Baptist Church of Pinedale members &amp; friends.
         </div>
+      </div>
+
+      {/* Embedded Google Doc - main content area */}
+      <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm mb-10">
+        <iframe
+          // TODO: Replace PLACEHOLDER with the actual published Google Doc embed URL for the Prayer Bulletin
+          src="https://docs.google.com/document/d/e/PLACEHOLDER_PRAYER_BULLETIN/pub?embedded=true"
+          width="100%"
+          height="1100"
+          frameBorder="0"
+          title="Prayer Bulletin"
+          className="w-full block"
+          style={{ minHeight: '700px', border: 'none' }}
+        />
       </div>
 
       <div className="text-xs text-center mt-8 text-[var(--color-stone-light)]">

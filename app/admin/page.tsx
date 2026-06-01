@@ -1180,7 +1180,7 @@ export default function AdminDashboard() {
             })}
           </div>
 
-          <div className="mt-6 text-sm">When you approve someone they gain access to the Members Portal, Prayer Bulletin, and other private areas.</div>
+          <div className="mt-6 text-sm">When you approve someone they gain access to the Member Directory, Prayer Bulletin, and other private areas.</div>
         </div>
       )}
 

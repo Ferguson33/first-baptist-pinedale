@@ -143,19 +143,6 @@ create table events (
   created_at timestamptz default now()
 );
 
--- Member Directory
-create table directory_members (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  spouse text,
-  photo_url text,
-  phone text,
-  email text,
-  notes text,
-  approved boolean default false,
-  created_at timestamptz default now()
-);
-
 -- Enable Row Level Security (recommended)
 alter table profiles enable row level security;
 alter table prayer_requests enable row level security;
@@ -166,14 +153,12 @@ alter table prayer_requests enable row level security;
 
 ## Zeffy Giving Integration
 
-On the `/give` page you will see a clearly marked box:
-**PASTE ZEFFY EMBED CODE HERE**
+The `/give` page contains a live Zeffy donation form. To update the form:
 
 1. Log into your Zeffy account
-2. Create a donation form (choose the 4 funds: Tithe, Offering, Building, Faith Promise)
-3. Go to the form → Embed
-4. Copy the HTML embed code
-5. Paste it into the placeholder in `app/give/page.tsx`
+2. Go to your donation form → Embed
+3. Copy the new embed URL
+4. Update the `src` in `app/give/page.tsx`
 
 ---
 
@@ -183,8 +168,8 @@ On the `/give` page you will see a clearly marked box:
 - `/give` — Zeffy giving with 4 funds
 - `/admin` — Full drag-and-drop beginner-friendly dashboard (pastors only)
 - `/admin/quick-guide` — One-page printable pastor cheat sheet
-- `/prayer-wall` — Public approved prayers + member submission
-- `/members/directory` — Private searchable member list
+- `/members/directory` — Private Member Directory (Google Doc embed)
+- `/prayer-bulletin` — Prayer Bulletin (Google Doc embed)
 
 ---
 

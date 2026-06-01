@@ -76,19 +76,6 @@ create table if not exists events (
   created_at timestamptz default now()
 );
 
--- MEMBER DIRECTORY
-create table if not exists directory_members (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  spouse text,
-  photo_url text,
-  phone text,
-  email text,
-  notes text,
-  approved boolean default false,
-  created_at timestamptz default now()
-);
-
 -- Simple starter policies (tighten for production)
 create policy "Public can read approved profiles" on profiles for select using (role = 'approved' or role = 'admin');
 create policy "Users can read own profile" on profiles for select using (auth.uid() = id);

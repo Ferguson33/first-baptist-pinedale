@@ -83,27 +83,6 @@ export type Event = {
   created_at: string;
 };
 
-export type DirectoryMember = {
-  id: string;
-  name: string;
-  spouse?: string;
-  photo_url?: string;
-  phone?: string;
-  email?: string;
-  notes?: string;
-  approved: boolean;
-  created_at: string;
-};
-
-// New Family-centric model for the directory
-export type Family = {
-  id: string;
-  name: string;                    // e.g. "The Johnson Family" or "Mike & Sarah Johnson"
-  photo_url?: string;
-  address?: string;
-  notes?: string;
-  member_count: number;            // Total people in the family (including kids)
-  created_at: string;
-  updated_at: string;
-};
+// Note: The old DirectoryMember and Family types were removed as the site
+// moved to Google Docs for the Member Directory.
 
