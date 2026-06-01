@@ -206,7 +206,9 @@ export default function AdminDashboard() {
       // Could open a modal in a full version
     }
     else if (type === 'youth') {
-      // Youth photo upload - supports multiple files + selected album
+      // === YOUTH SERVER ROUTE v2: FULL UPLOAD ===
+      // Sends raw file(s) via FormData to /api/admin/youth/upload-photo
+      // Server does BOTH storage.upload + youth_photos INSERT with service role (no client RLS)
       const albumId = selectedYouthAlbumId;
 
       // === DEBUG: Check who the client thinks is logged in ===
@@ -215,54 +217,56 @@ export default function AdminDashboard() {
       console.log('%c[Youth Upload Debug] User ID:', 'color: #ff9800', currentUser?.id);
       console.log('%c[Youth Upload Debug] Selected Album ID:', 'color: #ff9800', albumId);
 
-      // LOUD MARKER - only exists in the new server-route code path
-      console.log('%c=== YOUTH ALBUMS SERVER ROUTE v2 ACTIVE (using /api/admin/youth/upload-photo) ===', 'color: lime; font-size: 16px; font-weight: bold; background: black');
+      // LOUD MARKER - proves the v2 client code is running
+      console.log('%c=== YOUTH ALBUMS SERVER ROUTE v2 (CLIENT) - SENDING FILES TO /api/admin/youth/upload-photo ===', 'color: lime; font-size: 15px; font-weight: bold; background: #111');
+
+      // Get fresh access token to send to our protected API route
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        toast.error("No active session token. Please log out and log back in as admin.");
+        return;
+      }
 
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) continue;
 
         try {
-          toast.loading(`Uploading ${file.name}...`, { id: 'youth-upload' });
-
-          const fileExt = file.name.split('.').pop();
-          const fileName = `youth-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
-          const filePath = `youth/${fileName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from('youth-photos')
-            .upload(filePath, file);
-
-          if (uploadError) throw uploadError;
-
-          const { data: urlData } = supabase.storage
-            .from('youth-photos')
-            .getPublicUrl(filePath);
+          toast.loading(`Uploading ${file.name} via server v2...`, { id: 'youth-upload' });
 
           const caption = prompt(`Caption for ${file.name} (optional)`) || "";
 
-          // Use server-side API route with service role key to bypass RLS issues
+          const formData = new FormData();
+          formData.append('file', file);
+          if (albumId) formData.append('album_id', albumId);
+          if (caption) formData.append('caption', caption);
+
+          // Call server route - server will do storage + DB with service role
           const response = await fetch('/api/admin/youth/upload-photo', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              url: urlData.publicUrl,
-              caption: caption || null,
-              album_id: albumId,
-            }),
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              // DO NOT set Content-Type — browser must set the multipart boundary automatically
+            },
+            body: formData,
           });
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || 'Failed to save photo metadata');
+            console.error('%c[Server Route v2] HTTP error response:', 'color:red', errorData);
+            throw new Error(errorData.error || `Server returned ${response.status}`);
           }
+
+          const result = await response.json().catch(() => ({}));
+          console.log('%c[Server Route v2] SUCCESS response from server:', 'color:lime', result);
         } catch (error: any) {
-          console.error('%c[Youth Upload Debug] Full error during insert:', 'color: red; font-weight: bold', error);
-          console.error('Youth upload error:', error);
+          console.error('%c[Youth Upload v2 Debug] Full error:', 'color: red; font-weight: bold', error);
+          console.error('Youth upload v2 error:', error);
           toast.error(`Failed to upload ${file.name}: ${error.message || error}`);
         }
       }
 
-      toast.success("Youth photos uploaded!", { id: 'youth-upload' });
+      toast.success("Youth photos uploaded via Server Route v2!", { id: 'youth-upload' });
       fetchYouthPhotos();
     }
   };
@@ -1219,7 +1223,7 @@ export default function AdminDashboard() {
             </div>
             <div className="text-[var(--color-stone-light)] mt-1">
               {selectedYouthAlbumId 
-                ? "Using server-side upload with service role (bypasses RLS)" 
+                ? "Server Route v2 — full upload (storage + DB) via service role • no client RLS" 
                 : "or click to browse • JPG or PNG recommended"}
             </div>
             <input 
