@@ -67,9 +67,7 @@ export default function AdminDashboard() {
   const [directory, setDirectory] = useState<LocalMember[]>([
     { id: 'm1', name: "Robert & Linda Thompson", spouse: "Linda", phone: "(307) 555-0182", approved: true }
   ]);
-  const [events, setEvents] = useState<LocalEvent[]>([
-    { id: 'e1', title: "Spring Potluck & Church Clean-up", date: "2025-05-17", time: "11:30 AM", description: "Bring a dish to share. All ages welcome!", location: "Church Fellowship Hall" }
-  ]);
+  const [events, setEvents] = useState<any[]>([]);
 
   const [progress, setProgress] = useState({ 
     physical_percent: 68, 
@@ -379,6 +377,9 @@ export default function AdminDashboard() {
       loadSermonSettings();
       fetchRealSermons();
     }
+    if (tab === 'events') {
+      fetchEvents();
+    }
   };
 
   async function fetchBuildingPhotos() {
@@ -476,6 +477,60 @@ export default function AdminDashboard() {
     } catch (error: any) {
       console.error(error);
       toast.error("Failed to delete album: " + (error.message || "Unknown error"));
+    }
+  }
+
+  // === Events (for spotlighting rare events on the public Events page) ===
+  async function fetchEvents() {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching events:', error);
+    } else {
+      setEvents(data || []);
+    }
+  }
+
+  async function addEvent() {
+    const title = prompt("Event title?");
+    if (!title) return;
+
+    const date = prompt("Date (YYYY-MM-DD)?", new Date().toISOString().split('T')[0]);
+    if (!date) return;
+
+    const time = prompt("Time (optional, e.g. 6:00 PM)?", "") || null;
+    const description = prompt("Short description?", "") || "";
+    const location = prompt("Location (optional)?", "") || null;
+
+    const { error } = await supabase.from('events').insert({
+      title,
+      date,
+      time,
+      description,
+      location,
+    });
+
+    if (error) {
+      toast.error("Failed to add event: " + error.message);
+    } else {
+      toast.success("Event added!");
+      fetchEvents();
+    }
+  }
+
+  async function deleteEvent(id: string, title: string) {
+    if (!confirm(`Delete event "${title}"?`)) return;
+
+    const { error } = await supabase.from('events').delete().eq('id', id);
+
+    if (error) {
+      toast.error("Failed to delete event");
+    } else {
+      toast.success("Event deleted");
+      fetchEvents();
     }
   }
 
@@ -1398,28 +1453,48 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* EVENTS */}
+      {/* EVENTS - Spotlight rare events on the public Events page */}
       {activeTab === 'events' && (
         <div>
           <div className="flex justify-between mb-6">
-            <div className="font-semibold text-2xl">Upcoming Events</div>
-            <button onClick={() => {
-              const title = prompt("Event title?");
-              if (!title) return;
-              setEvents(e => [...e, { id: Date.now().toString(), title, date: "2025-06-15", description: "New event added from dashboard" }]);
-              toast.success("Event added");
-            }} className="admin-big-button flex items-center gap-2 bg-[var(--color-navy)] text-white px-6 rounded-2xl"><Plus /> Add Event</button>
+            <div>
+              <div className="font-semibold text-2xl">Spotlight Events</div>
+              <div className="text-sm text-[var(--color-stone-light)]">These will appear prominently on the public Events page (below the header).</div>
+            </div>
+            <button 
+              onClick={addEvent}
+              className="admin-big-button flex items-center gap-2 bg-[var(--color-navy)] text-white px-6 rounded-2xl"
+            >
+              <Plus /> Add Event
+            </button>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            {events.map(ev => (
-              <div key={ev.id} className="border bg-white p-6 rounded-2xl">
-                <div className="font-semibold text-xl">{ev.title}</div>
-                <div className="text-[var(--color-gold-dark)] mt-1">{ev.date} {ev.time && `at ${ev.time}`}</div>
-                <p className="mt-3 text-sm">{ev.description}</p>
-              </div>
-            ))}
-          </div>
+          {events.length === 0 ? (
+            <div className="text-[var(--color-stone-light)] py-8 text-center border border-dashed rounded-3xl">
+              No spotlight events yet. Add one above for rare/one-off events you want to highlight on the Events page.
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              {events.map((ev: any) => (
+                <div key={ev.id} className="border bg-white p-6 rounded-2xl relative group">
+                  <div className="font-semibold text-xl">{ev.title}</div>
+                  <div className="text-[var(--color-gold-dark)] mt-1">
+                    {new Date(ev.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                    {ev.time && ` • ${ev.time}`}
+                  </div>
+                  {ev.location && <div className="text-sm mt-1 text-[var(--color-stone)]">{ev.location}</div>}
+                  {ev.description && <p className="mt-3 text-sm">{ev.description}</p>}
+
+                  <button
+                    onClick={() => deleteEvent(ev.id, ev.title)}
+                    className="absolute top-3 right-3 text-red-600 hover:text-red-700 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

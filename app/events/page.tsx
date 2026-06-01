@@ -1,4 +1,35 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+
+interface SpotlightEvent {
+  id: string;
+  title: string;
+  date: string;
+  time?: string | null;
+  description?: string | null;
+  location?: string | null;
+}
+
 export default function EventsPage() {
+  const [spotlightEvents, setSpotlightEvents] = useState<SpotlightEvent[]>([]);
+
+  useEffect(() => {
+    const fetchSpotlightEvents = async () => {
+      const { data } = await supabase
+        .from('events')
+        .select('*')
+        .order('date', { ascending: true });
+
+      if (data) {
+        setSpotlightEvents(data);
+      }
+    };
+
+    fetchSpotlightEvents();
+  }, []);
+
   return (
     <div className="max-w-4xl mx-auto px-6 py-16">
       <div className="text-center mb-12">
@@ -8,6 +39,43 @@ export default function EventsPage() {
           We are a small church in a high mountain town. Come as you are — we’d love to have you with us.
         </p>
       </div>
+
+      {/* Spotlight / Special Events - Only shows when admin adds something */}
+      {spotlightEvents.length > 0 && (
+        <div className="mb-12">
+          <div className="uppercase text-xs tracking-[3px] text-[var(--color-gold-dark)] mb-3">Special Notice</div>
+          <div className="space-y-4">
+            {spotlightEvents.map((event) => (
+              <div 
+                key={event.id} 
+                className="bg-[var(--color-navy)] text-white rounded-3xl p-6 md:p-8 shadow-lg border border-[var(--color-gold)]/30"
+              >
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                  <div>
+                    <div className="text-2xl font-semibold tracking-tight">{event.title}</div>
+                    <div className="mt-2 text-[var(--color-gold-light)] text-lg">
+                      {new Date(event.date).toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                      {event.time && ` • ${event.time}`}
+                    </div>
+                    {event.location && (
+                      <div className="mt-1 text-sm text-white/80">{event.location}</div>
+                    )}
+                  </div>
+                  {event.description && (
+                    <div className="md:max-w-md text-white/90 text-[15px] leading-relaxed">
+                      {event.description}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Weekly Schedule */}
       <div className="mb-16">
