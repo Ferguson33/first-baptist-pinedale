@@ -1,5 +1,6 @@
 import React from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { unstable_noStore } from 'next/cache';
 import EventsClient from './EventsClient';
 
 interface SpotlightEvent {
@@ -18,6 +19,9 @@ interface SpotlightEvent {
 export const dynamic = 'force-dynamic';
 
 export default async function EventsPage() {
+  // Ensure this is never cached — always fetch the latest events from the DB.
+  unstable_noStore();
+
   // Server-side fetch using service role.
   // This completely bypasses RLS and any client-side auth issues.
   // Safe because this runs only on the server.

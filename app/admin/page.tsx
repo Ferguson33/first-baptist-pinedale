@@ -527,7 +527,7 @@ export default function AdminDashboard() {
         console.error('[Events] Insert error:', error);
         toast.error("Failed to add event: " + (error.message || JSON.stringify(error)));
       } else {
-        toast.success("Event added!");
+        toast.success("Event added! It should now appear on the public Events page (hard refresh / new tab).", { duration: 6000 });
         fetchEvents();
       }
     } catch (err: any) {
