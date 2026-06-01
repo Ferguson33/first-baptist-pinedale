@@ -63,6 +63,7 @@ export default function AdminDashboard() {
   const [buildingPhotos, setBuildingPhotos] = useState<any[]>([]);
   const [youthPhotos, setYouthPhotos] = useState<any[]>([]);
   const [youthAlbums, setYouthAlbums] = useState<any[]>([]);
+  const [selectedYouthAlbumId, setSelectedYouthAlbumId] = useState<string | null>(null);
   const [directory, setDirectory] = useState<LocalMember[]>([
     { id: 'm1', name: "Robert & Linda Thompson", spouse: "Linda", phone: "(307) 555-0182", approved: true }
   ]);
@@ -205,8 +206,8 @@ export default function AdminDashboard() {
       // Could open a modal in a full version
     }
     else if (type === 'youth') {
-      // Youth photo upload - now supports multiple files
-      const albumId = prompt("Enter Album ID to add these photos to (leave blank for now, or copy from admin albums list):") || null;
+      // Youth photo upload - supports multiple files + selected album
+      const albumId = selectedYouthAlbumId;
 
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) continue;
@@ -436,6 +437,7 @@ export default function AdminDashboard() {
     } else {
       toast.success("Album created!");
       setYouthAlbums(prev => [data, ...prev]);
+      setSelectedYouthAlbumId(data.id); // Auto-select the new album for uploads
     }
   }
 
@@ -1074,8 +1076,8 @@ export default function AdminDashboard() {
           <div>
             <div className="flex justify-between mb-6">
               <div>
-                <div className="font-semibold text-2xl">Youth Ministry Photos</div>
-                <div className="text-sm text-[var(--color-stone-light)]">Upload photos that appear on the public Youth Ministry page with captions.</div>
+                <div className="font-semibold text-2xl">Youth Ministry Photos (Albums)</div>
+                <div className="text-sm text-[var(--color-stone-light)]">Create albums first, then select one above and drag photos into it. Photos will appear grouped on the public Youth page.</div>
               </div>
               <div className="flex gap-3">
                 <button 
@@ -1097,6 +1099,32 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+          {/* Album selector for uploads */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-2">Upload photos to this album:</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedYouthAlbumId(null)}
+                className={`px-4 py-2 rounded-full text-sm border ${!selectedYouthAlbumId ? 'bg-[var(--color-navy)] text-white' : 'hover:bg-[var(--color-cream)]'}`}
+              >
+                No Album (Uncategorized)
+              </button>
+              {youthAlbums.map((album: any) => (
+                <button
+                  key={album.id}
+                  onClick={() => setSelectedYouthAlbumId(album.id)}
+                  className={`px-4 py-2 rounded-full text-sm border ${selectedYouthAlbumId === album.id ? 'bg-[var(--color-navy)] text-white' : 'hover:bg-[var(--color-cream)]'}`}
+                >
+                  {album.title}
+                  {album.date && ` (${new Date(album.date).getFullYear()})`}
+                </button>
+              ))}
+              {youthAlbums.length === 0 && (
+                <span className="text-sm text-[var(--color-stone-light)]">No albums yet — create one above.</span>
+              )}
+            </div>
+          </div>
+
           {/* BIG DRAG & DROP ZONE - exact same style as Building */}
           <div 
             className="dropzone dropzone-large mb-6" 
@@ -1110,8 +1138,16 @@ export default function AdminDashboard() {
             onClick={() => document.getElementById('youth-upload')?.click()}
           >
             <Upload className="w-10 h-10 text-[var(--color-gold-dark)] mb-4" />
-            <div className="font-semibold text-xl">Drag &amp; Drop New Youth Photos Here</div>
-            <div className="text-[var(--color-stone-light)] mt-1">or click to browse • JPG or PNG recommended</div>
+            <div className="font-semibold text-xl">
+              {selectedYouthAlbumId 
+                ? `Add Photos to Selected Album` 
+                : "Drag & Drop New Youth Photos Here"}
+            </div>
+            <div className="text-[var(--color-stone-light)] mt-1">
+              {selectedYouthAlbumId 
+                ? "Photos will be added to the highlighted album above" 
+                : "or click to browse • JPG or PNG recommended"}
+            </div>
             <input 
               id="youth-upload" 
               type="file" 
@@ -1123,31 +1159,34 @@ export default function AdminDashboard() {
 
           {/* Current Youth Photos - grid styled to match Building admin tab */}
           <div className="bg-white p-8 rounded-3xl">
-            <div className="font-semibold mb-4">Current Youth Photos</div>
+            <div className="font-semibold mb-4">All Youth Photos (with album info)</div>
             {youthPhotos.length === 0 ? (
               <div className="text-[var(--color-stone-light)] py-4">No youth photos yet. Drag photos into the box above to get started.</div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {youthPhotos.map((photo: any) => (
-                  <div key={photo.id} className="group relative rounded-2xl overflow-hidden border aspect-video bg-[var(--color-cream)]">
-                    <img 
-                      src={photo.url} 
-                      alt={photo.caption || ""} 
-                      className="w-full h-full object-contain p-1" 
-                    />
-                    {photo.caption && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 p-3 text-xs text-white">{photo.caption}</div>
-                    )}
-                    
-                    {/* Delete button - exact same style as Building photos */}
-                    <button
-                      onClick={() => deleteYouthPhoto(photo.id, photo.url)}
-                      className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                ))}
+                {youthPhotos.map((photo: any) => {
+                  const album = youthAlbums.find((a: any) => a.id === photo.album_id);
+                  return (
+                    <div key={photo.id} className="group relative rounded-2xl overflow-hidden border aspect-video bg-[var(--color-cream)]">
+                      <img 
+                        src={photo.url} 
+                        alt={photo.caption || ""} 
+                        className="w-full h-full object-contain p-1" 
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 p-3 text-xs text-white">
+                        {photo.caption || (album ? album.title : "No album")}
+                      </div>
+                      
+                      {/* Delete button */}
+                      <button
+                        onClick={() => deleteYouthPhoto(photo.id, photo.url)}
+                        className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
