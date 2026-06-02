@@ -56,7 +56,7 @@ export function Footer() {
           <div className="font-semibold text-white tracking-wide mb-2 flex items-center gap-2">
             <Clock className="w-4 h-4 text-[var(--color-gold)]" /> Service Times
           </div>
-          <div className="flex gap-2 text-sm text-white/80">
+          <div className="flex gap-1 text-sm text-white/80">
             <div className="flex flex-col">
               <div className="text-white/60">Sunday Potluck Breakfast</div>
               <div className="text-white/60">Sunday School</div>
