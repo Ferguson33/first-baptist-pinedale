@@ -15,6 +15,7 @@ export default function Home() {
   // ============================================
   const PASTOR_YORK_VIDEO_ID = "PASTOR_YORK_VIDEO_ID";      // Ted & Teresa York
   const PASTOR_HOLMES_VIDEO_ID = "PASTOR_HOLMES_VIDEO_ID";  // Heath & Tessa Holmes
+  const CHURCH_TEASER_VIDEO_ID = "CHURCH_TEASER_VIDEO_ID";  // Church intro / teaser video
 
   // Sermon teaser content from admin (including Youth Sunday School)
   const [sermonTeaser, setSermonTeaser] = useState({
@@ -322,6 +323,34 @@ export default function Home() {
           <p className="text-center text-xs text-[var(--color-stone-light)] mt-6">
             Short videos introducing our pastoral families — coming soon.
           </p>
+        </div>
+      </div>
+
+      {/* STEP INSIDE OUR CHURCH HOME - Teaser Video */}
+      <div className="max-w-4xl mx-auto mt-10">
+        <div className="text-center mb-8">
+          <div className="uppercase tracking-[3px] text-xs text-[var(--color-gold-dark)]">OUR CHURCH HOME</div>
+          <h2 className="text-4xl font-semibold tracking-tighter mt-2 text-[var(--color-navy)]">Step Inside Our Church Home</h2>
+          <p className="mt-2 text-[var(--color-stone)] max-w-md mx-auto">
+            Take a quick walk through our building, hear a bit of our music, and get a feel for who we are.
+          </p>
+        </div>
+
+        <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm max-w-3xl mx-auto">
+          <div className="aspect-video bg-black">
+            <iframe
+              src={`https://www.youtube.com/embed/${CHURCH_TEASER_VIDEO_ID}`}
+              title="Step Inside Our Church Home"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full"
+            />
+          </div>
+          <div className="p-6 text-center">
+            <p className="text-[var(--color-stone)] text-sm">
+              A short look at our sanctuary, fellowship, and heart for Pinedale.
+            </p>
+          </div>
         </div>
       </div>
 
