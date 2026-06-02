@@ -155,6 +155,13 @@ export default function EventsClient({ spotlightEvents }: EventsClientProps) {
         </div>
       </div>
 
+      {/* Choir Note */}
+      <div className="mb-12 max-w-2xl">
+        <p className="text-lg text-[var(--color-stone)]">
+          We are excited to be starting a choir.
+        </p>
+      </div>
+
       {/* Google Calendar Placeholder */}
       <div className="mb-16">
         <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)] mb-4">Events Calendar</h2>
@@ -175,16 +182,6 @@ export default function EventsClient({ spotlightEvents }: EventsClientProps) {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Choir & Ministry Notes */}
-      <div className="max-w-2xl">
-        <h3 className="font-semibold text-xl text-[var(--color-navy)] mb-3">Current Ministry Notes</h3>
-        <ul className="space-y-2 text-[var(--color-stone)]">
-          <li>• Pastor Ted York preaches verse-by-verse through the Scriptures.</li>
-          <li>• We are excited to be starting a choir.</li>
-          <li>• Coffee is always available.</li>
-        </ul>
       </div>
 
       {/* Photo Gallery Lightbox for Spotlight Events */}
