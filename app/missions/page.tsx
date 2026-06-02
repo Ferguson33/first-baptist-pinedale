@@ -35,12 +35,12 @@ export default function MissionsPage() {
             onClick={() => setSelectedMissionary(missionary)}
           >
             {/* Photo / Placeholder Area */}
-            <div className="aspect-[4/3] bg-[var(--color-cream)] flex items-center justify-center relative overflow-hidden">
+            <div className={`bg-[var(--color-cream)] flex items-center justify-center relative overflow-hidden ${missionary.name.includes('Kowach') ? 'aspect-[3/4] min-h-[320px]' : 'aspect-[4/3]'}`}>
               {missionary.photo ? (
                 <img 
                   src={missionary.photo} 
                   alt={missionary.name}
-                  className={`max-h-full max-w-full object-contain ${missionary.name.includes('Kowach') ? 'object-top scale-[1.08]' : ''}`}
+                  className={`max-w-full object-contain ${missionary.name.includes('Kowach') ? 'h-auto object-top' : 'h-full w-full'}`}
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center">
