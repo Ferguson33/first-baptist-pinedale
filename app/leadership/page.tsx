@@ -53,7 +53,7 @@ export default function LeadershipPage() {
                 <span className="not-italic text-sm text-[var(--color-stone-light)]">— {couple.verseRef}</span>
               </blockquote>
 
-              <p className="mt-6 text-[15px] leading-relaxed text-[var(--color-stone)] max-w-prose">
+              <p className="mt-6 text-base leading-relaxed text-[var(--color-stone)] max-w-prose">
                 {couple.bio}
               </p>
             </div>
