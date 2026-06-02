@@ -26,7 +26,7 @@ export const missionaries: Missionary[] = [
     field: "Pinedale, Wy",
     country: "United States",
     org: "First Baptist Church",
-    // photo: "/images/Missionaries/holmes.jpg"
+    photo: "/images/pastors/holmes-couple.jpg",
   },
   {
     name: "Dr. Terry & Dr. Peggy Ellis",
