@@ -56,7 +56,7 @@ export function Footer() {
           <div className="font-semibold text-white tracking-wide mb-2 flex items-center gap-2">
             <Clock className="w-4 h-4 text-[var(--color-gold)]" /> Service Times
           </div>
-          <div className="grid grid-cols-[1fr,auto] gap-x-3 gap-y-1 text-white/80">
+          <div className="grid grid-cols-[1fr,4.5rem] gap-x-3 gap-y-1 text-white/80">
             <div className="text-white/60">Sunday Potluck Breakfast</div>
             <div className="font-medium tabular-nums text-right whitespace-nowrap">9:45 AM</div>
             <div className="text-white/60">Sunday School</div>
