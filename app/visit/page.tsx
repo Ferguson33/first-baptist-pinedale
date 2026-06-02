@@ -7,12 +7,24 @@ export default function PlanYourVisit() {
       <div className="mt-10 grid md:grid-cols-2 gap-x-10 gap-y-10 text-sm">
         <div>
           <div className="font-semibold text-lg mb-2">What to Expect</div>
-          <ul className="space-y-2 pl-5 text-[var(--color-stone)] list-outside">
-            <li>• Christ-centered, verse-by-verse preaching</li>
-            <li>• Music that is reverent and joyful — you’ll hear hymns and congregational singing</li>
-            <li>• Excellent, safe nursery available during services</li>
-            <li>• A simple, welcoming atmosphere in a small mountain church</li>
-          </ul>
+          <div className="space-y-2 text-[var(--color-stone)]">
+            <div className="flex gap-2">
+              <span className="shrink-0">•</span>
+              <span>Christ-centered, verse-by-verse preaching</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="shrink-0">•</span>
+              <span>Music that is reverent and joyful — you’ll hear hymns and congregational singing</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="shrink-0">•</span>
+              <span>Excellent, safe nursery available during services</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="shrink-0">•</span>
+              <span>A simple, welcoming atmosphere in a small mountain church</span>
+            </div>
+          </div>
         </div>
 
         <div>
