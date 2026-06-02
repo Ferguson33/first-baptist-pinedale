@@ -62,13 +62,19 @@ export default function PlanYourVisit() {
           <div className="mt-8">
             <div className="font-semibold text-xl mb-2">Location</div>
             <div>646 N Tyler Ave<br />Pinedale, WY 82941</div>
-            <div className="mt-1 text-xs text-[var(--color-stone-light)]">Directly across from the SCSD #1 administration building. Easy parking on the east side of the building.</div>
+
+            <div className="mt-4">
+              <div className="font-semibold text-xl mb-1">Parking</div>
+              <div className="text-[15px] text-[var(--color-stone)]">
+                Parking is available in front of the SCSD #1 administration building and in the Wrangler Gym parking lot. They have graciously given us access to their parking areas.
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="mt-12 bg-[var(--color-cream)] p-8 rounded-3xl text-[15px]">
-        First time? Email us at <a href="mailto:Firstbaptist646@gmail.com" className="font-medium underline">Firstbaptist646@gmail.com</a> and let us know you’re coming. We’ll save you a seat and have a welcome packet ready.
+        First time? Email us at <a href="mailto:Firstbaptist646@gmail.com" className="font-medium underline">Firstbaptist646@gmail.com</a> and let us know you’re coming. We’ll save you a seat.
       </div>
 
       {/* Google Map + Directions */}
@@ -93,7 +99,7 @@ export default function PlanYourVisit() {
             <div>
               <div className="font-medium">646 N Tyler Ave, Pinedale, WY 82941</div>
               <div className="text-sm text-[var(--color-stone-light)] mt-0.5">
-                Easy parking on the east side of the building.
+                Parking available in front of SCSD #1 or Wrangler Gym lots.
               </div>
             </div>
 
@@ -109,7 +115,7 @@ export default function PlanYourVisit() {
         </div>
 
         <p className="text-xs text-center text-[var(--color-stone-light)] mt-3">
-          We’re located directly across from the SCSD #1 administration building in the heart of Pinedale.
+          We’re located directly across from the SCSD #1 administration building. Parking available in front of SCSD #1 or the Wrangler Gym lots.
         </p>
       </div>
     </div>
