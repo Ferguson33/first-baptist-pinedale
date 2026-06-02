@@ -16,22 +16,7 @@ export type Profile = {
   email: string;
   full_name: string;
   role: 'pending' | 'approved' | 'admin';
-  photo_url?: string;
-  phone?: string;
-  address?: string;
-  joined_date?: string;
   created_at: string;
-
-  // Extended fields added over time
-  spouse_name?: string;
-  birthdate?: string;
-  anniversary?: string;
-  spouse_birthdate?: string;
-  notes?: string;
-
-  // Deprecated / removed features (kept in DB only)
-  // family_id?: string;
-  // prayer_auto_approve?: boolean;   // Was used for old Prayer Wall "trusted posters" feature
 };
 
 export type Sermon = {

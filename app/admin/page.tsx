@@ -33,10 +33,7 @@ interface LocalBuildingPhoto {
 interface LocalMember {
   id: string;
   name: string;
-  spouse?: string;
-  phone?: string;
   email?: string;
-  notes?: string;
   approved: boolean;
 }
 
@@ -66,7 +63,7 @@ export default function AdminDashboard() {
   const [youthAlbums, setYouthAlbums] = useState<any[]>([]);
   const [selectedYouthAlbumId, setSelectedYouthAlbumId] = useState<string | null>(null);
   const [directory, setDirectory] = useState<LocalMember[]>([
-    { id: 'm1', name: "Robert & Linda Thompson", spouse: "Linda", phone: "(307) 555-0182", approved: true }
+    { id: 'm1', name: "Robert Thompson", email: "robert@example.com", approved: true }
   ]);
   const [events, setEvents] = useState<any[]>([]);
 
@@ -1404,11 +1401,6 @@ export default function AdminDashboard() {
             )}
 
             {!loadingMembers && realMembers.map((m: any) => {
-              // Build nice display name for couples
-              const displayName = m.spouse_name 
-                ? `${m.full_name} & ${m.spouse_name}` 
-                : m.full_name;
-
               return (
                 <div 
                   key={m.id} 
@@ -1416,17 +1408,9 @@ export default function AdminDashboard() {
                   className="flex justify-between border-b py-4 last:border-0 items-center gap-4 hover:bg-[var(--color-cream)] cursor-pointer rounded-lg px-2 -mx-2 transition"
                 >
                   <div className="min-w-0">
-                    <div className="font-semibold text-lg">{displayName}</div>
+                    <div className="font-semibold text-lg">{m.full_name}</div>
                     
                     <div className="text-xs text-[var(--color-stone-light)] mt-0.5">{m.email}</div>
-
-                    {/* Key dates and phone */}
-                    <div className="text-sm mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[var(--color-stone)]">
-                      {m.phone && <div>📞 {m.phone}</div>}
-                      {m.birthdate && <div>🎂 {m.birthdate}</div>}
-                      {m.anniversary && <div>💍 Anniversary: {m.anniversary}</div>}
-                      {m.spouse_birthdate && <div>🎂 Spouse: {m.spouse_birthdate}</div>}
-                    </div>
 
                     <div className="text-[10px] mt-1.5 uppercase tracking-wider">
                       Status: <span className={m.role === 'approved' ? 'text-green-600' : m.role === 'admin' ? 'text-[var(--color-gold-dark)]' : 'text-orange-600'}>
@@ -1473,33 +1457,9 @@ export default function AdminDashboard() {
             </button>
 
             <div className="font-semibold text-2xl mb-1">
-              {selectedMember.spouse_name 
-                ? `${selectedMember.full_name} & ${selectedMember.spouse_name}` 
-                : selectedMember.full_name}
+              {selectedMember.full_name}
             </div>
             <div className="text-sm text-[var(--color-stone-light)] mb-6">{selectedMember.email}</div>
-
-            {selectedMember.photo_url && (
-              <img 
-                src={selectedMember.photo_url} 
-                alt="Member photo" 
-                className="w-32 h-32 rounded-full object-cover mx-auto mb-6 border-4 border-[var(--color-cream)]" 
-              />
-            )}
-
-            <div className="space-y-3 text-sm">
-              {selectedMember.phone && <div><strong>Phone:</strong> {selectedMember.phone}</div>}
-              {selectedMember.birthdate && <div><strong>Birthdate:</strong> {selectedMember.birthdate}</div>}
-              {selectedMember.anniversary && <div><strong>Anniversary:</strong> {selectedMember.anniversary}</div>}
-              {selectedMember.spouse_birthdate && <div><strong>Spouse Birthdate:</strong> {selectedMember.spouse_birthdate}</div>}
-              {selectedMember.address && <div><strong>Address:</strong> {selectedMember.address}</div>}
-              {selectedMember.notes && (
-                <div>
-                  <strong>Notes:</strong><br />
-                  <span className="text-[var(--color-stone)]">{selectedMember.notes}</span>
-                </div>
-              )}
-            </div>
 
             <div className="mt-8 flex justify-end gap-3">
               {selectedMember.role === 'pending' && (
