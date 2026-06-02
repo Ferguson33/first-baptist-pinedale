@@ -7,7 +7,7 @@ export default function PlanYourVisit() {
       <div className="mt-10 grid md:grid-cols-2 gap-x-10 gap-y-10 text-sm">
         <div>
           <div className="font-semibold text-lg mb-2">What to Expect</div>
-          <ul className="space-y-2 text-[var(--color-stone)]">
+          <ul className="space-y-2 pl-5 text-[var(--color-stone)] list-outside">
             <li>• Christ-centered, verse-by-verse preaching</li>
             <li>• Music that is reverent and joyful — you’ll hear hymns and congregational singing</li>
             <li>• Excellent, safe nursery available during services</li>
@@ -18,12 +18,30 @@ export default function PlanYourVisit() {
         <div>
           <div className="font-semibold text-lg mb-2">Service Times</div>
           <div className="space-y-1 text-[var(--color-stone)]">
-            <div>Sunday Breakfast Fellowship — 9:45 AM</div>
-            <div>Sunday School (all ages) — 10:15 AM</div>
-            <div>Teen Sunday School (6th–12th grade) — 10:15 AM</div>
-            <div>Sunday Morning Worship — 11:00 AM</div>
-            <div>Junior Church (ages 4–5th grade) — during Sunday Morning Worship</div>
-            <div>Nursery available during Sunday School and Worship</div>
+            <div className="flex justify-between gap-4">
+              <span>Sunday Breakfast Fellowship</span>
+              <span className="font-medium text-right whitespace-nowrap">9:45 AM</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span>Sunday School (all ages)</span>
+              <span className="font-medium text-right whitespace-nowrap">10:15 AM</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span>Teen Sunday School (6th–12th grade)</span>
+              <span className="font-medium text-right whitespace-nowrap">10:15 AM</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span>Sunday Morning Worship</span>
+              <span className="font-medium text-right whitespace-nowrap">11:00 AM</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span>Junior Church (ages 4–5th grade)</span>
+              <span className="font-medium text-right whitespace-nowrap">during Worship</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span>Nursery available</span>
+              <span className="font-medium text-right whitespace-nowrap">during services</span>
+            </div>
           </div>
           <div className="mt-3 text-xs text-[var(--color-stone-light)]">
             We do not currently have a Sunday evening service.
@@ -32,7 +50,7 @@ export default function PlanYourVisit() {
           <div className="mt-8">
             <div className="font-semibold text-lg mb-2">Location</div>
             <div>646 N Tyler Ave<br />Pinedale, WY 82941</div>
-            <div className="mt-1 text-xs text-[var(--color-stone-light)]">Just two blocks north of the high school. Easy parking on the east side of the building.</div>
+            <div className="mt-1 text-xs text-[var(--color-stone-light)]">Directly across from the SCSD #1 administration building. Easy parking on the east side of the building.</div>
           </div>
         </div>
       </div>
@@ -79,7 +97,7 @@ export default function PlanYourVisit() {
         </div>
 
         <p className="text-xs text-center text-[var(--color-stone-light)] mt-3">
-          We’re located just north of the high school in the heart of Pinedale.
+          We’re located directly across from the SCSD #1 administration building in the heart of Pinedale.
         </p>
       </div>
     </div>

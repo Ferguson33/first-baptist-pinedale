@@ -110,6 +110,15 @@ export function Navbar() {
                             <Link href="/prayer-bulletin" className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)]" onClick={() => setShowUserMenu(false)}>
                               <BookOpen className="w-4 h-4" /> Prayer Bulletin <span className="text-[10px] text-[var(--color-gold-dark)] font-medium">(Coming Soon)</span>
                             </Link>
+                            <a
+                              href="https://calendar.google.com/calendar/embed?src=jncferguson18%40gmail.com&ctz=America%2FDenver"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)]"
+                              onClick={() => setShowUserMenu(false)}
+                            >
+                              Nursery Schedule
+                            </a>
                           </>
                         )}
 
@@ -191,6 +200,15 @@ export function Navbar() {
                   <Link href="/prayer-bulletin" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>
                     Prayer Bulletin <span className="text-[10px] text-[var(--color-gold-dark)]">(Coming Soon)</span>
                   </Link>
+                  <a
+                    href="https://calendar.google.com/calendar/embed?src=jncferguson18%40gmail.com&ctz=America%2FDenver"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    Nursery Schedule
+                  </a>
                 </>
               )}
 

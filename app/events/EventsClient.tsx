@@ -135,16 +135,6 @@ export default function EventsClient({ spotlightEvents }: EventsClientProps) {
               <div className="font-semibold text-[var(--color-navy)]">Nursery</div>
               <div className="text-[var(--color-stone)]">
                 Available during Sunday School and the morning service.
-                <div className="mt-2">
-                  <a
-                    href="https://calendar.google.com/calendar/embed?src=jncferguson18%40gmail.com&ctz=America%2FDenver"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block px-4 py-2 bg-[var(--color-navy)] hover:bg-black text-white text-sm rounded-full transition"
-                  >
-                    View Nursery Volunteer Schedule →
-                  </a>
-                </div>
               </div>
             </div>
           </div>
