@@ -56,22 +56,18 @@ export function Footer() {
           <div className="font-semibold text-white tracking-wide mb-2 flex items-center gap-2">
             <Clock className="w-4 h-4 text-[var(--color-gold)]" /> Service Times
           </div>
-          <table className="text-sm text-white/80">
-            <tbody>
-              <tr>
-                <td className="pr-1 text-white/60">Sunday Potluck Breakfast</td>
-                <td className="font-medium tabular-nums text-right w-14 whitespace-nowrap">9:45 AM</td>
-              </tr>
-              <tr>
-                <td className="pr-1 text-white/60">Sunday School</td>
-                <td className="font-medium tabular-nums text-right w-14 whitespace-nowrap">10:15 AM</td>
-              </tr>
-              <tr>
-                <td className="pr-1 text-white/60">Sunday Worship</td>
-                <td className="font-medium tabular-nums text-right w-14 whitespace-nowrap">11:00 AM</td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="flex gap-2 text-sm text-white/80">
+            <div className="flex flex-col">
+              <div className="text-white/60">Sunday Potluck Breakfast</div>
+              <div className="text-white/60">Sunday School</div>
+              <div className="text-white/60">Sunday Worship</div>
+            </div>
+            <div className="flex flex-col font-medium tabular-nums text-right">
+              <div>9:45 AM</div>
+              <div>10:15 AM</div>
+              <div>11:00 AM</div>
+            </div>
+          </div>
           <Link href="/visit" className="inline-block mt-3 text-[var(--color-gold-light)] hover:text-[var(--color-gold)] text-sm font-medium">
             Visitors Info →
           </Link>
