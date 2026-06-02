@@ -35,11 +35,11 @@ export default function LeadershipPage() {
         {couples.map((couple, index) => (
           <div key={index} className="grid md:grid-cols-5 gap-10 items-center border-b pb-16 last:border-none last:pb-0">
             <div className="md:col-span-2">
-              <div className="aspect-[4/3] rounded-3xl overflow-hidden bg-[var(--color-cream)] shadow-xl">
+              <div className={`${index === 1 ? 'aspect-[3/4]' : 'aspect-[4/3]'} rounded-3xl overflow-hidden bg-[var(--color-cream)] shadow-xl`}>
                 <img 
                   src={couple.image} 
                   alt={couple.names}
-                  className="w-full h-full object-cover" 
+                  className={`w-full h-full object-cover ${index === 1 ? 'object-top' : ''}`} 
                 />
               </div>
             </div>
