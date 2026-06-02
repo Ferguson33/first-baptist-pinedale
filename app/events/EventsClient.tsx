@@ -155,13 +155,6 @@ export default function EventsClient({ spotlightEvents }: EventsClientProps) {
         </div>
       </div>
 
-      {/* Choir Note */}
-      <div className="mb-12 max-w-2xl">
-        <p className="text-lg text-[var(--color-stone)]">
-          We are excited to be starting a choir.
-        </p>
-      </div>
-
       {/* Google Calendar Placeholder */}
       <div className="mb-16">
         <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)] mb-4">Events Calendar</h2>
