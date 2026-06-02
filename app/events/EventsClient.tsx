@@ -107,7 +107,7 @@ export default function EventsClient({ spotlightEvents }: EventsClientProps) {
         <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8 md:p-10">
           <div className="space-y-6 text-lg">
             <div className="grid grid-cols-1 md:grid-cols-[220px,1fr] gap-x-8 gap-y-1 md:items-start">
-              <div className="font-semibold text-[var(--color-navy)]">Sunday Breakfast Fellowship</div>
+              <div className="font-semibold text-[var(--color-navy)]">Potluck Breakfast</div>
               <div className="text-[var(--color-stone)]">9:45 AM — Potluck-style breakfast. Come and enjoy good food and fellowship.</div>
             </div>
 

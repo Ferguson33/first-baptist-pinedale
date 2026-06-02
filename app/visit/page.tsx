@@ -31,7 +31,7 @@ export default function PlanYourVisit() {
           <div className="font-semibold text-xl mb-2">Service Times</div>
           <div className="space-y-1 text-[var(--color-stone)]">
             <div className="flex justify-between gap-4">
-              <span>Sunday Breakfast Fellowship</span>
+              <span>Potluck Breakfast</span>
               <span className="font-medium text-right whitespace-nowrap">9:45 AM</span>
             </div>
             <div className="flex justify-between gap-4">
