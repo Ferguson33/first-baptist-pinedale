@@ -1,32 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-
-interface Missionary {
-  name: string;
-  field: string;
-  country: string;
-  org: string;
-  photo?: string; // Optional - add path like "/images/missionaries/lastname.jpg" when ready
-}
-
-const missionaries: Missionary[] = [
-  { name: "Carolyn Hultquist", field: "Pinedale, Wy", country: "United States", org: "New" },
-  { name: "Alex and Nicole Boyle", field: "Namibia", country: "South Africa", org: "New" },
-  { name: "Heath & Tessa Holmes", field: "Pinedale, Wy", country: "United States", org: "First Baptist Church" },
-  { name: "Dr. Terry & Dr. Peggy Ellis", field: "Dalton GA", country: "United States", org: "Rock of Ages Prison Ministry" },
-  { name: "Lonita Lohse", field: "Papua New Guinea", country: "Papua New Guinea", org: "Baptist World Mission" },
-  { name: "Keith & Leslie Rheinheimer", field: "United States", country: "United States", org: "Fundamental Baptist" },
-  { name: "Russell Posey", field: "Siberia & Alaska", country: "United States", org: "New" },
-  { name: "Terry and Wendy Broyles", field: "Brazil", country: "Brazil", org: "Broyles to Brazil" },
-  { name: "Shay and Abigail Babalola", field: "Nigeria", country: "Nigeria", org: "International Baptist" },
-  { name: "Joe and Gail Owens", field: "Cordoba, Argentina", country: "Argentina", org: "Argentina International" },
-  { name: "Elsa Ramirez", field: "Tijuana, Baja Calif", country: "Mexico", org: "World Wide New Testament" },
-  { name: "Dean and Lorie Loftus", field: "United States", country: "United States", org: "Red Cliff Bible Camp" },
-  { name: "Bob and Joyce Landis", field: "United States", country: "United States", org: "MTT Ministries" },
-  { name: "Larrie and Carol Bunyan", field: "Montana, United States", country: "United States", org: "Independent Faith Mission" },
-  { name: "Dan and Dee Kowach", field: "Daegu, South Korea", country: "South Korea", org: "Baptist World Mission" },
-];
+import { missionaries, type Missionary } from '@/data/missionaries';
 
 export default function MissionsPage() {
   const [selectedMissionary, setSelectedMissionary] = useState<Missionary | null>(null);
