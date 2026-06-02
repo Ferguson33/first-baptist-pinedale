@@ -1,12 +1,12 @@
 export default function PlanYourVisit() {
   return (
-    <div className="max-w-3xl mx-auto px-6 py-16">
+    <div className="max-w-3xl mx-auto px-6 py-16 text-[15px]">
       <h1 className="text-5xl font-semibold tracking-tight text-[var(--color-navy)]">Visitors Info</h1>
       <p className="text-xl mt-3">We can’t wait to meet you. Come as you are — jeans and boots are perfectly fine here.</p>
 
-      <div className="mt-10 grid md:grid-cols-2 gap-x-10 gap-y-10 text-sm">
+      <div className="mt-10 grid md:grid-cols-2 gap-x-10 gap-y-10">
         <div>
-          <div className="font-semibold text-lg mb-2">What to Expect</div>
+          <div className="font-semibold text-xl mb-2">What to Expect</div>
           <div className="space-y-2 text-[var(--color-stone)]">
             <div className="flex gap-2">
               <span className="shrink-0">•</span>
@@ -28,7 +28,7 @@ export default function PlanYourVisit() {
         </div>
 
         <div>
-          <div className="font-semibold text-lg mb-2">Service Times</div>
+          <div className="font-semibold text-xl mb-2">Service Times</div>
           <div className="space-y-1 text-[var(--color-stone)]">
             <div className="flex justify-between gap-4">
               <span>Sunday Breakfast Fellowship</span>
@@ -60,20 +60,20 @@ export default function PlanYourVisit() {
           </div>
 
           <div className="mt-8">
-            <div className="font-semibold text-lg mb-2">Location</div>
+            <div className="font-semibold text-xl mb-2">Location</div>
             <div>646 N Tyler Ave<br />Pinedale, WY 82941</div>
             <div className="mt-1 text-xs text-[var(--color-stone-light)]">Directly across from the SCSD #1 administration building. Easy parking on the east side of the building.</div>
           </div>
         </div>
       </div>
 
-      <div className="mt-12 bg-[var(--color-cream)] p-8 rounded-3xl text-sm">
+      <div className="mt-12 bg-[var(--color-cream)] p-8 rounded-3xl text-[15px]">
         First time? Email us at <a href="mailto:Firstbaptist646@gmail.com" className="font-medium underline">Firstbaptist646@gmail.com</a> and let us know you’re coming. We’ll save you a seat and have a welcome packet ready.
       </div>
 
       {/* Google Map + Directions */}
       <div className="mt-12">
-        <div className="font-semibold text-xl mb-4 text-[var(--color-navy)]">Find Us on the Map</div>
+        <div className="font-semibold text-2xl mb-4 text-[var(--color-navy)]">Find Us on the Map</div>
         
         <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden">
           {/* Google Map Embed */}
