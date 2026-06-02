@@ -6,14 +6,13 @@ import Link from 'next/link';
 /**
  * Member Directory Page (dedicated view)
  * 
- * Embeds the official First Baptist Church Directory Google Doc (published version).
+ * Provides a link to the official First Baptist Church Directory Google Doc.
  * This page is read-only — the directory is maintained off-site in Google Docs by an administrator.
  * Protected to approved members only.
  *
  * This is one of the primary destinations linked from the user menu.
  *
- * To update the document, an administrator edits the master Google Doc and re-publishes it.
- * The embed URL format is: https://docs.google.com/document/d/e/<ID>/pub?embedded=true
+ * To update the document, an administrator edits the master Google Doc directly.
  */
 
 export default function MemberDirectory() {
@@ -35,26 +34,27 @@ export default function MemberDirectory() {
         <div className="text-xs uppercase tracking-[2px] text-[var(--color-gold-dark)]">OFFICIAL CHURCH DIRECTORY</div>
         <h1 className="text-4xl font-semibold tracking-tight mt-1">Member Directory</h1>
         <p className="text-[var(--color-stone)] text-sm mt-2 max-w-2xl">
-          Current contact information for our church family. This is a published, read-only view of the master Google Doc. 
-          Updates are made off-site by an administrator.
+          Current contact information for our church family. The directory is maintained off-site in Google Docs by an administrator.
         </p>
       </div>
 
-      <div className="bg-white border border-[var(--color-gold)]/10 rounded-2xl overflow-hidden shadow-sm">
-        <iframe
-          // Google Doc must be published first (File → Share → Publish to web)
-          src="https://docs.google.com/document/d/e/16PgxfcMPyZqOO7WxdsXS5Uu4RXSl0Ywc4cN3KMM5oaA/pub?embedded=true"
-          width="100%"
-          height="1300"
-          frameBorder="0"
-          title="First Baptist Church Directory"
-          className="w-full block"
-          style={{ minHeight: '800px', border: 'none' }}
-        />
-      </div>
+      <div className="bg-white border border-[var(--color-gold)]/10 rounded-2xl p-10 text-center shadow-sm">
+        <p className="text-[var(--color-stone)] mb-6">
+          The Member Directory is maintained in Google Docs by the church office.
+        </p>
 
-      <div className="mt-4 text-xs text-[var(--color-stone-light)] text-center">
-        This directory is maintained off-site in Google Docs. The page is read-only for approved members.
+        <a
+          href="https://docs.google.com/document/d/16PgxfcMPyZqOO7WxdsXS5Uu4RXSl0Ywc4cN3KMM5oaA/edit?tab=t.0"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center px-8 py-3 bg-[var(--color-navy)] hover:bg-black text-white rounded-full font-semibold transition"
+        >
+          Open Member Directory →
+        </a>
+
+        <p className="mt-6 text-xs text-[var(--color-stone-light)]">
+          Opens in a new tab. This document is for approved members only.
+        </p>
       </div>
     </div>
   );
