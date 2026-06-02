@@ -7,11 +7,12 @@ import Link from 'next/link';
  * Member Directory Page (dedicated view)
  * 
  * Embeds the official First Baptist Church Directory Google Doc (published version).
+ * This page is read-only — the directory is maintained off-site in Google Docs by an administrator.
  * Protected to approved members only.
  *
  * This is one of the primary destinations linked from the user menu.
  *
- * To update the document, the office edits it in Google Docs then re-publishes it.
+ * To update the document, an administrator edits the master Google Doc and re-publishes it.
  * The embed URL format is: https://docs.google.com/document/d/e/<ID>/pub?embedded=true
  */
 
@@ -34,7 +35,8 @@ export default function MemberDirectory() {
         <div className="text-xs uppercase tracking-[2px] text-[var(--color-gold-dark)]">OFFICIAL CHURCH DIRECTORY</div>
         <h1 className="text-4xl font-semibold tracking-tight mt-1">Member Directory</h1>
         <p className="text-[var(--color-stone)] text-sm mt-2 max-w-2xl">
-          Current contact information for our church family. Maintained by the church office in Google Docs.
+          Current contact information for our church family. This is a published, read-only view of the master Google Doc. 
+          Updates are made off-site by an administrator.
         </p>
       </div>
 
@@ -52,7 +54,7 @@ export default function MemberDirectory() {
       </div>
 
       <div className="mt-4 text-xs text-[var(--color-stone-light)] text-center">
-        Updates made in the master Google Doc appear here for all approved members.
+        This directory is maintained off-site in Google Docs. The page is read-only for approved members.
       </div>
     </div>
   );
