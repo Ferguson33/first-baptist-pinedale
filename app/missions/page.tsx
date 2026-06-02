@@ -40,7 +40,7 @@ export default function MissionsPage() {
                 <img 
                   src={missionary.photo} 
                   alt={missionary.name}
-                  className="max-h-full max-w-full object-contain"
+                  className={`max-h-full max-w-full object-contain ${missionary.name.includes('Kowach') ? 'object-top scale-[1.08]' : ''}`}
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center">
@@ -74,12 +74,6 @@ export default function MissionsPage() {
                 </div>
               </div>
 
-              <button 
-                className="mt-5 text-sm px-4 py-2 rounded-full border border-[var(--color-gold)]/40 hover:bg-[var(--color-gold)] hover:text-white hover:border-[var(--color-gold)] transition"
-                onClick={(e) => { e.stopPropagation(); setSelectedMissionary(missionary); }}
-              >
-                View Details
-              </button>
             </div>
           </div>
         ))}
