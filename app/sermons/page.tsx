@@ -188,9 +188,6 @@ export default function SermonsPage() {
         </div>
       )}
 
-      <div className="mt-12 text-center text-sm text-[var(--color-stone-light)]">
-        These videos are for the church family only. Please do not share the links outside our membership.
-      </div>
     </div>
   );
 }
