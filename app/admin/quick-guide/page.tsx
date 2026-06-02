@@ -53,10 +53,6 @@ export default function PastorQuickGuide() {
         </div>
       </div>
 
-      <div className="mt-8 pt-6 border-t">
-        <div className="font-bold tracking-wider text-[var(--color-gold-dark)] mb-1">SUPABASE SETUP (ONE-TIME)</div>
-        <div className="text-xs text-[var(--color-stone)]">1. Create free project at supabase.com<br />2. Copy URL + anon key into .env.local<br />3. Run the SQL schema from README.md in the SQL Editor<br />4. Create storage buckets: sermons, building-photos, youth-photos, member-photos (make public)<br />5. Enable email signups in Authentication settings</div>
-      </div>
 
       <div className="mt-8 text-center text-[10px] text-[var(--color-stone-light)]">
         646 N Tyler Ave, Pinedale, WY 82941 • (307) 367-4567 • Firstbaptist646@gmail.com<br />

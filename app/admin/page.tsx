@@ -335,7 +335,9 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadBuildingProgress();
-    fetchBuildingPhotos(); // Load photos early so they're ready when switching to the tab
+    fetchBuildingPhotos();
+    fetchMembers();
+    fetchRealSermons();
   }, []);
 
   // Fetch building photos when the building tab is active (helps when returning to the page)
@@ -380,6 +382,10 @@ export default function AdminDashboard() {
     }
     if (tab === 'events') {
       fetchEvents();
+    }
+    if (tab === 'overview') {
+      if (realMembers.length === 0) fetchMembers();
+      if (realSermons.length === 0) fetchRealSermons();
     }
   };
 
@@ -821,8 +827,9 @@ export default function AdminDashboard() {
           <div className="admin-section bg-white p-8 rounded-3xl">
             <div className="font-semibold mb-4 flex items-center gap-2 text-lg"><TrendingUp className="text-[var(--color-gold-dark)]" /> Quick Stats</div>
             <div className="space-y-4 text-sm">
+              <div className="flex justify-between"><span>Current Members</span><span className="font-semibold">{realMembers.filter((m: any) => m.role === 'approved' || m.role === 'admin').length || '—'}</span></div>
               <div className="flex justify-between"><span>Pending Member Approvals</span><span className="font-semibold">{realMembers.filter((m: any) => m.role === 'pending').length || '—'}</span></div>
-              <div className="flex justify-between"><span>Sermons Published</span><span className="font-semibold">{sermons.length}</span></div>
+              <div className="flex justify-between"><span>Sermons Published</span><span className="font-semibold">{realSermons.length}</span></div>
               <div className="flex justify-between"><span>Building Progress</span><span className="font-semibold">{progress.physical_percent}%</span></div>
             </div>
             <div className="text-xs mt-6 text-[var(--color-stone-light)]">All changes you make here update the website instantly for your members and visitors.</div>
