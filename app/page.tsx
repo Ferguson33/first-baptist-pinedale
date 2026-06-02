@@ -332,7 +332,7 @@ export default function Home() {
           <div className="uppercase tracking-[3px] text-xs text-[var(--color-gold-dark)]">OUR CHURCH HOME</div>
           <h2 className="text-4xl font-semibold tracking-tighter mt-2 text-[var(--color-navy)]">Step Inside Our Church Home</h2>
           <p className="mt-2 text-[var(--color-stone)] max-w-md mx-auto">
-            Take a quick walk through our building, hear a bit of our music, and get a feel for who we are.
+            Take a quick walk through our building, experience our ministry in action, and get a feel for who we are.
           </p>
         </div>
 
