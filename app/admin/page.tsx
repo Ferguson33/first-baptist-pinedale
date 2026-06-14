@@ -88,6 +88,7 @@ export default function AdminDashboard() {
     youth_pastor_note: "",
     youth_google_doc_url: "",
     live_video_id: "",
+    live_stream_active: false,
   });
   const [savingSermonSettings, setSavingSermonSettings] = useState(false);
 
@@ -99,6 +100,18 @@ export default function AdminDashboard() {
   // Real sermons from Supabase (for Admin management)
   const [realSermons, setRealSermons] = useState<any[]>([]);
   const [loadingSermons, setLoadingSermons] = useState(false);
+
+  // Form state for adding/editing sermon (replaces old prompt-based add)
+  const [showSermonForm, setShowSermonForm] = useState(false);
+  const [editingSermon, setEditingSermon] = useState<any>(null);
+  const [sermonForm, setSermonForm] = useState({
+    title: "",
+    preacher: "Pastor Ted York",
+    date: new Date().toISOString().split('T')[0],
+    video_url: "",
+    description: "",
+    is_public: false,
+  });
 
   async function fetchMembers() {
     setLoadingMembers(true);
@@ -625,6 +638,7 @@ export default function AdminDashboard() {
         youth_pastor_note: data.youth_pastor_note || "",
         youth_google_doc_url: data.youth_google_doc_url || "",
         live_video_id: data.live_video_id || "",
+        live_stream_active: data.live_stream_active || false,
       });
     }
   }
@@ -646,6 +660,7 @@ export default function AdminDashboard() {
         youth_pastor_note: sermonSettings.youth_pastor_note || null,
         youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
         live_video_id: sermonSettings.live_video_id || null,
+        live_stream_active: sermonSettings.live_stream_active || false,
         updated_at: new Date().toISOString(),
       })
       .eq('id', 1);
@@ -676,31 +691,72 @@ export default function AdminDashboard() {
     setLoadingSermons(false);
   }
 
-  async function addRealSermon() {
-    const title = prompt("Sermon title?");
-    if (!title) return;
+  // Open form for new or edit
+  function openSermonForm(sermon?: any) {
+    if (sermon) {
+      setEditingSermon(sermon);
+      setSermonForm({
+        title: sermon.title || "",
+        preacher: sermon.preacher || "Pastor Ted York",
+        date: sermon.date || new Date().toISOString().split('T')[0],
+        video_url: sermon.video_url || "",
+        description: sermon.description || "",
+        is_public: sermon.is_public || false,
+      });
+    } else {
+      setEditingSermon(null);
+      setSermonForm({
+        title: "",
+        preacher: "Pastor Ted York",
+        date: new Date().toISOString().split('T')[0],
+        video_url: "",
+        description: "",
+        is_public: false,
+      });
+    }
+    setShowSermonForm(true);
+  }
 
-    const videoUrl = prompt("YouTube URL or Embed URL?");
-    if (!videoUrl) return;
+  function closeSermonForm() {
+    setShowSermonForm(false);
+    setEditingSermon(null);
+  }
 
-    const preacher = prompt("Preacher name?", "Pastor Ted York") || "Pastor Ted York";
-    const date = prompt("Date (YYYY-MM-DD)?", new Date().toISOString().split('T')[0]);
+  async function saveRealSermon() {
+    if (!sermonForm.title || !sermonForm.video_url) {
+      toast.error("Title and YouTube URL are required.");
+      return;
+    }
 
-    const { error } = await supabase.from('sermons').insert({
-      title,
-      preacher,
-      date: date || new Date().toISOString().split('T')[0],
-      video_url: videoUrl,
-      thumbnail_url: "https://picsum.photos/id/1015/600/340", // placeholder for now
-      description: "",
-    });
+    const payload = {
+      title: sermonForm.title,
+      preacher: sermonForm.preacher,
+      date: sermonForm.date,
+      video_url: sermonForm.video_url,
+      thumbnail_url: "https://picsum.photos/id/1015/600/340", // TODO: could derive from YouTube or upload
+      description: sermonForm.description || "",
+      is_public: sermonForm.is_public,
+    };
+
+    let error;
+    if (editingSermon) {
+      ({ error } = await supabase.from('sermons').update(payload).eq('id', editingSermon.id));
+    } else {
+      ({ error } = await supabase.from('sermons').insert(payload));
+    }
 
     if (error) {
-      toast.error("Failed to add sermon: " + error.message);
+      toast.error("Failed to save sermon: " + error.message);
     } else {
-      toast.success("Sermon added!");
+      toast.success(editingSermon ? "Sermon updated!" : "Sermon added!");
+      closeSermonForm();
       fetchRealSermons();
     }
+  }
+
+  // Legacy add kept for backward but now opens form (can remove later)
+  function addRealSermon() {
+    openSermonForm();
   }
 
   // Track which sermon is currently being deleted (for loading state)
@@ -954,7 +1010,18 @@ export default function AdminDashboard() {
             </div>
 
             <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8">
-              <label className="block font-medium mb-2 text-sm">Live YouTube Video ID or URL</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block font-medium text-sm">Live YouTube Video ID or URL</label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sermonSettings.live_stream_active}
+                    onChange={(e) => setSermonSettings({ ...sermonSettings, live_stream_active: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  Live stream active
+                </label>
+              </div>
               <input
                 type="text"
                 value={sermonSettings.live_video_id}
@@ -963,8 +1030,7 @@ export default function AdminDashboard() {
                 placeholder="e.g. dQw4w9wg or https://www.youtube.com/watch?v=dQw4w9wg"
               />
               <p className="text-xs text-[var(--color-stone-light)] mt-2">
-                <strong>Simplest way:</strong> Go to YouTube Studio → Go live (as Unlisted). Copy the video URL or ID, paste it here, and save. 
-                The live player will appear instantly on the Sermons page for approved members. Clear this field when the stream ends.
+                <strong>Admin toggle:</strong> Check "Live stream active" + paste ID/URL to show "Join Live Now" + embed for approved members only. Uncheck or clear to hide. Auto-detect not used (manual for reliability).
               </p>
             </div>
           </div>
@@ -974,7 +1040,7 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <div className="font-semibold text-2xl">Archived Sermons</div>
-                <div className="text-sm text-[var(--color-stone-light)]">These will be visible only to signed-in approved members on the Sermons page.</div>
+                <div className="text-sm text-[var(--color-stone-light)]">Manage the full list. Toggle "Show on public site (curated)" for sermons visible to everyone (no login required). Full list + live stream shown to approved members only.</div>
               </div>
               <div className="flex gap-3">
                 <button 
@@ -993,6 +1059,50 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* Sermon Add/Edit Form Modal */}
+            {showSermonForm && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" onClick={closeSermonForm}>
+                <div className="bg-white rounded-3xl w-full max-w-lg p-8" onClick={e => e.stopPropagation()}>
+                  <div className="font-semibold text-xl mb-4">{editingSermon ? "Edit Sermon" : "Add New Sermon"}</div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Title</label>
+                      <input type="text" value={sermonForm.title} onChange={e => setSermonForm({...sermonForm, title: e.target.value})} className="w-full mt-1 border rounded-xl p-3" placeholder="Sermon Title" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">Preacher</label>
+                        <input type="text" value={sermonForm.preacher} onChange={e => setSermonForm({...sermonForm, preacher: e.target.value})} className="w-full mt-1 border rounded-xl p-3" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Date</label>
+                        <input type="date" value={sermonForm.date} onChange={e => setSermonForm({...sermonForm, date: e.target.value})} className="w-full mt-1 border rounded-xl p-3" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">YouTube URL or Video ID</label>
+                      <input type="text" value={sermonForm.video_url} onChange={e => setSermonForm({...sermonForm, video_url: e.target.value})} className="w-full mt-1 border rounded-xl p-3 font-mono text-sm" placeholder="https://youtu.be/xxxx or ID" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Description (optional)</label>
+                      <textarea value={sermonForm.description} onChange={e => setSermonForm({...sermonForm, description: e.target.value})} className="w-full mt-1 border rounded-xl p-3" rows={3} placeholder="Scripture reference or summary..." />
+                    </div>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" checked={sermonForm.is_public} onChange={e => setSermonForm({...sermonForm, is_public: e.target.checked})} />
+                      Show on public site (curated / selected sermon for non-members)
+                    </label>
+                  </div>
+
+                  <div className="flex gap-3 mt-6 justify-end">
+                    <button onClick={closeSermonForm} className="px-6 py-2 border rounded-full text-sm">Cancel</button>
+                    <button onClick={saveRealSermon} className="px-6 py-2 bg-[var(--color-navy)] text-white rounded-full text-sm font-semibold">Save Sermon</button>
+                  </div>
+                  <p className="mt-3 text-[10px] text-[var(--color-stone-light)]">Clean YouTube embeds (iframe) are used on the public Sermons page. Mark "is_public" for curated sermons visible without login.</p>
+                </div>
+              </div>
+            )}
+
             {loadingSermons ? (
               <div className="text-center py-8 text-[var(--color-stone-light)]">Loading...</div>
             ) : realSermons.length > 0 ? (
@@ -1001,20 +1111,32 @@ export default function AdminDashboard() {
                   const isDeleting = deletingSermonId === s.id;
                   return (
                     <div key={s.id} className="bg-white border rounded-2xl p-5 relative group">
-                      <button
-                        onClick={() => deleteRealSermon(s.id, s.title)}
-                        disabled={isDeleting}
-                        className="absolute top-3 right-3 p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                        title="Delete this sermon"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                        <button
+                          onClick={() => openSermonForm(s)}
+                          className="p-1.5 rounded-full bg-[var(--color-cream)] text-[var(--color-navy)] hover:bg-[var(--color-gold)] hover:text-white"
+                          title="Edit sermon"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        </button>
+                        <button
+                          onClick={() => deleteRealSermon(s.id, s.title)}
+                          disabled={isDeleting}
+                          className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white disabled:opacity-50"
+                          title="Delete this sermon"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
 
-                      <div className="font-semibold text-[var(--color-navy)] pr-10">{s.title}</div>
+                      <div className="font-semibold text-[var(--color-navy)] pr-16">{s.title}</div>
                       <div className="text-sm mt-1 text-[var(--color-stone)]">
                         {s.preacher} • {new Date(s.date).toLocaleDateString()}
                       </div>
                       <div className="text-xs mt-2 text-[var(--color-gold-dark)] truncate font-mono">{s.video_url}</div>
+                      {s.is_public && (
+                        <span className="inline-block mt-2 text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded">Public / Curated</span>
+                      )}
 
                       {isDeleting && (
                         <div className="mt-3 text-xs text-red-600">Deleting...</div>
@@ -1030,7 +1152,7 @@ export default function AdminDashboard() {
             )}
 
             <div className="mt-6 admin-help text-xs">
-              Paste the full YouTube URL (or embed URL). Only approved members will be able to watch these on the Sermons page after logging in.
+              Use the form to add sermons with title, date, description and YouTube URL. Toggle "Show on public site" for curated sermons visible to everyone (no login). Full archive + live only for approved/logged-in members.
             </div>
           </div>
         </div>

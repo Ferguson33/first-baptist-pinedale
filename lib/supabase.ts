@@ -27,7 +27,26 @@ export type Sermon = {
   video_url: string; // YouTube embed URL or ID
   thumbnail_url: string;
   description?: string;
+  is_public?: boolean; // curated for public (non-members) view
   created_at: string;
+};
+
+export type SermonSettings = {
+  id: number;
+  pastor_note?: string | null;
+  upcoming_title?: string | null;
+  upcoming_reference?: string | null;
+  upcoming_date?: string | null;
+  sunday_school_lesson?: string | null;
+  sunday_school_reference?: string | null;
+  youth_sunday_school_lesson?: string | null;
+  youth_sunday_school_reference?: string | null;
+  youth_sunday_school_date?: string | null;
+  youth_pastor_note?: string | null;
+  youth_google_doc_url?: string | null;
+  live_video_id?: string | null;
+  live_stream_active?: boolean;
+  updated_at?: string;
 };
 
 export type BuildingPhoto = {

@@ -100,14 +100,6 @@ export default function SermonsPage() {
         <p className="mt-4 text-xl text-[var(--color-stone)] max-w-2xl mx-auto">
           We believe in the power of God’s Word taught clearly and faithfully.
         </p>
-        <a 
-          href={YOUTUBE_CHANNEL_URL} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="mt-3 inline-flex items-center gap-2 text-[var(--color-gold-dark)] hover:underline text-sm font-medium"
-        >
-          Visit our YouTube Channel →
-        </a>
       </div>
 
       {/* Pending user message (non-blocking) */}

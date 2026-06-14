@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS sermon_settings (
   youth_sunday_school_reference text,
   youth_sunday_school_date date,
   live_video_id text,
+  live_stream_active boolean DEFAULT false,
   updated_at timestamptz DEFAULT now()
 );
 
@@ -32,6 +33,7 @@ ALTER TABLE sermon_settings
   ADD COLUMN IF NOT EXISTS youth_sunday_school_reference text,
   ADD COLUMN IF NOT EXISTS youth_sunday_school_date date,
   ADD COLUMN IF NOT EXISTS live_video_id text,
+  ADD COLUMN IF NOT EXISTS live_stream_active boolean DEFAULT false,
   ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 
 -- 3. Ensure the single row (id=1) exists

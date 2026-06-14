@@ -29,6 +29,7 @@ create table if not exists sermons (
   video_url text not null,
   thumbnail_url text not null,
   description text,
+  is_public boolean default false,  -- curated/selected for public (non-login) viewing
   created_at timestamptz default now()
 );
 
