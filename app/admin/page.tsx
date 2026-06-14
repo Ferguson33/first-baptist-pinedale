@@ -50,7 +50,14 @@ export default function AdminDashboard() {
   const supabase = createClient();
   const { user, profile, isAdmin, loading } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('adminActiveTab') as AdminTab | null;
+      const validTabs: AdminTab[] = ['overview', 'sermons', 'building', 'youth', 'members', 'events', 'guide'];
+      if (saved && validTabs.includes(saved)) return saved;
+    }
+    return 'overview';
+  });
 
 
 
@@ -383,6 +390,13 @@ export default function AdminDashboard() {
     }
   }, [activeTab]);
 
+  // Fetch events data when the events tab is active (so data loads on tab switch and on refresh if tab is restored)
+  useEffect(() => {
+    if (activeTab === 'events') {
+      fetchEvents();
+    }
+  }, [activeTab]);
+
   if (loading || !isAdmin) {
     return <div className="min-h-[60vh] flex items-center justify-center">Checking permissions…</div>;
   }
@@ -399,6 +413,9 @@ export default function AdminDashboard() {
 
   const handleTabChange = (tab: AdminTab) => {
     setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('adminActiveTab', tab);
+    }
     if (tab === 'members') {
       fetchMembers();
     }
@@ -415,9 +432,6 @@ export default function AdminDashboard() {
     if (tab === 'sermons') {
       loadSermonSettings();
       fetchRealSermons();
-    }
-    if (tab === 'events') {
-      fetchEvents();
     }
     if (tab === 'overview') {
       if (realMembers.length === 0) fetchMembers();
@@ -1843,7 +1857,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* EVENTS - Spotlight / Special Events (visible on public /events page) + Youth Schedule/Albums */}
+      {/* EVENTS - Spotlight / Special Events (visible on public /events page) */}
       {activeTab === 'events' && (
         <div className="space-y-12">
           {/* General Spotlight Events */}
@@ -1910,22 +1924,29 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <div className="grid md:grid-cols-2 gap-4">
-                {events.map((ev: any) => (
-                  <div key={ev.id} className="border bg-white p-6 rounded-2xl relative group">
-                    <div className="font-semibold text-xl">{ev.title}</div>
-                    <div className="text-[var(--color-gold-dark)] mt-1">
-                      {new Date(ev.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                      {ev.time && ` • ${ev.time}`}
-                    </div>
-                    {ev.location && <div className="text-sm mt-1 text-[var(--color-stone)]">{ev.location}</div>}
-                    {ev.description && <p className="mt-3 text-sm">{ev.description}</p>}
+                {events
+                  .filter((ev: any) => ev && ev.id)
+                  .map((ev: any) => {
+                    const displayDate = ev.date
+                      ? new Date(ev.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+                      : 'No date';
+                    return (
+                      <div key={ev.id} className="border bg-white p-6 rounded-2xl relative group">
+                        <div className="font-semibold text-xl">{ev.title || 'Untitled Event'}</div>
+                        <div className="text-[var(--color-gold-dark)] mt-1">
+                          {displayDate}
+                          {ev.time && ` • ${ev.time}`}
+                        </div>
+                        {ev.location && <div className="text-sm mt-1 text-[var(--color-stone)]">{ev.location}</div>}
+                        {ev.description && <p className="mt-3 text-sm">{ev.description}</p>}
 
-                    <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                      <button onClick={() => openEventForm(ev)} className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700">Edit</button>
-                      <button onClick={() => deleteEvent(ev.id, ev.title)} className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
-                    </div>
-                  </div>
-                ))}
+                        <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                          <button onClick={() => openEventForm(ev)} className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700">Edit</button>
+                          <button onClick={() => deleteEvent(ev.id, ev.title || 'Untitled')} className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>
