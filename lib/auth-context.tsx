@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, startTransition } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, startTransition } from 'react';
 import { User, Session, type AuthChangeEvent } from '@supabase/supabase-js';
 import { createClient } from './supabase/client';
 import type { Profile } from './supabase';
@@ -67,14 +67,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
-    // Get initial session - wrapped to prevent unhandled rejections and ensure loading always settles
+    // Get initial session - ALL state updates wrapped in startTransition to avoid
+    // "Cannot update a component while rendering a different component" (#310)
+    // during hydration / hard refresh of admin (or other consumers).
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!isMounted) return;
 
-        setSession(session);
-        setUser(session?.user ?? null);
+        startTransition(() => {
+          setSession(session);
+          setUser(session?.user ?? null);
+        });
 
         if (session?.user) {
           const prof = await fetchProfile(session.user.id);
@@ -90,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error('Initial auth session error (non-blocking):', err);
         if (isMounted) {
-          setLoading(false);
+          startTransition(() => setLoading(false));
           // Do not crash the app; user can still browse public content
         }
       }
@@ -98,13 +102,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
-    // Listen for auth changes - always settle loading, catch fetch errors
+    // Listen for auth changes - wrap *all* sets (session/user/profile/loading) in startTransition.
+    // The bare sets were the source of #310 when listener fired around the same time the
+    // admin dashboard (or other complex pages) was rendering its initial tree on refresh.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
         if (!isMounted) return;
 
-        setSession(session);
-        setUser(session?.user ?? null);
+        startTransition(() => {
+          setSession(session);
+          setUser(session?.user ?? null);
+        });
 
         if (session?.user) {
           try {
@@ -199,14 +207,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Let the middleware handle cookie/session clearing on next request.
     // Aggressive localStorage clearing can cause auth state to desync with the new SSR setup.
-
-    setUser(null);
-    setSession(null);
-    setProfile(null);
+    startTransition(() => {
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+    });
     toast.success("Signed out successfully");
   }
 
-  const value = {
+  // Memoize context value so consumers only re-render when actual auth state changes.
+  // Combined with startTransition on all internal sets, this eliminates #310 during
+  // provider bootstrap on hard refreshes of the admin dashboard.
+  const value = useMemo(() => ({
     user,
     session,
     profile,
@@ -217,7 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signOut,
     refreshProfile,
-  };
+  }), [user, session, profile, loading, isAdmin, isApprovedMember]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
