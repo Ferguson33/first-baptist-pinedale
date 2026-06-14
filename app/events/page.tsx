@@ -41,7 +41,19 @@ export default async function EventsPage() {
 
   const spotlightEvents = data ?? [];
 
+  // Fetch the events schedule Google Doc embed URL (published read-only version)
+  const { data: settingsData } = await supabase
+    .from('sermon_settings')
+    .select('events_google_doc_url')
+    .eq('id', 1)
+    .single();
+
+  const eventsGoogleDocUrl = settingsData?.events_google_doc_url || null;
+
   return (
-    <EventsClient spotlightEvents={spotlightEvents as SpotlightEvent[]} />
+    <EventsClient 
+      spotlightEvents={spotlightEvents as SpotlightEvent[]} 
+      eventsGoogleDocUrl={eventsGoogleDocUrl} 
+    />
   );
 }

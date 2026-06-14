@@ -14,9 +14,10 @@ interface SpotlightEvent {
 
 interface EventsClientProps {
   spotlightEvents: SpotlightEvent[];
+  eventsGoogleDocUrl?: string | null;
 }
 
-export default function EventsClient({ spotlightEvents }: EventsClientProps) {
+export default function EventsClient({ spotlightEvents, eventsGoogleDocUrl }: EventsClientProps) {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -150,27 +151,35 @@ export default function EventsClient({ spotlightEvents }: EventsClientProps) {
         </div>
       </div>
 
-      {/* Google Calendar Placeholder */}
-      <div className="mb-16">
-        <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)] mb-4">Events Calendar</h2>
-        <p className="text-[var(--color-stone)] mb-6">
-          Special events, fellowships, and activities will appear here once our church calendar is set up.
-        </p>
-
-        <div className="border-2 border-dashed border-[var(--color-gold)]/40 rounded-3xl p-10 md:p-16 bg-[var(--color-cream)] text-center min-h-[420px] flex flex-col items-center justify-center">
-          <div className="max-w-md">
-            <div className="font-semibold text-xl text-[var(--color-navy)] mb-3">
-              Google Calendar Embed
-            </div>
-            <p className="text-[var(--color-stone)] mb-4">
-              A public Google Calendar will be embedded here. Events can then be easily added and updated by the church.
-            </p>
-            <div className="text-xs text-[var(--color-stone-light)]">
-              (Placeholder — ready for the embed code when the calendar is created)
-            </div>
+      {/* Events Schedule Google Doc Embed (published read-only) */}
+      {eventsGoogleDocUrl ? (
+        <div className="mb-16">
+          <div className="mb-5">
+            <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Events Schedule</h2>
+            <p className="text-sm text-[var(--color-stone-light)] mt-1">Current schedule and details. This view is read-only.</p>
+          </div>
+          <div className="bg-white border border-[var(--color-gold)]/10 rounded-3xl overflow-hidden shadow-sm">
+            <iframe
+              src={eventsGoogleDocUrl}
+              width="100%"
+              height="900"
+              frameBorder="0"
+              title="Events Schedule"
+              className="w-full block"
+              style={{ minHeight: '600px', border: 'none' }}
+            />
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="mb-16">
+          <div className="mb-5">
+            <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Events Schedule</h2>
+          </div>
+          <div className="text-center py-12 text-[var(--color-stone-light)] border border-[var(--color-gold)]/20 rounded-3xl">
+            Schedule embed will appear here once configured in the Admin Dashboard (Events tab).
+          </div>
+        </div>
+      )}
 
       {/* Photo Gallery Lightbox for Spotlight Events */}
       {galleryOpen && spotlightEvents.length > 0 && (
