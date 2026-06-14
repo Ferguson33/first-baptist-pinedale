@@ -102,7 +102,7 @@ export default function EventsClient({ spotlightEvents }: EventsClientProps) {
 
       {/* Youth link (always visible, even when no spotlight events) */}
       <div className="mb-12 -mt-6 text-sm text-[var(--color-stone)]">
-        Youth events, calendar, and photo albums: <a href="/youth-ministry" className="text-[var(--color-gold-dark)] hover:underline font-medium">Youth Ministry page</a>.
+        Youth events and photo albums: <a href="/youth-ministry" className="text-[var(--color-gold-dark)] hover:underline font-medium">Youth Ministry page</a>.
       </div>
 
       {/* Weekly Schedule */}

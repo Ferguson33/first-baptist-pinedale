@@ -46,11 +46,12 @@ export async function POST(request: NextRequest) {
 
     console.log('Youth upload authorized for', user.email);
 
-    // Parse multipart form data (file + optional album_id + caption)
+    // Parse multipart form data (file + optional album_id + caption + target for event images)
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const album_id = formData.get('album_id') as string | null;
     const caption = formData.get('caption') as string | null;
+    const target = formData.get('target') as string | null; // 'album' or 'event'
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided in form data' }, { status: 400 });
@@ -95,31 +96,41 @@ export async function POST(request: NextRequest) {
 
     const publicUrl = urlData.publicUrl;
 
-    // Insert metadata row using service role (bypasses youth_photos RLS)
-    const { data: insertData, error: insertError } = await supabaseAdmin
-      .from('youth_photos')
-      .insert({
-        url: publicUrl,
-        caption: caption || null,
-        album_id: album_id || null,
-      })
-      .select()
-      .single();
+    let responseData: any = { success: true, url: publicUrl };
 
-    if (insertError) {
-      console.error('Youth DB insert error:', insertError);
-      await supabaseAdmin.storage.from('youth-photos').remove([filePath]).catch(() => {});
-      return NextResponse.json({ error: 'DB insert failed' }, { status: 500 });
+    if (target === 'event') {
+      // For event images, just return the URL, don't insert to youth_photos table
+      console.log('Youth event image uploaded successfully:', publicUrl);
+      responseData = { success: true, url: publicUrl, target: 'event' };
+    } else {
+      // Default: insert to youth_photos (for albums)
+      const { data: insertData, error: insertError } = await supabaseAdmin
+        .from('youth_photos')
+        .insert({
+          url: publicUrl,
+          caption: caption || null,
+          album_id: album_id || null,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Youth DB insert error:', insertError);
+        await supabaseAdmin.storage.from('youth-photos').remove([filePath]).catch(() => {});
+        return NextResponse.json({ error: 'DB insert failed' }, { status: 500 });
+      }
+
+      console.log('Youth photo uploaded successfully:', insertData?.id);
+
+      responseData = { 
+        success: true, 
+        id: insertData?.id, 
+        url: publicUrl,
+        album_id: album_id || null 
+      };
     }
 
-    console.log('Youth photo uploaded successfully:', insertData?.id);
-
-    return NextResponse.json({ 
-      success: true, 
-      id: insertData?.id, 
-      url: publicUrl,
-      album_id: album_id || null 
-    });
+    return NextResponse.json(responseData);
   } catch (error: any) {
     console.error('Youth upload error:', error);
     return NextResponse.json({ error: error.message || 'Upload failed' }, { status: 500 });

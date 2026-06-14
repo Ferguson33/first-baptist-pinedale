@@ -73,6 +73,7 @@ export default function AdminDashboard() {
     link_url: "",
   });
   const [uploadingEventImage, setUploadingEventImage] = useState(false);
+  const [savingYouthEvent, setSavingYouthEvent] = useState(false);
 
   // Album form (nice modal instead of prompt() — fixes bugginess)
   const [showAlbumForm, setShowAlbumForm] = useState(false);
@@ -557,21 +558,30 @@ export default function AdminDashboard() {
       return;
     }
 
-    const payload = { ...youthEventForm };
+    setSavingYouthEvent(true);
+    try {
+      const payload = { ...youthEventForm };
 
-    let error;
-    if (editingYouthEvent) {
-      ({ error } = await supabase.from('youth_events').update(payload).eq('id', editingYouthEvent.id));
-    } else {
-      ({ error } = await supabase.from('youth_events').insert(payload));
-    }
+      let error;
+      if (editingYouthEvent) {
+        ({ error } = await supabase.from('youth_events').update(payload).eq('id', editingYouthEvent.id));
+      } else {
+        ({ error } = await supabase.from('youth_events').insert(payload));
+      }
 
-    if (error) {
-      toast.error("Failed to save event: " + error.message);
-    } else {
-      toast.success(editingYouthEvent ? "Event updated!" : "Event added!");
-      closeYouthEventForm();
-      fetchYouthEvents();
+      if (error) {
+        console.error('Youth event save error:', error);
+        toast.error("Failed to save event: " + (error.message || "Unknown error"));
+      } else {
+        toast.success(editingYouthEvent ? "Event updated!" : "Event added!");
+        closeYouthEventForm();
+        fetchYouthEvents();
+      }
+    } catch (err: any) {
+      console.error('Unexpected error saving youth event:', err);
+      toast.error("Failed to save youth event. Check console for details.");
+    } finally {
+      setSavingYouthEvent(false);
     }
   }
 
@@ -1447,7 +1457,7 @@ export default function AdminDashboard() {
                 className="w-full border border-[var(--color-gold)]/30 rounded-2xl p-4 text-sm"
                 placeholder="Example: Hey teens! This week we're talking about..."
               />
-              <p className="text-xs text-[var(--color-stone-light)] mt-2">This note will be shown on the /youth page.</p>
+              <p className="text-xs text-[var(--color-stone-light)] mt-2">This note will be shown on the /youth-ministry page.</p>
             </div>
           </div>
 
@@ -1473,30 +1483,13 @@ export default function AdminDashboard() {
                 Paste the "Publish to web" embed link here. Leave blank to hide the section on the Youth page.
               </p>
             </div>
-          </div>
-
-          {/* Youth Events Calendar Embed URL */}
-          <div>
-            <div className="mb-4">
-              <div className="font-semibold text-2xl">Youth Events Calendar (Embed URL)</div>
-              <div className="text-sm text-[var(--color-stone-light)]">
-                Optional: Paste the src URL for the Youth Google Calendar embed (iframe). It will show on the public Youth page. (Any admin can edit.)
-              </div>
-            </div>
-
-            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8">
-              <label className="block font-medium mb-2 text-sm">Calendar Embed src URL</label>
-              <input
-                type="text"
-                value={sermonSettings.youth_calendar_url}
-                onChange={(e) => setSermonSettings({ ...sermonSettings, youth_calendar_url: e.target.value })}
-                className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm"
-                placeholder="https://calendar.google.com/calendar/embed?src=...&ctz=..."
-              />
-              <p className="text-xs text-[var(--color-stone-light)] mt-2">
-                Get the embed code from Google Calendar (public calendar), copy the src URL. Leave blank to hide.
-              </p>
-            </div>
+            <button
+              onClick={saveSermonSettings}
+              disabled={savingSermonSettings}
+              className="mt-3 px-6 py-2 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium disabled:opacity-60"
+            >
+              {savingSermonSettings ? "Saving..." : "Save Note + Google Doc"}
+            </button>
           </div>
 
           {/* Youth Sunday School - same structure as main service */}
@@ -1706,7 +1699,7 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <div className="font-semibold text-2xl">Upcoming Youth Events</div>
-                <div className="text-sm text-[var(--color-stone-light)]">These appear on the public /youth page. Add image by uploading (uses youth-photos storage).</div>
+                <div className="text-sm text-[var(--color-stone-light)]">These appear on the public /youth-ministry page. Add image by uploading (uses youth-photos storage).</div>
               </div>
               <div className="flex gap-3">
                 <button 
@@ -1724,108 +1717,9 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Youth Event Form Modal */}
-            {showYouthEventForm && (
-              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" onClick={closeYouthEventForm}>
-                <div className="bg-white rounded-3xl w-full max-w-lg p-8" onClick={e => e.stopPropagation()}>
-                  <div className="font-semibold text-xl mb-4">{editingYouthEvent ? "Edit Youth Event" : "Add New Youth Event"}</div>
+            {/* Youth Event modal is rendered globally below so it works from Events tab too */}
 
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium">Title</label>
-                      <input type="text" value={youthEventForm.title} onChange={e => setYouthEventForm({...youthEventForm, title: e.target.value})} className="w-full mt-1 border rounded-xl p-3" placeholder="Event Title" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Date</label>
-                      <input type="date" value={youthEventForm.date} onChange={e => setYouthEventForm({...youthEventForm, date: e.target.value})} className="w-full mt-1 border rounded-xl p-3" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Description (optional)</label>
-                      <textarea value={youthEventForm.description} onChange={e => setYouthEventForm({...youthEventForm, description: e.target.value})} className="w-full mt-1 border rounded-xl p-3" rows={3} />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Link URL (optional, e.g. registration or more info)</label>
-                      <input type="text" value={youthEventForm.link_url} onChange={e => setYouthEventForm({...youthEventForm, link_url: e.target.value})} className="w-full mt-1 border rounded-xl p-3" placeholder="https://..." />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Event Image (optional)</label>
-                      <div className="flex gap-3 items-center">
-                        <input 
-                          type="file" 
-                          accept="image/*" 
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) uploadYouthEventImage(file);
-                          }} 
-                          disabled={uploadingEventImage}
-                          className="text-sm"
-                        />
-                        {uploadingEventImage && <span className="text-xs text-[var(--color-stone-light)]">Uploading...</span>}
-                      </div>
-                      {youthEventForm.image_url && (
-                        <div className="mt-2">
-                          <img src={youthEventForm.image_url} alt="Event preview" className="max-h-32 rounded border" />
-                          <button 
-                            onClick={() => setYouthEventForm(prev => ({...prev, image_url: ""}))}
-                            className="text-xs text-red-600 mt-1"
-                          >
-                            Remove image
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 mt-6 justify-end">
-                    <button onClick={closeYouthEventForm} className="px-6 py-2 border rounded-full text-sm">Cancel</button>
-                    <button onClick={saveYouthEvent} className="px-6 py-2 bg-[var(--color-navy)] text-white rounded-full text-sm font-semibold">Save Event</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Album Form Modal (nice form, replaces prompts) */}
-            {showAlbumForm && (
-              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" onClick={closeAlbumForm}>
-                <div className="bg-white rounded-3xl w-full max-w-md p-8" onClick={e => e.stopPropagation()}>
-                  <div className="font-semibold text-xl mb-4">{editingAlbum ? "Edit Youth Album" : "Create New Youth Album"}</div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium">Album Title</label>
-                      <input
-                        type="text"
-                        value={albumForm.title}
-                        onChange={e => setAlbumForm({ ...albumForm, title: e.target.value })}
-                        className="w-full mt-1 border rounded-xl p-3"
-                        placeholder="Summer 2025 Youth Camp"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Date (optional, YYYY-MM-DD)</label>
-                      <input
-                        type="date"
-                        value={albumForm.date}
-                        onChange={e => setAlbumForm({ ...albumForm, date: e.target.value })}
-                        className="w-full mt-1 border rounded-xl p-3"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 mt-6 justify-end">
-                    <button onClick={closeAlbumForm} className="px-6 py-2 border rounded-full text-sm">Cancel</button>
-                    <button
-                      onClick={saveAlbum}
-                      disabled={savingAlbum}
-                      className="px-6 py-2 bg-[var(--color-navy)] text-white rounded-full text-sm font-semibold disabled:opacity-60"
-                    >
-                      {savingAlbum ? "Saving..." : (editingAlbum ? "Save Changes" : "Create Album")}
-                    </button>
-                  </div>
-                  <p className="mt-3 text-[10px] text-[var(--color-stone-light)]">After creating, select the album above and drag photos into it.</p>
-                </div>
-              </div>
-            )}
+            {/* Album modal is rendered globally below (available in Events tab too) */}
 
             {youthEvents.length === 0 ? (
               <div className="text-center py-8 text-[var(--color-stone-light)] border border-dashed rounded-3xl">
@@ -2054,7 +1948,7 @@ export default function AdminDashboard() {
             <div className="mb-4">
               <div className="font-semibold text-2xl">Youth Events &amp; Albums</div>
               <div className="text-sm text-[var(--color-stone-light)]">
-                Manage upcoming youth events (with pictures) and photo albums. These appear on the public Youth Ministry page. Full photo uploads available in the Youth tab.
+                Quick view + edit for youth events and albums (these appear on the public /youth-ministry page). Full photo upload + album selection is in the Youth tab.
               </div>
             </div>
 
@@ -2086,7 +1980,7 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               )}
-              <div className="text-[10px] text-[var(--color-stone-light)] mt-1">Full editor (with image upload) is in the Youth tab.</div>
+              <div className="text-[10px] text-[var(--color-stone-light)] mt-1">For image upload on events, use the full form in the Youth tab. Albums are public to all visitors.</div>
             </div>
 
             {/* Youth Albums management (the requested album editing under Events/Schedule) */}
@@ -2137,6 +2031,115 @@ export default function AdminDashboard() {
             <div>• Maintain the Prayer Bulletin Google Doc for the Prayer Bulletin page</div>
             <div>• Add YouTube links for sermons (embed format preferred)</div>
             <div>• Drag photos directly onto the big drop zones — no file naming required</div>
+          </div>
+        </div>
+      )}
+
+      {/* YOUTH EVENT MODAL - hoisted so "Add/Edit" buttons work from both Youth tab AND the Events/Schedule tab */}
+      {showYouthEventForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" onClick={closeYouthEventForm}>
+          <div className="bg-white rounded-3xl w-full max-w-lg p-8" onClick={e => e.stopPropagation()}>
+            <div className="font-semibold text-xl mb-4">{editingYouthEvent ? "Edit Youth Event" : "Add New Youth Event"}</div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Title</label>
+                <input type="text" value={youthEventForm.title} onChange={e => setYouthEventForm({...youthEventForm, title: e.target.value})} className="w-full mt-1 border rounded-xl p-3" placeholder="Event Title" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Date</label>
+                <input type="date" value={youthEventForm.date} onChange={e => setYouthEventForm({...youthEventForm, date: e.target.value})} className="w-full mt-1 border rounded-xl p-3" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Description (optional)</label>
+                <textarea value={youthEventForm.description} onChange={e => setYouthEventForm({...youthEventForm, description: e.target.value})} className="w-full mt-1 border rounded-xl p-3" rows={3} />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Link URL (optional, e.g. registration or more info)</label>
+                <input type="text" value={youthEventForm.link_url} onChange={e => setYouthEventForm({...youthEventForm, link_url: e.target.value})} className="w-full mt-1 border rounded-xl p-3" placeholder="https://..." />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Event Image (optional)</label>
+                <div className="flex gap-3 items-center">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) uploadYouthEventImage(file);
+                    }} 
+                    disabled={uploadingEventImage}
+                    className="text-sm"
+                  />
+                  {uploadingEventImage && <span className="text-xs text-[var(--color-stone-light)]">Uploading...</span>}
+                </div>
+                {youthEventForm.image_url && (
+                  <div className="mt-2">
+                    <img src={youthEventForm.image_url} alt="Event preview" className="max-h-32 rounded border" />
+                    <button 
+                      onClick={() => setYouthEventForm(prev => ({...prev, image_url: ""}))}
+                      className="text-xs text-red-600 mt-1"
+                    >
+                      Remove image
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6 justify-end">
+              <button onClick={closeYouthEventForm} className="px-6 py-2 border rounded-full text-sm">Cancel</button>
+              <button 
+                onClick={saveYouthEvent} 
+                disabled={savingYouthEvent}
+                className="px-6 py-2 bg-[var(--color-navy)] text-white rounded-full text-sm font-semibold disabled:opacity-60"
+              >
+                {savingYouthEvent ? "Saving..." : "Save Event"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ALBUM FORM MODAL - hoisted for use from Events tab "Youth Events & Albums" section */}
+      {showAlbumForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" onClick={closeAlbumForm}>
+          <div className="bg-white rounded-3xl w-full max-w-md p-8" onClick={e => e.stopPropagation()}>
+            <div className="font-semibold text-xl mb-4">{editingAlbum ? "Edit Youth Album" : "Create New Youth Album"}</div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Album Title</label>
+                <input
+                  type="text"
+                  value={albumForm.title}
+                  onChange={e => setAlbumForm({ ...albumForm, title: e.target.value })}
+                  className="w-full mt-1 border rounded-xl p-3"
+                  placeholder="Summer 2025 Youth Camp"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Date (optional, YYYY-MM-DD)</label>
+                <input
+                  type="date"
+                  value={albumForm.date}
+                  onChange={e => setAlbumForm({ ...albumForm, date: e.target.value })}
+                  className="w-full mt-1 border rounded-xl p-3"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6 justify-end">
+              <button onClick={closeAlbumForm} className="px-6 py-2 border rounded-full text-sm">Cancel</button>
+              <button
+                onClick={saveAlbum}
+                disabled={savingAlbum}
+                className="px-6 py-2 bg-[var(--color-navy)] text-white rounded-full text-sm font-semibold disabled:opacity-60"
+              >
+                {savingAlbum ? "Saving..." : (editingAlbum ? "Save Changes" : "Create Album")}
+              </button>
+            </div>
+            <p className="mt-3 text-[10px] text-[var(--color-stone-light)]">After creating, select the album in the Youth tab and drag photos in. Albums are publicly visible to everyone.</p>
           </div>
         </div>
       )}

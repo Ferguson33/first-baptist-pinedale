@@ -35,7 +35,6 @@ export default function YouthMinistry() {
     youth_sunday_school_reference: "",
     youth_sunday_school_date: "",
     youth_google_doc_url: "",
-    youth_calendar_url: "",
   });
 
   // Events
@@ -87,25 +86,26 @@ export default function YouthMinistry() {
     try {
       const { data, error } = await supabase
         .from('sermon_settings')
-        .select('youth_pastor_note, youth_sunday_school_lesson, youth_sunday_school_reference, youth_sunday_school_date, youth_google_doc_url, youth_calendar_url')
+        .select('youth_pastor_note, youth_sunday_school_lesson, youth_sunday_school_reference, youth_sunday_school_date, youth_google_doc_url')
         .eq('id', 1)
         .single();
 
-      if (error) throw error;
-
-      if (data) {
-        setYouthContent({
-          youth_pastor_note: data.youth_pastor_note || "",
-          youth_sunday_school_lesson: data.youth_sunday_school_lesson || "",
-          youth_sunday_school_reference: data.youth_sunday_school_reference || "",
-          youth_sunday_school_date: data.youth_sunday_school_date || "",
-          youth_google_doc_url: data.youth_google_doc_url || "",
-          youth_calendar_url: data.youth_calendar_url || "",
-        });
+      if (error) {
+        console.error('Error fetching youth content:', error);
       }
+
+      // Always set (defensive - previously working data should appear even if query is partial)
+      const d = data || {};
+      setYouthContent({
+        youth_pastor_note: d.youth_pastor_note || "",
+        youth_sunday_school_lesson: d.youth_sunday_school_lesson || "",
+        youth_sunday_school_reference: d.youth_sunday_school_reference || "",
+        youth_sunday_school_date: d.youth_sunday_school_date || "",
+        youth_google_doc_url: d.youth_google_doc_url || "",
+      });
     } catch (err: any) {
       console.error('Error fetching youth content:', err);
-      // Keep previous values on error for smooth experience
+      // Keep previous/empty values - sections will simply not render if empty
     }
   }, [supabase]);
 
@@ -427,30 +427,6 @@ export default function YouthMinistry() {
           </div>
         )}
       </div>
-
-      {/* Youth Events Calendar Embed (was "Heath's" — now generic + any-admin managed) */}
-      {youthContent.youth_calendar_url && (
-        <div className="mb-14">
-          <div className="mb-5">
-            <div className="font-semibold text-2xl tracking-tight">Youth Events Calendar</div>
-            <p className="text-sm text-[var(--color-stone-light)]">Full youth events calendar. Click inside to view details or add events to your own calendar.</p>
-          </div>
-          <div className="bg-white border border-[var(--color-gold)]/10 rounded-2xl overflow-hidden shadow-sm">
-            <iframe
-              src={youthContent.youth_calendar_url}
-              width="100%"
-              height="620"
-              frameBorder="0"
-              title="Youth Events Calendar"
-              className="w-full block"
-              style={{ minHeight: '520px', border: 'none' }}
-            />
-          </div>
-          <p className="text-xs text-center text-[var(--color-stone-light)] mt-2">
-            Also available on the <a href="/events" className="underline hover:text-[var(--color-navy)]">main Events page</a>.
-          </p>
-        </div>
-      )}
 
       {/* Youth Photo Albums — fully public, reload fixed */}
       <div className="mt-8">
