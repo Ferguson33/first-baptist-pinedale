@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { Menu, X, User, LogOut, Shield, Users, BookOpen, Youtube } from 'lucide-react';
+import { Menu, X, User, LogOut, Shield, Users, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function Navbar() {
@@ -22,8 +22,6 @@ export function Navbar() {
     { href: '/missions', label: 'Missions' },
     { href: '/visit', label: 'Visitors Info' },
   ];
-
-  const YOUTUBE_CHANNEL_URL = "https://www.youtube.com/@FirstBaptistChurchofPinedale";
 
   const isLoggedIn = !!user;
   const showMemberLinks = isApprovedMember;
@@ -59,14 +57,6 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <a 
-              href={YOUTUBE_CHANNEL_URL} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="nav-link text-[var(--color-stone)] hover:text-[var(--color-navy)] flex items-center gap-1"
-            >
-              YouTube <Youtube className="w-3.5 h-3.5" />
-            </a>
           </div>
 
           {/* Right side actions */}
@@ -203,15 +193,6 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              <a 
-                href={YOUTUBE_CHANNEL_URL} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg flex items-center gap-1"
-                onClick={() => setMobileOpen(false)}
-              >
-                YouTube <Youtube className="w-4 h-4" />
-              </a>
               
               {showMemberLinks && (
                 <>

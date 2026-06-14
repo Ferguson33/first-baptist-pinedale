@@ -25,8 +25,6 @@ export default function SermonsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showLiveModal, setShowLiveModal] = useState(false);
 
-  const YOUTUBE_CHANNEL_URL = "https://www.youtube.com/@FirstBaptistChurchofPinedale";
-
   useEffect(() => {
     // Always fetch for public curated sermons + live settings.
     // Member-only content (live + full archive) is rendered conditionally.
@@ -115,19 +113,9 @@ export default function SermonsPage() {
 
       {/* Curated / Selected Sermons - visible to everyone (public) */}
       <div className="mb-12">
-        <div className="flex items-baseline justify-between mb-4">
-          <div>
-            <div className="uppercase text-xs tracking-[3px] text-[var(--color-gold-dark)]">SELECTED MESSAGES</div>
-            <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Curated Sermons</h2>
-          </div>
-          <a 
-            href={YOUTUBE_CHANNEL_URL} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-sm font-medium text-[var(--color-gold-dark)] hover:underline flex items-center gap-1"
-          >
-            Full archive on YouTube →
-          </a>
+        <div className="mb-4">
+          <div className="uppercase text-xs tracking-[3px] text-[var(--color-gold-dark)]">SELECTED MESSAGES</div>
+          <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Curated Sermons</h2>
         </div>
 
         {loading ? (
@@ -175,7 +163,7 @@ export default function SermonsPage() {
           </div>
         ) : (
           <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-10 text-center text-[var(--color-stone-light)]">
-            Selected sermons will appear here soon. In the meantime, visit our YouTube channel.
+            Selected sermons will appear here soon.
           </div>
         )}
       </div>
@@ -206,9 +194,8 @@ export default function SermonsPage() {
 
           {/* Full Archive for Members */}
           <div>
-            <div className="flex items-baseline justify-between mb-4">
+            <div className="mb-4">
               <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Full Sermon Archive</h2>
-              <a href={YOUTUBE_CHANNEL_URL} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-[var(--color-gold-dark)] hover:underline">Subscribe on YouTube →</a>
             </div>
 
             {loading ? (
