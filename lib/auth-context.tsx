@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, startTransition } from 'react';
 import { User, Session, type AuthChangeEvent } from '@supabase/supabase-js';
 import { createClient } from './supabase/client';
 import type { Profile } from './supabase';
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     try {
       const prof = await fetchProfile(user.id);
-      if (prof) setProfile(prof);
+      if (prof) startTransition(() => setProfile(prof));
     } catch (err) {
       console.error('refreshProfile error (non-blocking):', err);
       // Do not throw; keep UI responsive
@@ -79,11 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           const prof = await fetchProfile(session.user.id);
           if (isMounted) {
-            setProfile(prof);
-            setLoading(false);
+            startTransition(() => {
+              setProfile(prof);
+              setLoading(false);
+            });
           }
         } else {
-          if (isMounted) setLoading(false);
+          if (isMounted) startTransition(() => setLoading(false));
         }
       } catch (err) {
         console.error('Initial auth session error (non-blocking):', err);
@@ -108,27 +110,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             const prof = await fetchProfile(session.user.id);
             if (isMounted) {
-              setProfile(prof);
+              startTransition(() => {
+                setProfile(prof);
 
-              // Show friendly message on login (non-blocking)
-              if (event === 'SIGNED_IN') {
-                if (prof?.role === 'pending') {
-                  toast.info("Welcome! Your membership is pending approval. You'll get access to the Prayer Bulletin and Directory soon.");
-                } else if (prof?.role === 'admin') {
-                  toast.success("Welcome back, Pastor! You have full admin access.");
-                } else if (prof?.role === 'approved') {
-                  toast.success("Welcome back!");
+                // Show friendly message on login (non-blocking)
+                if (event === 'SIGNED_IN') {
+                  if (prof?.role === 'pending') {
+                    toast.info("Welcome! Your membership is pending approval. You'll get access to the Prayer Bulletin and Directory soon.");
+                  } else if (prof?.role === 'admin') {
+                    toast.success("Welcome back, Pastor! You have full admin access.");
+                  } else if (prof?.role === 'approved') {
+                    toast.success("Welcome back!");
+                  }
                 }
-              }
+              });
             }
           } catch (err) {
             console.error('Auth state profile fetch error (non-blocking):', err);
-            if (isMounted) setProfile(null);
+            if (isMounted) startTransition(() => setProfile(null));
           }
         } else {
-          if (isMounted) setProfile(null);
+          if (isMounted) startTransition(() => setProfile(null));
         }
-        if (isMounted) setLoading(false);
+        if (isMounted) startTransition(() => setLoading(false));
       }
     );
 
