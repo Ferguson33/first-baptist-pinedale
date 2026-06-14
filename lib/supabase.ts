@@ -42,7 +42,8 @@ export type BuildingProgress = {
   physical_percent: number;
   funds_raised: number;
   funds_goal: number;
-  updated_at: string;
+  physical_note?: string | null;
+  updated_at?: string;
 };
 
 // PrayerRequest type removed - old Prayer Wall feature has been replaced by Prayer Bulletin (Google Doc)

@@ -43,9 +43,9 @@ create table if not exists building_photos (
 -- BUILDING PROGRESS (single row)
 create table if not exists building_progress (
   id int primary key default 1,
-  physical_percent int default 68,
-  funds_raised numeric default 250000,
-  funds_goal numeric default 451000,
+  physical_percent int default 0,
+  funds_raised numeric default 0,
+  funds_goal numeric default 0,
   physical_note text,
   updated_at timestamptz default now()
 );

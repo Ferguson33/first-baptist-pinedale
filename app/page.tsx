@@ -5,9 +5,14 @@ import { useState, useEffect } from 'react';
 import { ArrowRight, Clock, MapPin, Users, Heart } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
+// Note: Progress is now fetched via direct Supabase REST + cache:'no-store' for guaranteed fresh data.
+// The client is still used for other dynamic content (sermon teaser).
+
 export default function Home() {
   const supabase = createClient();
   const [physicalProgress, setPhysicalProgress] = useState<number | null>(null);
+  const [progressLoading, setProgressLoading] = useState(true);
+  const [progressError, setProgressError] = useState(false);
 
   // ============================================
   // MEET THE PASTORS - YouTube Video IDs
@@ -47,21 +52,40 @@ export default function Home() {
   }
 
   const fetchProgress = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('building_progress')
-        .select('physical_percent')
-        .eq('id', 1)
-        .single();
+    setProgressLoading(true);
+    setProgressError(false);
 
-      if (error) {
-        console.error('Error fetching home progress:', error);
-        // On error, leave as null (will show "..." or last value if we add state)
-      } else if (data?.physical_percent !== undefined) {
+    try {
+      // Force fresh data with no cache - direct REST call to Supabase (bypasses any client/HTTP caching)
+      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/building_progress?select=physical_percent&id=eq.1`;
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store', // Force fresh on every call (even in browser/Next context)
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const rows = await res.json();
+      const data = rows?.[0];
+
+      if (data?.physical_percent !== undefined) {
         setPhysicalProgress(data.physical_percent);
+      } else {
+        setProgressError(true);
       }
     } catch (err) {
-      console.error('Unexpected error fetching home progress:', err);
+      console.error('Error fetching home progress (fresh):', err);
+      setProgressError(true);
+      // Robust: previous value in state is kept as last known
+    } finally {
+      setProgressLoading(false);
     }
   };
 
@@ -94,7 +118,7 @@ export default function Home() {
     }
     loadSermonTeaser();
 
-    // Mobile resilience + re-fetch sermon settings when returning to tab
+    // Re-fetch fresh progress on visibility/focus for live updates (no cache)
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         fetchProgress();
@@ -364,14 +388,25 @@ export default function Home() {
           <div className="mt-8 max-w-md mx-auto">
             <div className="flex justify-between text-sm mb-2 font-medium">
               <div>Physical Progress</div>
-              <div className="text-[var(--color-gold-dark)]">{physicalProgress ?? '...'}%</div>
+              <div className="text-[var(--color-gold-dark)] flex items-center gap-1.5">
+                {progressLoading ? (
+                  <>Updating... <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" /></>
+                ) : progressError && physicalProgress === null ? (
+                  '—% (temporarily unavailable)'
+                ) : (
+                  `${physicalProgress ?? '—'}%`
+                )}
+              </div>
             </div>
             <div className="h-3 bg-white rounded-full overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-[var(--color-gold)] to-[var(--color-gold-dark)] rounded-full transition-all" 
-                style={{ width: `${physicalProgress ?? 0}%` }} 
+                className="h-full bg-gradient-to-r from-[var(--color-gold)] to-[var(--color-gold-dark)] rounded-full transition-all duration-500" 
+                style={{ width: `${progressLoading ? 5 : (physicalProgress ?? 5)}%` }} 
               />
             </div>
+            {progressError && physicalProgress === null && (
+              <div className="text-[10px] text-[var(--color-stone-light)] mt-1">Could not load live progress. Showing last known value if available.</div>
+            )}
           </div>
 
           <Link href="/building-project" className="mt-8 inline-flex items-center gap-2 text-[var(--color-navy)] font-semibold hover:text-[var(--color-gold-dark)]">

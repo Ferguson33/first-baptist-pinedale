@@ -22,26 +22,44 @@ export default function BuildingProject() {
   const [progress, setProgress] = useState<BuildingProgress | null>(null);
   const [photos, setPhotos] = useState<BuildingPhoto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [progressError, setProgressError] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const fetchBuildingData = async (isBackground = false) => {
-    if (!isBackground) setLoading(true);
+    if (!isBackground) {
+      setLoading(true);
+      setProgressError(false);
+    }
 
     try {
-      const { data: progressData, error: progressError } = await supabase
-        .from('building_progress')
-        .select('physical_percent, funds_raised, funds_goal, physical_note')
-        .eq('id', 1)
-        .single();
+      // Force fresh data (no cache) for progress - direct Supabase REST to always get live admin value
+      const progressUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/building_progress?select=physical_percent,funds_raised,funds_goal,physical_note&id=eq.1`;
+      const progressRes = await fetch(progressUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+      });
 
-      if (progressError) {
-        console.error('Error fetching building progress:', progressError);
-        // On error, leave progress as null or previous — do not reset to defaults
-      } else if (progressData) {
-        setProgress(progressData);
+      if (progressRes.ok) {
+        const progressRows = await progressRes.json();
+        const progressData = progressRows?.[0];
+        if (progressData) {
+          setProgress(progressData);
+          setProgressError(false);
+        } else {
+          setProgressError(true);
+        }
+      } else {
+        console.error('Progress fetch HTTP error:', progressRes.status);
+        setProgressError(true);
       }
 
+      // Photos can use client (or same fresh pattern if needed)
       const { data: photosData, error: photosError } = await supabase
         .from('building_photos')
         .select('id, url, caption')
@@ -54,6 +72,7 @@ export default function BuildingProject() {
       }
     } catch (error) {
       console.error('Error fetching building data:', error);
+      setProgressError(true);
     } finally {
       if (!isBackground) setLoading(false);
     }
@@ -113,14 +132,15 @@ export default function BuildingProject() {
           <div className="flex justify-between text-sm mb-2">
             <div className="font-semibold">Physical Progress</div>
             <div className="font-mono text-[var(--color-gold-dark)]">
-              {progress ? `${progress.physical_percent}%` : '...'}
+              {loading && !progress ? 'Updating...' : `${progress?.physical_percent ?? '—'}%`}
+              {progressError && <span className="text-[10px] text-[var(--color-stone-light)] ml-1">(last known)</span>}
             </div>
           </div>
           <div className="h-6 bg-[var(--color-cream)] rounded-full overflow-hidden">
             <motion.div 
               className="h-full bg-gradient-to-r from-[var(--color-gold)] to-[var(--color-gold-dark)]" 
               initial={{ width: 0 }} 
-              animate={{ width: progress ? `${progress.physical_percent}%` : '0%' }} 
+              animate={{ width: progress ? `${progress.physical_percent}%` : (loading ? '5%' : '0%') }} 
               transition={{ duration: 1.4, ease: [0.34, 1.56, 0.64, 1] }}
             />
           </div>
@@ -133,16 +153,21 @@ export default function BuildingProject() {
           <div className="flex justify-between text-sm mb-2">
             <div className="font-semibold">Funds Raised</div>
             <div>
-              {progress ? (
+              {loading && !progress ? (
+                'Updating...'
+              ) : progress ? (
                 <><span className="font-mono text-[var(--color-gold-dark)]">${progress.funds_raised.toLocaleString()}</span> <span className="text-xs text-[var(--color-stone-light)]">of ${progress.funds_goal.toLocaleString()}</span></>
-              ) : '...'}
+              ) : (
+                '—'
+              )}
+              {progressError && <span className="text-[10px] text-[var(--color-stone-light)] ml-1">(last known)</span>}
             </div>
           </div>
           <div className="h-6 bg-[var(--color-cream)] rounded-full overflow-hidden">
             <motion.div 
               className="h-full bg-[var(--color-navy)]" 
               initial={{ width: 0 }} 
-              animate={{ width: progress ? `${Math.min(100, (progress.funds_raised / progress.funds_goal) * 100)}%` : '0%' }} 
+              animate={{ width: progress ? `${Math.min(100, (progress.funds_raised / progress.funds_goal) * 100)}%` : (loading ? '5%' : '0%') }} 
               transition={{ duration: 1.4, ease: [0.34, 1.56, 0.64, 1] }}
             />
           </div>
