@@ -52,7 +52,14 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
 
-
+  // Client-only mounted flag. On hard refresh (or any mount), we stay in the lightweight
+  // "Checking permissions…" state until after the first client effect tick. This gives the
+  // AuthProvider's startTransition updates (and any Supabase listener re-fires) time to settle
+  // before we render the very large admin tab tree + all its controlled forms, lists, and
+  // useEffect-driven data loads. This is a standard stabilization for "update a component while
+  // rendering a different component" (React #310) when an ancestor context updates during the
+  // initial render of a complex descendant page.
+  const [isMounted, setIsMounted] = useState(false);
 
   // Local state for demo (replace with real Supabase calls once connected)
   const [sermons, setSermons] = useState<LocalSermon[]>([
@@ -352,6 +359,16 @@ export default function AdminDashboard() {
     }
   }, [user, isAdmin, loading, router]);
 
+  // Mark that we are fully mounted on the client. Combined with the early guard below and
+  // the updated conditions on every data-loading useEffect, this prevents the heavy admin
+  // JSX (tabs, dozens of controlled inputs, maps/filters over realMembers/realSermons/events,
+  // hoisted modals, etc.) from rendering on the very first client pass after a hard refresh.
+  // This breaks the timing window where an in-flight AuthProvider set (even inside startTransition)
+  // could be seen by React as "updating while rendering".
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Load building progress from Supabase
   const loadBuildingProgress = async () => {
     const { data, error } = await supabase
@@ -369,55 +386,55 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (!loading && isAdmin) {
+    if (!loading && isAdmin && isMounted) {
       loadBuildingProgress();
       fetchBuildingPhotos();
       fetchMembers();
       fetchRealSermons();
     }
-  }, [loading, isAdmin]);
+  }, [loading, isAdmin, isMounted]);
 
   // Fetch building photos when the building tab is active (helps when returning to the page)
   useEffect(() => {
-    if (activeTab === 'building' && !loading && isAdmin) {
+    if (activeTab === 'building' && !loading && isAdmin && isMounted) {
       fetchBuildingPhotos();
       loadBuildingProgress();
     }
-  }, [activeTab, loading, isAdmin]);
+  }, [activeTab, loading, isAdmin, isMounted]);
 
   // Fetch events data when the events tab is active (so data loads on tab switch and on refresh if tab is restored)
   useEffect(() => {
-    if (activeTab === 'events' && !loading && isAdmin) {
+    if (activeTab === 'events' && !loading && isAdmin && isMounted) {
       fetchEvents();
     }
-  }, [activeTab, loading, isAdmin]);
+  }, [activeTab, loading, isAdmin, isMounted]);
 
   // Auto-load data for other tabs on activation or restore after auth
   useEffect(() => {
-    if (activeTab === 'members' && !loading && isAdmin) {
+    if (activeTab === 'members' && !loading && isAdmin && isMounted) {
       fetchMembers();
     }
-  }, [activeTab, loading, isAdmin]);
+  }, [activeTab, loading, isAdmin, isMounted]);
 
   useEffect(() => {
-    if (activeTab === 'sermons' && !loading && isAdmin) {
+    if (activeTab === 'sermons' && !loading && isAdmin && isMounted) {
       loadSermonSettings();
       fetchRealSermons();
     }
-  }, [activeTab, loading, isAdmin]);
+  }, [activeTab, loading, isAdmin, isMounted]);
 
   useEffect(() => {
-    if (activeTab === 'youth' && !loading && isAdmin) {
+    if (activeTab === 'youth' && !loading && isAdmin && isMounted) {
       fetchYouthPhotos();
       fetchYouthAlbums();
       loadSermonSettings();
       fetchYouthEvents();
     }
-  }, [activeTab, loading, isAdmin]);
+  }, [activeTab, loading, isAdmin, isMounted]);
 
 
 
-  if (loading || !isAdmin) {
+  if (loading || !isAdmin || !isMounted) {
     return <div className="min-h-[60vh] flex items-center justify-center">Checking permissions…</div>;
   }
 
