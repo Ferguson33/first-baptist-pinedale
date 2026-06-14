@@ -96,3 +96,13 @@ export type YouthPhoto = {
   uploaded_at: string;
 };
 
+export type YouthEvent = {
+  id: string;
+  title: string;
+  date: string | null;
+  description: string | null;
+  image_url: string | null;
+  link_url: string | null;
+  created_at?: string;
+};
+

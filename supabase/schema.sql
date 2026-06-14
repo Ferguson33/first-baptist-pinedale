@@ -211,3 +211,106 @@ WITH CHECK (
 
 -- Storage buckets you must create in the Supabase dashboard:
 -- building-photos, sermons, youth-photos, member-photos (make them public)
+
+-- YOUTH EVENTS (Upcoming events for youth, editable in admin youth tab)
+create table if not exists youth_events (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  date date,
+  description text,
+  image_url text,
+  link_url text,
+  created_at timestamptz default now()
+);
+
+-- Add calendar embed for Heath's youth events (editable in admin)
+-- This will be added to sermon_settings table via migration.
+
+-- RLS for youth_events: public can view, admins manage (any admin, not just Heath)
+ALTER TABLE youth_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can view youth events" ON youth_events;
+CREATE POLICY "Public can view youth events"
+ON youth_events FOR SELECT
+TO anon, authenticated
+USING (true);
+
+DROP POLICY IF EXISTS "Admins can manage youth events" ON youth_events;
+CREATE POLICY "Admins can manage youth events"
+ON youth_events FOR ALL
+TO authenticated
+USING (is_admin())
+WITH CHECK (is_admin());
+
+GRANT SELECT ON public.youth_events TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.youth_events TO authenticated;
+
+-- YOUTH ALBUMS (publicly visible photo albums for all visitors)
+CREATE TABLE IF NOT EXISTS youth_albums (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  date date,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE youth_albums ENABLE ROW LEVEL SECURITY;
+
+-- Public read for all visitors (albums are not members-only)
+DROP POLICY IF EXISTS "Public can view youth albums" ON youth_albums;
+CREATE POLICY "Public can view youth albums"
+ON youth_albums FOR SELECT
+TO anon, authenticated
+USING (true);
+
+-- Any admin can manage
+DROP POLICY IF EXISTS "Admins can manage youth albums" ON youth_albums;
+CREATE POLICY "Admins can manage youth albums"
+ON youth_albums FOR ALL
+TO authenticated
+USING (is_admin())
+WITH CHECK (is_admin());
+
+GRANT SELECT ON public.youth_albums TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.youth_albums TO authenticated;
+
+-- YOUTH PHOTOS (tied to albums or uncategorized; public gallery)
+CREATE TABLE IF NOT EXISTS youth_photos (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  url text NOT NULL,
+  caption text,
+  album_id uuid REFERENCES youth_albums(id) ON DELETE CASCADE,
+  uploaded_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE youth_photos ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can view youth photos" ON youth_photos;
+CREATE POLICY "Public can view youth photos"
+ON youth_photos FOR SELECT
+TO anon, authenticated
+USING (true);
+
+DROP POLICY IF EXISTS "Admins can insert youth photos" ON youth_photos;
+CREATE POLICY "Admins can insert youth photos"
+ON youth_photos FOR INSERT
+TO authenticated
+WITH CHECK (is_admin());
+
+DROP POLICY IF EXISTS "Admins can delete youth photos" ON youth_photos;
+CREATE POLICY "Admins can delete youth photos"
+ON youth_photos FOR DELETE
+TO authenticated
+USING (is_admin());
+
+DROP POLICY IF EXISTS "Admins can update youth photos" ON youth_photos;
+CREATE POLICY "Admins can update youth photos"
+ON youth_photos FOR UPDATE
+TO authenticated
+USING (is_admin())
+WITH CHECK (is_admin());
+
+GRANT SELECT ON public.youth_photos TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.youth_photos TO authenticated;
+
+-- Ensure sermon_settings public read includes youth calendar / notes etc.
+GRANT SELECT ON public.sermon_settings TO anon, authenticated;

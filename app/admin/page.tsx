@@ -62,6 +62,33 @@ export default function AdminDashboard() {
   const [youthPhotos, setYouthPhotos] = useState<any[]>([]);
   const [youthAlbums, setYouthAlbums] = useState<any[]>([]);
   const [selectedYouthAlbumId, setSelectedYouthAlbumId] = useState<string | null>(null);
+  const [youthEvents, setYouthEvents] = useState<any[]>([]);
+  const [showYouthEventForm, setShowYouthEventForm] = useState(false);
+  const [editingYouthEvent, setEditingYouthEvent] = useState<any>(null);
+  const [youthEventForm, setYouthEventForm] = useState({
+    title: "",
+    date: "",
+    description: "",
+    image_url: "",
+    link_url: "",
+  });
+  const [uploadingEventImage, setUploadingEventImage] = useState(false);
+
+  // Album form (nice modal instead of prompt() — fixes bugginess)
+  const [showAlbumForm, setShowAlbumForm] = useState(false);
+  const [editingAlbum, setEditingAlbum] = useState<any>(null);
+  const [albumForm, setAlbumForm] = useState({ title: "", date: "" });
+  const [savingAlbum, setSavingAlbum] = useState(false);
+
+  // General spotlight event form (nice modal, replaces old prompts)
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [eventForm, setEventForm] = useState({ title: "", date: "", time: "", description: "", location: "" });
+  const [savingEvent, setSavingEvent] = useState(false);
+
+  // Youth data loading flags for smooth admin UX
+  const [loadingYouthEvents, setLoadingYouthEvents] = useState(false);
+  const [loadingYouthAlbums, setLoadingYouthAlbums] = useState(false);
   const [directory, setDirectory] = useState<LocalMember[]>([
     { id: 'm1', name: "Robert Thompson", email: "robert@example.com", approved: true }
   ]);
@@ -87,6 +114,7 @@ export default function AdminDashboard() {
     youth_sunday_school_date: "",
     youth_pastor_note: "",
     youth_google_doc_url: "",
+    youth_calendar_url: "",
     live_video_id: "",
     live_stream_active: false,
   });
@@ -385,6 +413,7 @@ export default function AdminDashboard() {
       fetchYouthPhotos();
       fetchYouthAlbums();
       loadSermonSettings();
+      fetchYouthEvents();
     }
     if (tab === 'sermons') {
       loadSermonSettings();
@@ -392,6 +421,9 @@ export default function AdminDashboard() {
     }
     if (tab === 'events') {
       fetchEvents();
+      // Load youth events + albums so "Youth Events & Albums" subsection works under Events/Schedule
+      fetchYouthEvents();
+      fetchYouthAlbums();
     }
     if (tab === 'overview') {
       if (realMembers.length === 0) fetchMembers();
@@ -439,6 +471,7 @@ export default function AdminDashboard() {
   }
 
   async function fetchYouthAlbums() {
+    setLoadingYouthAlbums(true);
     const { data, error } = await supabase
       .from('youth_albums')
       .select('*')
@@ -449,30 +482,22 @@ export default function AdminDashboard() {
     } else {
       setYouthAlbums(data || []);
     }
+    setLoadingYouthAlbums(false);
   }
 
-  async function createYouthAlbum() {
-    const title = prompt("Album title? (e.g. 'Summer 2025 Youth Camp')");
-    if (!title) return;
-
-    const date = prompt("Date (YYYY-MM-DD) or leave blank?", new Date().toISOString().split('T')[0]);
-
+  async function fetchYouthEvents() {
+    setLoadingYouthEvents(true);
     const { data, error } = await supabase
-      .from('youth_albums')
-      .insert({
-        title,
-        date: date || null,
-      })
-      .select()
-      .single();
+      .from('youth_events')
+      .select('*')
+      .order('date', { ascending: true });
 
     if (error) {
-      toast.error("Failed to create album: " + error.message);
+      console.error('Error fetching youth events:', error);
     } else {
-      toast.success("Album created!");
-      setYouthAlbums(prev => [data, ...prev]);
-      setSelectedYouthAlbumId(data.id);
+      setYouthEvents(data || []);
     }
+    setLoadingYouthEvents(false);
   }
 
   async function deleteYouthAlbum(id: string, title: string) {
@@ -497,6 +522,159 @@ export default function AdminDashboard() {
     }
   }
 
+  // Youth Events management (for Upcoming Events on /youth-ministry page)
+  function openYouthEventForm(ev?: any) {
+    if (ev) {
+      setEditingYouthEvent(ev);
+      setYouthEventForm({
+        title: ev.title || "",
+        date: ev.date || "",
+        description: ev.description || "",
+        image_url: ev.image_url || "",
+        link_url: ev.link_url || "",
+      });
+    } else {
+      setEditingYouthEvent(null);
+      setYouthEventForm({
+        title: "",
+        date: "",
+        description: "",
+        image_url: "",
+        link_url: "",
+      });
+    }
+    setShowYouthEventForm(true);
+  }
+
+  function closeYouthEventForm() {
+    setShowYouthEventForm(false);
+    setEditingYouthEvent(null);
+  }
+
+  async function saveYouthEvent() {
+    if (!youthEventForm.title) {
+      toast.error("Title is required.");
+      return;
+    }
+
+    const payload = { ...youthEventForm };
+
+    let error;
+    if (editingYouthEvent) {
+      ({ error } = await supabase.from('youth_events').update(payload).eq('id', editingYouthEvent.id));
+    } else {
+      ({ error } = await supabase.from('youth_events').insert(payload));
+    }
+
+    if (error) {
+      toast.error("Failed to save event: " + error.message);
+    } else {
+      toast.success(editingYouthEvent ? "Event updated!" : "Event added!");
+      closeYouthEventForm();
+      fetchYouthEvents();
+    }
+  }
+
+  async function deleteYouthEvent(id: string, title: string) {
+    if (!confirm(`Delete event "${title}"?`)) return;
+
+    const { error } = await supabase.from('youth_events').delete().eq('id', id);
+
+    if (error) {
+      toast.error("Failed to delete event: " + error.message);
+    } else {
+      toast.success("Event deleted");
+      fetchYouthEvents();
+    }
+  }
+
+  // === Nice Album modal (replaces prompt-based create/edit for reliability) ===
+  function openAlbumForm(album?: any) {
+    if (album) {
+      setEditingAlbum(album);
+      setAlbumForm({ title: album.title || "", date: album.date || "" });
+    } else {
+      setEditingAlbum(null);
+      setAlbumForm({ title: "", date: new Date().toISOString().split('T')[0] });
+    }
+    setShowAlbumForm(true);
+  }
+
+  function closeAlbumForm() {
+    setShowAlbumForm(false);
+    setEditingAlbum(null);
+  }
+
+  async function saveAlbum() {
+    if (!albumForm.title.trim()) {
+      toast.error("Album title is required.");
+      return;
+    }
+    setSavingAlbum(true);
+
+    const payload = {
+      title: albumForm.title.trim(),
+      date: albumForm.date || null,
+    };
+
+    let error;
+    if (editingAlbum) {
+      ({ error } = await supabase.from('youth_albums').update(payload).eq('id', editingAlbum.id));
+    } else {
+      ({ error } = await supabase.from('youth_albums').insert(payload));
+    }
+
+    setSavingAlbum(false);
+
+    if (error) {
+      toast.error("Failed to save album: " + error.message);
+    } else {
+      toast.success(editingAlbum ? "Album updated!" : "Album created!");
+      closeAlbumForm();
+      fetchYouthAlbums();
+    }
+  }
+
+  // Override old prompt versions with nice modal versions (kept for backward calls in UI)
+  async function createYouthAlbum() {
+    openAlbumForm();
+  }
+
+  async function editYouthAlbum(album: any) {
+    openAlbumForm(album);
+  }
+
+  // Upload image for youth event (reuses youth upload api but for event target)
+  async function uploadYouthEventImage(file: File) {
+    setUploadingEventImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('target', 'event');  // special target, no photo table insert
+
+      const res = await fetch('/api/admin/youth/upload-photo', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ (await supabase.auth.getSession()).data.session?.access_token }`,
+        },
+        body: formData,
+      });
+
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+      setYouthEventForm(prev => ({ ...prev, image_url: result.url }));
+      toast.success("Image uploaded for event");
+    } catch (err: any) {
+      console.error('Event image upload error:', err);
+      toast.error("Failed to upload image: " + (err.message || err));
+    } finally {
+      setUploadingEventImage(false);
+    }
+  }
+
   // === Events (Spotlight / Special Events for public Events page) ===
   async function fetchEvents() {
     try {
@@ -517,80 +695,72 @@ export default function AdminDashboard() {
     }
   }
 
-  async function addEvent() {
-    try {
-      const title = prompt("Event title?");
-      if (!title) return;
-
-      const date = prompt("Date (YYYY-MM-DD)?", new Date().toISOString().split('T')[0]);
-      if (!date) return;
-
-      const time = prompt("Time (optional)?", "") || null;
-      const description = prompt("Description (optional)?", "") || null;
-      const location = prompt("Location (optional)?", "") || null;
-
-      const { error } = await supabase.from('events').insert({
-        title,
-        date,
-        time,
-        description,
-        location,
+  // Nice modal handlers for general spotlight events (no more prompts)
+  function openEventForm(ev?: any) {
+    if (ev) {
+      setEditingEvent(ev);
+      setEventForm({
+        title: ev.title || "",
+        date: ev.date || "",
+        time: ev.time || "",
+        description: ev.description || "",
+        location: ev.location || "",
       });
+    } else {
+      setEditingEvent(null);
+      setEventForm({
+        title: "",
+        date: new Date().toISOString().split('T')[0],
+        time: "",
+        description: "",
+        location: "",
+      });
+    }
+    setShowEventForm(true);
+  }
 
-      if (error) {
-        console.error('Failed to add event:', error);
-        toast.error("Failed to add event: " + (error.message || 'Unknown error'));
-      } else {
-        toast.success("Event added!");
-        fetchEvents();
+  function closeEventForm() {
+    setShowEventForm(false);
+    setEditingEvent(null);
+  }
 
-        // Trigger public page refresh (non-blocking)
-        fetch('/api/revalidate?path=/events', { method: 'POST' }).catch(() => {});
-      }
-    } catch (err: any) {
-      console.error('Unexpected error in addEvent:', err);
-      toast.error("Failed to add event");
+  async function saveGeneralEvent() {
+    if (!eventForm.title.trim() || !eventForm.date) {
+      toast.error("Title and date are required.");
+      return;
+    }
+    setSavingEvent(true);
+
+    const payload = {
+      title: eventForm.title.trim(),
+      date: eventForm.date,
+      time: eventForm.time || null,
+      description: eventForm.description || null,
+      location: eventForm.location || null,
+    };
+
+    let error;
+    if (editingEvent) {
+      ({ error } = await supabase.from('events').update(payload).eq('id', editingEvent.id));
+    } else {
+      ({ error } = await supabase.from('events').insert(payload));
+    }
+
+    setSavingEvent(false);
+
+    if (error) {
+      toast.error("Failed to save event: " + error.message);
+    } else {
+      toast.success(editingEvent ? "Event updated!" : "Event added!");
+      closeEventForm();
+      fetchEvents();
+      fetch('/api/revalidate?path=/events', { method: 'POST' }).catch(() => {});
     }
   }
 
-  async function editEvent(ev: any) {
-    try {
-      const title = prompt("New title?", ev.title);
-      if (title === null) return;
-
-      const date = prompt("New date (YYYY-MM-DD)?", ev.date);
-      if (date === null) return;
-
-      const time = prompt("New time (optional)?", ev.time || "");
-      const description = prompt("New description (optional)?", ev.description || "");
-      const location = prompt("New location (optional)?", ev.location || "");
-
-      const { error } = await supabase
-        .from('events')
-        .update({
-          title,
-          date,
-          time: time || null,
-          description: description || null,
-          location: location || null,
-        })
-        .eq('id', ev.id);
-
-      if (error) {
-        console.error('Failed to update event:', error);
-        toast.error("Failed to update event");
-      } else {
-        toast.success("Event updated!");
-        fetchEvents();
-
-        // Trigger public page refresh (non-blocking)
-        fetch('/api/revalidate?path=/events', { method: 'POST' }).catch(() => {});
-      }
-    } catch (err: any) {
-      console.error('Unexpected error in editEvent:', err);
-      toast.error("Failed to update event");
-    }
-  }
+  // Legacy names kept for any old calls, now open the nice form
+  function addEvent() { openEventForm(); }
+  function editEvent(ev: any) { openEventForm(ev); }
 
   async function deleteEvent(id: string, title: string) {
     try {
@@ -637,6 +807,7 @@ export default function AdminDashboard() {
         youth_sunday_school_date: data.youth_sunday_school_date || "",
         youth_pastor_note: data.youth_pastor_note || "",
         youth_google_doc_url: data.youth_google_doc_url || "",
+        youth_calendar_url: data.youth_calendar_url || "",
         live_video_id: data.live_video_id || "",
         live_stream_active: data.live_stream_active || false,
       });
@@ -659,6 +830,7 @@ export default function AdminDashboard() {
         youth_sunday_school_date: sermonSettings.youth_sunday_school_date || null,
         youth_pastor_note: sermonSettings.youth_pastor_note || null,
         youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
+        youth_calendar_url: sermonSettings.youth_calendar_url || null,
         live_video_id: sermonSettings.live_video_id || null,
         live_stream_active: sermonSettings.live_stream_active || false,
         updated_at: new Date().toISOString(),
@@ -1303,6 +1475,30 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          {/* Youth Events Calendar Embed URL */}
+          <div>
+            <div className="mb-4">
+              <div className="font-semibold text-2xl">Youth Events Calendar (Embed URL)</div>
+              <div className="text-sm text-[var(--color-stone-light)]">
+                Optional: Paste the src URL for the Youth Google Calendar embed (iframe). It will show on the public Youth page. (Any admin can edit.)
+              </div>
+            </div>
+
+            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8">
+              <label className="block font-medium mb-2 text-sm">Calendar Embed src URL</label>
+              <input
+                type="text"
+                value={sermonSettings.youth_calendar_url}
+                onChange={(e) => setSermonSettings({ ...sermonSettings, youth_calendar_url: e.target.value })}
+                className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm"
+                placeholder="https://calendar.google.com/calendar/embed?src=...&ctz=..."
+              />
+              <p className="text-xs text-[var(--color-stone-light)] mt-2">
+                Get the embed code from Google Calendar (public calendar), copy the src URL. Leave blank to hide.
+              </p>
+            </div>
+          </div>
+
           {/* Youth Sunday School - same structure as main service */}
           <div>
             <div className="mb-4">
@@ -1364,7 +1560,7 @@ export default function AdminDashboard() {
               </div>
               <div className="flex gap-3">
                 <button 
-                  onClick={createYouthAlbum}
+                  onClick={() => openAlbumForm()}
                   className="admin-big-button px-4 bg-[var(--color-navy)] text-white rounded-2xl text-sm"
                 >
                   + Create New Album
@@ -1416,12 +1612,20 @@ export default function AdminDashboard() {
                         <span className="font-medium">{album.title}</span>
                         {album.date && <span className="ml-2 text-[var(--color-stone-light)]">{formatAlbumDate(album.date)}</span>}
                       </div>
-                      <button
-                        onClick={() => deleteYouthAlbum(album.id, album.title)}
-                        className="text-red-600 hover:text-red-700 text-xs px-3 py-1 rounded hover:bg-red-50"
-                      >
-                        Delete Album
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => openAlbumForm(album)}
+                          className="text-xs px-3 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteYouthAlbum(album.id, album.title)}
+                          className="text-red-600 hover:text-red-700 text-xs px-3 py-1 rounded hover:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1496,6 +1700,158 @@ export default function AdminDashboard() {
 
             <div className="admin-help mt-4">Photos will appear grouped by album on the public Youth page.</div>
           </div> {/* close photos section */}
+
+          {/* Upcoming Youth Events (editable by any admin) */}
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <div className="font-semibold text-2xl">Upcoming Youth Events</div>
+                <div className="text-sm text-[var(--color-stone-light)]">These appear on the public /youth page. Add image by uploading (uses youth-photos storage).</div>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => openYouthEventForm()}
+                  className="admin-big-button flex items-center gap-2 bg-[var(--color-navy)] text-white px-6 rounded-2xl"
+                >
+                  <Plus className="w-5 h-5" /> Add Event
+                </button>
+                <button 
+                  onClick={fetchYouthEvents} 
+                  className="admin-big-button px-4 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
+
+            {/* Youth Event Form Modal */}
+            {showYouthEventForm && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" onClick={closeYouthEventForm}>
+                <div className="bg-white rounded-3xl w-full max-w-lg p-8" onClick={e => e.stopPropagation()}>
+                  <div className="font-semibold text-xl mb-4">{editingYouthEvent ? "Edit Youth Event" : "Add New Youth Event"}</div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Title</label>
+                      <input type="text" value={youthEventForm.title} onChange={e => setYouthEventForm({...youthEventForm, title: e.target.value})} className="w-full mt-1 border rounded-xl p-3" placeholder="Event Title" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Date</label>
+                      <input type="date" value={youthEventForm.date} onChange={e => setYouthEventForm({...youthEventForm, date: e.target.value})} className="w-full mt-1 border rounded-xl p-3" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Description (optional)</label>
+                      <textarea value={youthEventForm.description} onChange={e => setYouthEventForm({...youthEventForm, description: e.target.value})} className="w-full mt-1 border rounded-xl p-3" rows={3} />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Link URL (optional, e.g. registration or more info)</label>
+                      <input type="text" value={youthEventForm.link_url} onChange={e => setYouthEventForm({...youthEventForm, link_url: e.target.value})} className="w-full mt-1 border rounded-xl p-3" placeholder="https://..." />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Event Image (optional)</label>
+                      <div className="flex gap-3 items-center">
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) uploadYouthEventImage(file);
+                          }} 
+                          disabled={uploadingEventImage}
+                          className="text-sm"
+                        />
+                        {uploadingEventImage && <span className="text-xs text-[var(--color-stone-light)]">Uploading...</span>}
+                      </div>
+                      {youthEventForm.image_url && (
+                        <div className="mt-2">
+                          <img src={youthEventForm.image_url} alt="Event preview" className="max-h-32 rounded border" />
+                          <button 
+                            onClick={() => setYouthEventForm(prev => ({...prev, image_url: ""}))}
+                            className="text-xs text-red-600 mt-1"
+                          >
+                            Remove image
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6 justify-end">
+                    <button onClick={closeYouthEventForm} className="px-6 py-2 border rounded-full text-sm">Cancel</button>
+                    <button onClick={saveYouthEvent} className="px-6 py-2 bg-[var(--color-navy)] text-white rounded-full text-sm font-semibold">Save Event</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Album Form Modal (nice form, replaces prompts) */}
+            {showAlbumForm && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" onClick={closeAlbumForm}>
+                <div className="bg-white rounded-3xl w-full max-w-md p-8" onClick={e => e.stopPropagation()}>
+                  <div className="font-semibold text-xl mb-4">{editingAlbum ? "Edit Youth Album" : "Create New Youth Album"}</div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Album Title</label>
+                      <input
+                        type="text"
+                        value={albumForm.title}
+                        onChange={e => setAlbumForm({ ...albumForm, title: e.target.value })}
+                        className="w-full mt-1 border rounded-xl p-3"
+                        placeholder="Summer 2025 Youth Camp"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Date (optional, YYYY-MM-DD)</label>
+                      <input
+                        type="date"
+                        value={albumForm.date}
+                        onChange={e => setAlbumForm({ ...albumForm, date: e.target.value })}
+                        className="w-full mt-1 border rounded-xl p-3"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-6 justify-end">
+                    <button onClick={closeAlbumForm} className="px-6 py-2 border rounded-full text-sm">Cancel</button>
+                    <button
+                      onClick={saveAlbum}
+                      disabled={savingAlbum}
+                      className="px-6 py-2 bg-[var(--color-navy)] text-white rounded-full text-sm font-semibold disabled:opacity-60"
+                    >
+                      {savingAlbum ? "Saving..." : (editingAlbum ? "Save Changes" : "Create Album")}
+                    </button>
+                  </div>
+                  <p className="mt-3 text-[10px] text-[var(--color-stone-light)]">After creating, select the album above and drag photos into it.</p>
+                </div>
+              </div>
+            )}
+
+            {youthEvents.length === 0 ? (
+              <div className="text-center py-8 text-[var(--color-stone-light)] border border-dashed rounded-3xl">
+                No upcoming youth events yet. Add some for the public /youth page.
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-4">
+                {youthEvents.map((ev: any) => (
+                  <div key={ev.id} className="bg-white border rounded-2xl p-5 relative group">
+                    {ev.image_url && (
+                      <img src={ev.image_url} alt="" className="w-full h-32 object-cover rounded mb-3" />
+                    )}
+                    <div className="font-semibold text-[var(--color-navy)]">{ev.title}</div>
+                    {ev.date && <div className="text-sm text-[var(--color-gold-dark)] mt-1">{new Date(ev.date).toLocaleDateString()}</div>}
+                    {ev.description && <p className="text-sm mt-2 text-[var(--color-stone)] line-clamp-2">{ev.description}</p>}
+                    {ev.link_url && <a href={ev.link_url} target="_blank" className="text-xs text-[var(--color-gold-dark)] mt-1 block">Link →</a>}
+
+                    <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100">
+                      <button onClick={() => openYouthEventForm(ev)} className="p-1.5 rounded bg-[var(--color-cream)] text-xs">Edit</button>
+                      <button onClick={() => deleteYouthEvent(ev.id, ev.title)} className="p-1.5 rounded bg-red-50 text-red-600 text-xs">Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1606,58 +1962,166 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* EVENTS - Spotlight / Special Events (visible on public /events page) */}
+      {/* EVENTS - Spotlight / Special Events (visible on public /events page) + Youth Schedule/Albums */}
       {activeTab === 'events' && (
-        <div>
-          <div className="flex justify-between mb-6">
-            <div>
-              <div className="font-semibold text-2xl">Spotlight Events</div>
-              <div className="text-sm text-[var(--color-stone-light)]">
-                These appear on the public Events page (above the weekly schedule) when added.
+        <div className="space-y-12">
+          {/* General Spotlight Events */}
+          <div>
+            <div className="flex justify-between mb-6">
+              <div>
+                <div className="font-semibold text-2xl">Spotlight Events</div>
+                <div className="text-sm text-[var(--color-stone-light)]">
+                  These appear on the public Events page (above the weekly schedule) when added.
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => openEventForm()} className="admin-big-button flex items-center gap-2 bg-[var(--color-navy)] text-white px-6 rounded-2xl">
+                  <Plus /> Add Event
+                </button>
+                <button onClick={fetchEvents} className="admin-big-button px-4 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm">Refresh</button>
               </div>
             </div>
-            <button 
-              onClick={addEvent}
-              className="admin-big-button flex items-center gap-2 bg-[var(--color-navy)] text-white px-6 rounded-2xl"
-            >
-              <Plus /> Add Event
-            </button>
-          </div>
 
-          {events.length === 0 ? (
-            <div className="text-[var(--color-stone-light)] py-8 text-center border border-dashed rounded-3xl">
-              No spotlight events yet. Add rare or special events here — they will show up on the public Events page.
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 gap-4">
-              {events.map((ev: any) => (
-                <div key={ev.id} className="border bg-white p-6 rounded-2xl relative group">
-                  <div className="font-semibold text-xl">{ev.title}</div>
-                  <div className="text-[var(--color-gold-dark)] mt-1">
-                    {new Date(ev.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                    {ev.time && ` • ${ev.time}`}
+            {/* General Event Modal */}
+            {showEventForm && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" onClick={closeEventForm}>
+                <div className="bg-white rounded-3xl w-full max-w-lg p-8" onClick={e => e.stopPropagation()}>
+                  <div className="font-semibold text-xl mb-4">{editingEvent ? "Edit Spotlight Event" : "Add New Spotlight Event"}</div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Title</label>
+                      <input type="text" value={eventForm.title} onChange={e => setEventForm({ ...eventForm, title: e.target.value })} className="w-full mt-1 border rounded-xl p-3" placeholder="Special Event Title" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">Date</label>
+                        <input type="date" value={eventForm.date} onChange={e => setEventForm({ ...eventForm, date: e.target.value })} className="w-full mt-1 border rounded-xl p-3" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Time (optional)</label>
+                        <input type="text" value={eventForm.time} onChange={e => setEventForm({ ...eventForm, time: e.target.value })} className="w-full mt-1 border rounded-xl p-3" placeholder="e.g. 6:00 PM" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Location (optional)</label>
+                      <input type="text" value={eventForm.location} onChange={e => setEventForm({ ...eventForm, location: e.target.value })} className="w-full mt-1 border rounded-xl p-3" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Description (optional)</label>
+                      <textarea value={eventForm.description} onChange={e => setEventForm({ ...eventForm, description: e.target.value })} className="w-full mt-1 border rounded-xl p-3" rows={3} />
+                    </div>
                   </div>
-                  {ev.location && <div className="text-sm mt-1 text-[var(--color-stone)]">{ev.location}</div>}
-                  {ev.description && <p className="mt-3 text-sm">{ev.description}</p>}
 
-                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition">
-                    <button
-                      onClick={() => editEvent(ev)}
-                      className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => deleteEvent(ev.id, ev.title)}
-                      className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700"
-                    >
-                      Delete
+                  <div className="flex gap-3 mt-6 justify-end">
+                    <button onClick={closeEventForm} className="px-6 py-2 border rounded-full text-sm">Cancel</button>
+                    <button onClick={saveGeneralEvent} disabled={savingEvent} className="px-6 py-2 bg-[var(--color-navy)] text-white rounded-full text-sm font-semibold disabled:opacity-60">
+                      {savingEvent ? "Saving..." : (editingEvent ? "Save Changes" : "Add Event")}
                     </button>
                   </div>
                 </div>
-              ))}
+              </div>
+            )}
+
+            {events.length === 0 ? (
+              <div className="text-[var(--color-stone-light)] py-8 text-center border border-dashed rounded-3xl">
+                No spotlight events yet. Add rare or special events here — they will show up on the public Events page.
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-4">
+                {events.map((ev: any) => (
+                  <div key={ev.id} className="border bg-white p-6 rounded-2xl relative group">
+                    <div className="font-semibold text-xl">{ev.title}</div>
+                    <div className="text-[var(--color-gold-dark)] mt-1">
+                      {new Date(ev.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                      {ev.time && ` • ${ev.time}`}
+                    </div>
+                    {ev.location && <div className="text-sm mt-1 text-[var(--color-stone)]">{ev.location}</div>}
+                    {ev.description && <p className="mt-3 text-sm">{ev.description}</p>}
+
+                    <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                      <button onClick={() => openEventForm(ev)} className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700">Edit</button>
+                      <button onClick={() => deleteEvent(ev.id, ev.title)} className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Youth Events & Albums — editing option under Events/Schedule (any admin has full access) */}
+          <div>
+            <div className="mb-4">
+              <div className="font-semibold text-2xl">Youth Events &amp; Albums</div>
+              <div className="text-sm text-[var(--color-stone-light)]">
+                Manage upcoming youth events (with pictures) and photo albums. These appear on the public Youth Ministry page. Full photo uploads available in the Youth tab.
+              </div>
             </div>
-          )}
+
+            {/* Youth Events quick management */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-medium">Upcoming Youth Events</div>
+                <div className="flex gap-2">
+                  <button onClick={() => openYouthEventForm()} className="text-xs px-3 py-1 bg-[var(--color-navy)] text-white rounded-full">+ Add Youth Event</button>
+                  <button onClick={fetchYouthEvents} disabled={loadingYouthEvents} className="text-xs px-3 py-1 border rounded">Refresh</button>
+                </div>
+              </div>
+
+              {loadingYouthEvents ? (
+                <div className="text-sm text-[var(--color-stone-light)] py-4">Loading youth events…</div>
+              ) : youthEvents.length === 0 ? (
+                <div className="text-sm text-[var(--color-stone-light)] py-4 border border-dashed rounded-2xl px-4">No youth events yet. Add some above or use the full form in the Youth tab.</div>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-3">
+                  {youthEvents.slice(0, 4).map((ev: any) => (
+                    <div key={ev.id} className="border bg-white p-4 rounded-xl text-sm relative group">
+                      <div className="font-medium text-[var(--color-navy)]">{ev.title}</div>
+                      {ev.date && <div className="text-[var(--color-gold-dark)] text-xs mt-0.5">{new Date(ev.date).toLocaleDateString()}</div>}
+                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100">
+                        <button onClick={() => openYouthEventForm(ev)} className="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-600">Edit</button>
+                        <button onClick={() => deleteYouthEvent(ev.id, ev.title)} className="text-[10px] px-2 py-0.5 rounded bg-red-50 text-red-600">Del</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="text-[10px] text-[var(--color-stone-light)] mt-1">Full editor (with image upload) is in the Youth tab.</div>
+            </div>
+
+            {/* Youth Albums management (the requested album editing under Events/Schedule) */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-medium">Youth Photo Albums</div>
+                <div className="flex gap-2">
+                  <button onClick={() => openAlbumForm()} className="text-xs px-3 py-1 bg-[var(--color-navy)] text-white rounded-full">+ New Album</button>
+                  <button onClick={fetchYouthAlbums} disabled={loadingYouthAlbums} className="text-xs px-3 py-1 border rounded">Refresh</button>
+                </div>
+              </div>
+
+              {loadingYouthAlbums ? (
+                <div className="text-sm text-[var(--color-stone-light)] py-4">Loading albums…</div>
+              ) : youthAlbums.length === 0 ? (
+                <div className="text-sm text-[var(--color-stone-light)] py-4 border border-dashed rounded-2xl px-4">No albums yet. Create one and add photos via the Youth tab.</div>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-3">
+                  {youthAlbums.map((album: any) => (
+                    <div key={album.id} className="border bg-white p-4 rounded-xl text-sm flex items-center justify-between">
+                      <div>
+                        <span className="font-medium">{album.title}</span>
+                        {album.date && <span className="ml-2 text-[var(--color-stone-light)] text-xs">{new Date(album.date).toLocaleDateString()}</span>}
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => openAlbumForm(album)} className="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-600">Edit</button>
+                        <button onClick={() => deleteYouthAlbum(album.id, album.title)} className="text-xs px-2 py-0.5 rounded bg-red-50 text-red-600">Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="text-[10px] mt-1 text-[var(--color-stone-light)]">Select an album in the Youth tab to upload photos. Albums and photos are publicly visible to all site visitors.</div>
+            </div>
+          </div>
         </div>
       )}
 

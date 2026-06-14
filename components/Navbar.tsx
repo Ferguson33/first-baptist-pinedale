@@ -18,7 +18,7 @@ export function Navbar() {
     { href: '/leadership', label: 'Leadership' },
     { href: '/sermons', label: 'Sermons' },
     { href: '/building-project', label: 'Building Project' },
-    { href: '/youth', label: 'Youth' },
+    { href: '/youth-ministry', label: 'Youth' },
     { href: '/missions', label: 'Missions' },
     { href: '/visit', label: 'Visitors Info' },
   ];

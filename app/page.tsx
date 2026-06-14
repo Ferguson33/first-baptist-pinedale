@@ -420,7 +420,7 @@ export default function Home() {
         {[
           { title: "Join Us Sunday", desc: "Everyone is welcome. Come as you are. Coffee & fellowship.", href: "/visit", icon: Users },
           { title: "Prayer Bulletin", desc: "Current prayer focuses and updates for our church family.", href: "/prayer-bulletin", icon: Heart },
-          { title: "Youth Ministry", desc: "Real faith for real life. For students grades 6–12.", href: "/youth", icon: Users },
+          { title: "Youth Ministry", desc: "Real faith for real life. For students grades 6–12.", href: "/youth-ministry", icon: Users },
         ].map((card, idx) => (
           <Link key={idx} href={card.href} className="group block border border-[var(--color-gold)]/30 hover:border-[var(--color-gold)] bg-white p-8 rounded-2xl transition">
             <card.icon className="w-8 h-8 text-[var(--color-gold-dark)] mb-6 group-hover:scale-110 transition" />
