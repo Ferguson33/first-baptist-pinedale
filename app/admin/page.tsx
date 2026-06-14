@@ -415,19 +415,7 @@ export default function AdminDashboard() {
     }
   }, [activeTab, loading, isAdmin]);
 
-  // Restore last active tab from sessionStorage ONLY after auth has loaded and confirmed admin.
-  // This prevents tab-specific data fetches from running before the Supabase session is ready,
-  // which was causing permission errors / crashes on hard refresh while a tab was open.
-  useEffect(() => {
-    if (!loading && isAdmin && typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem('adminActiveTab') as AdminTab | null;
-      const validTabs: AdminTab[] = ['overview', 'sermons', 'building', 'youth', 'members', 'events', 'guide'];
-      if (saved && validTabs.includes(saved) && saved !== activeTab) {
-        setActiveTab(saved);
-        sessionStorage.setItem('adminActiveTab', saved); // ensure persisted
-      }
-    }
-  }, [loading, isAdmin, activeTab]);  // include activeTab to compare, but guard prevents loops
+
 
   if (loading || !isAdmin) {
     return <div className="min-h-[60vh] flex items-center justify-center">Checking permissions…</div>;
@@ -445,11 +433,7 @@ export default function AdminDashboard() {
 
   const handleTabChange = (tab: AdminTab) => {
     setActiveTab(tab);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('adminActiveTab', tab);
-    }
-    // Data loading for each tab is handled by dedicated useEffects (triggered by activeTab change after auth).
-    // This ensures loads only happen with valid session on clicks and restores.
+    // Data loading for each tab is handled by dedicated useEffects below (triggered when activeTab changes, after auth is ready).
   };
 
   async function fetchBuildingPhotos() {
