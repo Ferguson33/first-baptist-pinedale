@@ -369,11 +369,13 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    loadBuildingProgress();
-    fetchBuildingPhotos();
-    fetchMembers();
-    fetchRealSermons();
-  }, []);
+    if (!loading && isAdmin) {
+      loadBuildingProgress();
+      fetchBuildingPhotos();
+      fetchMembers();
+      fetchRealSermons();
+    }
+  }, [loading, isAdmin]);
 
   // Fetch building photos when the building tab is active (helps when returning to the page)
   useEffect(() => {
@@ -390,6 +392,29 @@ export default function AdminDashboard() {
     }
   }, [activeTab, loading, isAdmin]);
 
+  // Auto-load data for other tabs on activation or restore after auth
+  useEffect(() => {
+    if (activeTab === 'members' && !loading && isAdmin) {
+      fetchMembers();
+    }
+  }, [activeTab, loading, isAdmin]);
+
+  useEffect(() => {
+    if (activeTab === 'sermons' && !loading && isAdmin) {
+      loadSermonSettings();
+      fetchRealSermons();
+    }
+  }, [activeTab, loading, isAdmin]);
+
+  useEffect(() => {
+    if (activeTab === 'youth' && !loading && isAdmin) {
+      fetchYouthPhotos();
+      fetchYouthAlbums();
+      loadSermonSettings();
+      fetchYouthEvents();
+    }
+  }, [activeTab, loading, isAdmin]);
+
   // Restore last active tab from sessionStorage ONLY after auth has loaded and confirmed admin.
   // This prevents tab-specific data fetches from running before the Supabase session is ready,
   // which was causing permission errors / crashes on hard refresh while a tab was open.
@@ -398,10 +423,11 @@ export default function AdminDashboard() {
       const saved = sessionStorage.getItem('adminActiveTab') as AdminTab | null;
       const validTabs: AdminTab[] = ['overview', 'sermons', 'building', 'youth', 'members', 'events', 'guide'];
       if (saved && validTabs.includes(saved) && saved !== activeTab) {
-        handleTabChange(saved);  // this will set the tab + trigger the correct data loads for that tab
+        setActiveTab(saved);
+        sessionStorage.setItem('adminActiveTab', saved); // ensure persisted
       }
     }
-  }, [loading, isAdmin]);  // only run when auth settles; no activeTab in deps to avoid loops
+  }, [loading, isAdmin, activeTab]);  // include activeTab to compare, but guard prevents loops
 
   if (loading || !isAdmin) {
     return <div className="min-h-[60vh] flex items-center justify-center">Checking permissions…</div>;
@@ -422,27 +448,8 @@ export default function AdminDashboard() {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('adminActiveTab', tab);
     }
-    if (tab === 'members') {
-      fetchMembers();
-    }
-    if (tab === 'building') {
-      fetchBuildingPhotos();
-      loadBuildingProgress();
-    }
-    if (tab === 'youth') {
-      fetchYouthPhotos();
-      fetchYouthAlbums();
-      loadSermonSettings();
-      fetchYouthEvents();
-    }
-    if (tab === 'sermons') {
-      loadSermonSettings();
-      fetchRealSermons();
-    }
-    if (tab === 'overview') {
-      if (realMembers.length === 0) fetchMembers();
-      if (realSermons.length === 0) fetchRealSermons();
-    }
+    // Data loading for each tab is handled by dedicated useEffects (triggered by activeTab change after auth).
+    // This ensures loads only happen with valid session on clicks and restores.
   };
 
   async function fetchBuildingPhotos() {
