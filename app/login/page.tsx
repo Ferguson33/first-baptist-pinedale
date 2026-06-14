@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -12,22 +13,23 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user, profile, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { user, profile, loading: authLoading } = useAuth();
 
-  // Smart post-login redirect based on role
+  // Smart post-login redirect based on role.
+  // Made non-blocking for pending users and safe on refresh (authLoading guards prevent premature redirects/crashes).
   useEffect(() => {
     if (authLoading) return;
 
-    // Only redirect if we just successfully logged in (user exists and we're not still loading)
+    // Only act when we have a stable user + profile after load.
+    // Pending users are intentionally sent to home (non-blocking, they see public content + toast on SIGNED_IN).
     if (user && profile) {
       if (profile.role === 'admin') {
         router.push('/admin');
       } else if (profile.role === 'approved') {
-        router.push('/'); // Normal members go to homepage for now
+        router.push('/'); // Normal members go to homepage
       } else {
-        // pending users
+        // pending: go home, membership approval is non-blocking
         router.push('/');
       }
     }
@@ -66,7 +68,21 @@ export default function LoginPage() {
     }
   };
 
+  // While auth is initializing (e.g. after pending signup + refresh), show a non-blocking loader
+  // so the page doesn't freeze or flash broken states.
+  if (authLoading) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center px-6 py-16 bg-[var(--color-cream)]">
+        <div className="text-center">
+          <div className="inline-block w-6 h-6 border-2 border-[var(--color-gold)] border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-[var(--color-stone-light)]">Checking your membership status...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
+    <ErrorBoundary>
     <div className="min-h-[70vh] flex items-center justify-center px-6 py-16 bg-[var(--color-cream)]">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
@@ -147,5 +163,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    </ErrorBoundary>
   );
 }

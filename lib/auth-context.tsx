@@ -33,71 +33,109 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isApprovedMember = profile?.role === 'approved' || profile?.role === 'admin';
 
   async function fetchProfile(userId: string) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-    if (error) {
-      console.log('Profile fetch note:', error.message);
+      if (error) {
+        // Common for brand new signups before profile row is created, or RLS edge cases
+        console.log('Profile fetch note (non-fatal):', error.message);
+        return null;
+      }
+      return data as Profile;
+    } catch (err) {
+      console.error('Unexpected error in fetchProfile:', err);
       return null;
     }
-    return data as Profile;
   }
 
   async function refreshProfile(): Promise<void> {
     if (!user) return;
-    const prof = await fetchProfile(user.id);
-    if (prof) setProfile(prof);
+    try {
+      const prof = await fetchProfile(user.id);
+      if (prof) setProfile(prof);
+    } catch (err) {
+      console.error('refreshProfile error (non-blocking):', err);
+      // Do not throw; keep UI responsive
+    }
     // Intentionally not returning the profile — callers do not use the return value
   }
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then((response: { data: { session: Session | null } }) => {
-      const { session } = response.data;
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchProfile(session.user.id).then((prof) => {
-          setProfile(prof);
-          setLoading(false);
-        });
-      } else {
-        setLoading(false);
-      }
-    });
+    let isMounted = true;
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session: Session | null) => {
+    // Get initial session - wrapped to prevent unhandled rejections and ensure loading always settles
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
           const prof = await fetchProfile(session.user.id);
-          setProfile(prof);
-          
-          // Show friendly message on login
-          if (event === 'SIGNED_IN') {
-            if (prof?.role === 'pending') {
-              toast.info("Welcome! Your membership is pending approval. You'll get access to the Prayer Bulletin and Directory soon.");
-            } else if (prof?.role === 'admin') {
-              toast.success("Welcome back, Pastor! You have full admin access.");
-            } else if (prof?.role === 'approved') {
-              toast.success("Welcome back!");
-            }
+          if (isMounted) {
+            setProfile(prof);
+            setLoading(false);
           }
         } else {
-          setProfile(null);
+          if (isMounted) setLoading(false);
         }
-        setLoading(false);
+      } catch (err) {
+        console.error('Initial auth session error (non-blocking):', err);
+        if (isMounted) {
+          setLoading(false);
+          // Do not crash the app; user can still browse public content
+        }
+      }
+    };
+
+    initAuth();
+
+    // Listen for auth changes - always settle loading, catch fetch errors
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event: AuthChangeEvent, session: Session | null) => {
+        if (!isMounted) return;
+
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          try {
+            const prof = await fetchProfile(session.user.id);
+            if (isMounted) {
+              setProfile(prof);
+
+              // Show friendly message on login (non-blocking)
+              if (event === 'SIGNED_IN') {
+                if (prof?.role === 'pending') {
+                  toast.info("Welcome! Your membership is pending approval. You'll get access to the Prayer Bulletin and Directory soon.");
+                } else if (prof?.role === 'admin') {
+                  toast.success("Welcome back, Pastor! You have full admin access.");
+                } else if (prof?.role === 'approved') {
+                  toast.success("Welcome back!");
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Auth state profile fetch error (non-blocking):', err);
+            if (isMounted) setProfile(null);
+          }
+        } else {
+          if (isMounted) setProfile(null);
+        }
+        if (isMounted) setLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function signUp(email: string, password: string, fullName: string) {
@@ -113,8 +151,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: error.message };
     }
 
-    // Profile is created automatically by the database trigger (handle_new_user)
-    // We keep this comment as documentation. No client-side insert.
+    // Explicitly create the profile row as 'pending' so:
+    // - Admin can see/approve it in the members list
+    // - Profile fetches succeed on refresh (prevents null profile + flaky auth)
+    // - Pending users have a record with role for isApprovedMember checks
+    // This is non-blocking: if insert fails (e.g. row already exists from trigger), we still succeed the signup.
+    if (data?.user) {
+      try {
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: email,
+            full_name: fullName,
+            role: 'pending',
+          });
+        if (insertError) {
+          // Common cases: row already created by DB trigger, or RLS (we'll add policy)
+          console.log('Profile insert note (signup):', insertError.message);
+        }
+      } catch (insertErr) {
+        console.log('Profile insert error during signup (non-fatal):', insertErr);
+      }
+    }
 
     return {};
   }

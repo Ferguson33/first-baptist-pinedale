@@ -16,9 +16,19 @@ import { BookOpen, MessageCircle } from 'lucide-react';
  */
 
 export default function PrayerBulletin() {
-  const { isApprovedMember } = useAuth();
+  const { isApprovedMember, user, profile } = useAuth();
 
   if (!isApprovedMember) {
+    if (user && profile?.role === 'pending') {
+      return (
+        <div className="max-w-md mx-auto text-center py-20 px-6">
+          <h2 className="font-semibold text-2xl">Membership Pending Approval</h2>
+          <p className="mt-3">Thank you for joining! The Prayer Bulletin will be available here once the pastors approve your membership.</p>
+          <Link href="/" className="mt-6 inline-block underline">Back to homepage</Link>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-md mx-auto text-center py-20 px-6">
         <h2 className="font-semibold text-2xl">Private Prayer Bulletin</h2>

@@ -16,7 +16,7 @@ interface Sermon {
 
 export default function SermonsPage() {
   const supabase = createClient();
-  const { isApprovedMember, user } = useAuth();
+  const { isApprovedMember, user, profile } = useAuth();
   const [sermons, setSermons] = useState<Sermon[]>([]);
   const [liveVideoId, setLiveVideoId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,8 +66,39 @@ export default function SermonsPage() {
     return match ? match[1] : urlOrId.length === 11 ? urlOrId : null;
   }
 
-  // Public view - not logged in or not approved
+  // Public view - not logged in or not approved.
+  // Pending users get a non-blocking friendly message (approval flow must not crash or block the site).
   if (!isApprovedMember) {
+    if (user && profile?.role === 'pending') {
+      return (
+        <div className="max-w-4xl mx-auto px-6 py-16">
+          <div className="text-center mb-12">
+            <div className="uppercase text-xs tracking-[3px] text-[var(--color-gold-dark)]">VERSE BY VERSE PREACHING</div>
+            <h1 className="text-6xl font-semibold tracking-tighter mt-3 text-[var(--color-navy)]">Sermons</h1>
+          </div>
+
+          <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-10 md:p-14 text-center">
+            <div className="max-w-md mx-auto">
+              <h2 className="text-2xl font-semibold text-[var(--color-navy)] mb-4">Membership Pending Approval</h2>
+              <p className="text-[var(--color-stone)]">
+                Thank you! Your membership request is with the pastors. Live streams and the sermon archive will be available here once approved.
+              </p>
+              <Link 
+                href="/" 
+                className="mt-6 inline-flex items-center justify-center gap-2 px-8 py-3 border border-[var(--color-navy)] text-[var(--color-navy)] rounded-full font-semibold hover:bg-[var(--color-cream)]"
+              >
+                Back to Homepage
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-12 text-center text-sm text-[var(--color-stone-light)]">
+            You can still hear Pastor Ted preach live every Sunday at 11:00 AM in person.
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-4xl mx-auto px-6 py-16">
         <div className="text-center mb-12">

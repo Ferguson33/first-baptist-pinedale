@@ -82,6 +82,25 @@ create table if not exists events (
 create policy "Public can read approved profiles" on profiles for select using (role = 'approved' or role = 'admin');
 create policy "Users can read own profile" on profiles for select using (auth.uid() = id);
 
+-- Allow new users (right after auth.signUp) to create their own pending profile row.
+-- This is required for pending membership flow to work reliably on refresh.
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can insert their own profile" ON profiles;
+CREATE POLICY "Users can insert own profile"
+ON profiles FOR INSERT
+TO authenticated
+WITH CHECK (auth.uid() = id);
+
+-- Allow admins to insert profiles (e.g. manual creation if needed).
+-- IMPORTANT: For INSERT policies, ONLY WITH CHECK is allowed. USING is invalid for INSERT.
+DROP POLICY IF EXISTS "Admins can insert profiles" ON profiles;
+CREATE POLICY "Admins can insert profiles"
+ON profiles FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.role = 'admin')
+);
+
 -- =====================================================
 -- PRAYER REQUESTS — RLS + GRANTS (LEGACY - see cleanup-old-prayer-system.sql)
 -- =====================================================
@@ -96,6 +115,12 @@ GRANT SELECT ON public.prayer_requests TO anon, authenticated;
 GRANT INSERT ON public.prayer_requests TO authenticated;
 GRANT UPDATE ON public.prayer_requests TO authenticated;
 GRANT DELETE ON public.prayer_requests TO authenticated;
+
+-- Profiles: allow authenticated users to read (own + approved via policies) and insert their own on signup.
+-- Critical for pending membership creation + refresh stability.
+GRANT SELECT ON public.profiles TO anon, authenticated;
+GRANT INSERT ON public.profiles TO authenticated;
+-- Admins get full via their policies (select/update/insert covered above)
 
 -- Clean up old policies
 DROP POLICY IF EXISTS "Anyone can read approved prayers" ON prayer_requests;

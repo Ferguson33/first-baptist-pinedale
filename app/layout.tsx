@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth-context";
 import { Layout } from "@/components/Layout";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -52,9 +53,11 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body className="min-h-screen bg-[var(--color-warm-white)] antialiased">
         <AuthProvider>
-          <Layout>
-            {children}
-          </Layout>
+          <ErrorBoundary>
+            <Layout>
+              {children}
+            </Layout>
+          </ErrorBoundary>
           <Toaster position="top-center" richColors closeButton />
         </AuthProvider>
       </body>
