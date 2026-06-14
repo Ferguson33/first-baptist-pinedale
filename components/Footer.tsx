@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { MapPin, Phone, Mail, Clock, Facebook } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, Facebook, Youtube } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -47,6 +47,19 @@ export function Footer() {
               className="hover:text-white"
             >
               Facebook
+            </a>
+          </div>
+
+          {/* YouTube Channel Link (prominent as requested) */}
+          <div className="flex items-center gap-3">
+            <Youtube className="w-4 h-4 flex-shrink-0 text-[var(--color-gold)]" />
+            <a 
+              href="https://www.youtube.com/@FirstBaptistChurchofPinedale" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:text-white"
+            >
+              YouTube Channel
             </a>
           </div>
         </div>
