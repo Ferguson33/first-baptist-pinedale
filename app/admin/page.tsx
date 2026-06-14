@@ -50,14 +50,7 @@ export default function AdminDashboard() {
   const supabase = createClient();
   const { user, profile, isAdmin, loading } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<AdminTab>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem('adminActiveTab') as AdminTab | null;
-      const validTabs: AdminTab[] = ['overview', 'sermons', 'building', 'youth', 'members', 'events', 'guide'];
-      if (saved && validTabs.includes(saved)) return saved;
-    }
-    return 'overview';
-  });
+  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
 
 
 
@@ -384,18 +377,31 @@ export default function AdminDashboard() {
 
   // Fetch building photos when the building tab is active (helps when returning to the page)
   useEffect(() => {
-    if (activeTab === 'building') {
+    if (activeTab === 'building' && !loading && isAdmin) {
       fetchBuildingPhotos();
       loadBuildingProgress();
     }
-  }, [activeTab]);
+  }, [activeTab, loading, isAdmin]);
 
   // Fetch events data when the events tab is active (so data loads on tab switch and on refresh if tab is restored)
   useEffect(() => {
-    if (activeTab === 'events') {
+    if (activeTab === 'events' && !loading && isAdmin) {
       fetchEvents();
     }
-  }, [activeTab]);
+  }, [activeTab, loading, isAdmin]);
+
+  // Restore last active tab from sessionStorage ONLY after auth has loaded and confirmed admin.
+  // This prevents tab-specific data fetches from running before the Supabase session is ready,
+  // which was causing permission errors / crashes on hard refresh while a tab was open.
+  useEffect(() => {
+    if (!loading && isAdmin && typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('adminActiveTab') as AdminTab | null;
+      const validTabs: AdminTab[] = ['overview', 'sermons', 'building', 'youth', 'members', 'events', 'guide'];
+      if (saved && validTabs.includes(saved) && saved !== activeTab) {
+        handleTabChange(saved);  // this will set the tab + trigger the correct data loads for that tab
+      }
+    }
+  }, [loading, isAdmin]);  // only run when auth settles; no activeTab in deps to avoid loops
 
   if (loading || !isAdmin) {
     return <div className="min-h-[60vh] flex items-center justify-center">Checking permissions…</div>;
