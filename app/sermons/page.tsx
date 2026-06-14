@@ -111,62 +111,65 @@ export default function SermonsPage() {
         </div>
       )}
 
-      {/* Curated / Selected Sermons - visible to everyone (public) */}
-      <div className="mb-12">
-        <div className="mb-4">
-          <div className="uppercase text-xs tracking-[3px] text-[var(--color-gold-dark)]">SELECTED MESSAGES</div>
-          <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Curated Sermons</h2>
-        </div>
+      {/* Curated / Selected Sermons - only for non-members / public visitors.
+          Members see everything in the Full Archive below (with "Also public" badges on curated ones). */}
+      {!isApprovedMember && (
+        <div className="mb-12">
+          <div className="mb-4">
+            <div className="uppercase text-xs tracking-[3px] text-[var(--color-gold-dark)]">SELECTED MESSAGES</div>
+            <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Curated Sermons</h2>
+          </div>
 
-        {loading ? (
-          <div className="text-center py-12 text-[var(--color-stone-light)]">Loading curated sermons...</div>
-        ) : error ? (
-          <div className="text-center py-8 text-red-600">{error}</div>
-        ) : publicSermons.length > 0 ? (
-          <div className="space-y-8">
-            {publicSermons.map((sermon: any) => {
-              const embedUrl = getYouTubeEmbed(sermon.video_url);
-              return (
-                <div key={sermon.id} className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden">
-                  <div className="p-6 md:p-8 border-b">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                      <div>
-                        <h3 className="text-2xl font-semibold text-[var(--color-navy)]">{sermon.title}</h3>
-                        <p className="text-sm text-[var(--color-stone-light)] mt-1">
-                          {sermon.preacher} • {new Date(sermon.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-                        </p>
+          {loading ? (
+            <div className="text-center py-12 text-[var(--color-stone-light)]">Loading curated sermons...</div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-600">{error}</div>
+          ) : publicSermons.length > 0 ? (
+            <div className="space-y-8">
+              {publicSermons.map((sermon: any) => {
+                const embedUrl = getYouTubeEmbed(sermon.video_url);
+                return (
+                  <div key={sermon.id} className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden">
+                    <div className="p-6 md:p-8 border-b">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                        <div>
+                          <h3 className="text-2xl font-semibold text-[var(--color-navy)]">{sermon.title}</h3>
+                          <p className="text-sm text-[var(--color-stone-light)] mt-1">
+                            {sermon.preacher} • {new Date(sermon.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                          </p>
+                        </div>
                       </div>
+                      {sermon.description && (
+                        <p className="mt-4 text-[var(--color-stone)]">{sermon.description}</p>
+                      )}
                     </div>
-                    {sermon.description && (
-                      <p className="mt-4 text-[var(--color-stone)]">{sermon.description}</p>
+
+                    {embedUrl ? (
+                      <div className="aspect-video bg-black">
+                        <iframe
+                          src={embedUrl}
+                          title={sermon.title}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="w-full h-full"
+                        />
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center text-[var(--color-stone-light)]">
+                        Video link not available yet.
+                      </div>
                     )}
                   </div>
-
-                  {embedUrl ? (
-                    <div className="aspect-video bg-black">
-                      <iframe
-                        src={embedUrl}
-                        title={sermon.title}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        className="w-full h-full"
-                      />
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center text-[var(--color-stone-light)]">
-                      Video link not available yet.
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-10 text-center text-[var(--color-stone-light)]">
-            Selected sermons will appear here soon.
-          </div>
-        )}
-      </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-10 text-center text-[var(--color-stone-light)]">
+              Selected sermons will appear here soon.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Member-only section: Live + Full Archive */}
       {isApprovedMember && (
