@@ -87,9 +87,6 @@ export default function AdminDashboard() {
   const [eventForm, setEventForm] = useState({ title: "", date: "", time: "", description: "", location: "" });
   const [savingEvent, setSavingEvent] = useState(false);
 
-  // Youth data loading flags for smooth admin UX
-  const [loadingYouthEvents, setLoadingYouthEvents] = useState(false);
-  const [loadingYouthAlbums, setLoadingYouthAlbums] = useState(false);
   const [directory, setDirectory] = useState<LocalMember[]>([
     { id: 'm1', name: "Robert Thompson", email: "robert@example.com", approved: true }
   ]);
@@ -421,9 +418,6 @@ export default function AdminDashboard() {
     }
     if (tab === 'events') {
       fetchEvents();
-      // Load youth events + albums so "Youth Events & Albums" subsection works under Events/Schedule
-      fetchYouthEvents();
-      fetchYouthAlbums();
     }
     if (tab === 'overview') {
       if (realMembers.length === 0) fetchMembers();
@@ -471,7 +465,6 @@ export default function AdminDashboard() {
   }
 
   async function fetchYouthAlbums() {
-    setLoadingYouthAlbums(true);
     const { data, error } = await supabase
       .from('youth_albums')
       .select('*')
@@ -482,11 +475,9 @@ export default function AdminDashboard() {
     } else {
       setYouthAlbums(data || []);
     }
-    setLoadingYouthAlbums(false);
   }
 
   async function fetchYouthEvents() {
-    setLoadingYouthEvents(true);
     const { data, error } = await supabase
       .from('youth_events')
       .select('*')
@@ -497,7 +488,6 @@ export default function AdminDashboard() {
     } else {
       setYouthEvents(data || []);
     }
-    setLoadingYouthEvents(false);
   }
 
   async function deleteYouthAlbum(id: string, title: string) {
@@ -1939,80 +1929,6 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
-
-          {/* Youth Events & Albums — editing option under Events/Schedule (any admin has full access) */}
-          <div>
-            <div className="mb-4">
-              <div className="font-semibold text-2xl">Youth Events &amp; Albums</div>
-              <div className="text-sm text-[var(--color-stone-light)]">
-                Quick view + edit for youth events and albums (these appear on the public /youth-ministry page). Full photo upload + album selection is in the Youth tab.
-              </div>
-            </div>
-
-            {/* Youth Events quick management */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-3">
-                <div className="font-medium">Upcoming Youth Events</div>
-                <div className="flex gap-2">
-                  <button onClick={() => openYouthEventForm()} className="text-xs px-3 py-1 bg-[var(--color-navy)] text-white rounded-full">+ Add Youth Event</button>
-                  <button onClick={fetchYouthEvents} disabled={loadingYouthEvents} className="text-xs px-3 py-1 border rounded">Refresh</button>
-                </div>
-              </div>
-
-              {loadingYouthEvents ? (
-                <div className="text-sm text-[var(--color-stone-light)] py-4">Loading youth events…</div>
-              ) : youthEvents.length === 0 ? (
-                <div className="text-sm text-[var(--color-stone-light)] py-4 border border-dashed rounded-2xl px-4">No youth events yet. Add some above or use the full form in the Youth tab.</div>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-3">
-                  {youthEvents.slice(0, 4).map((ev: any) => (
-                    <div key={ev.id} className="border bg-white p-4 rounded-xl text-sm relative group">
-                      <div className="font-medium text-[var(--color-navy)]">{ev.title}</div>
-                      {ev.date && <div className="text-[var(--color-gold-dark)] text-xs mt-0.5">{new Date(ev.date).toLocaleDateString()}</div>}
-                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100">
-                        <button onClick={() => openYouthEventForm(ev)} className="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-600">Edit</button>
-                        <button onClick={() => deleteYouthEvent(ev.id, ev.title)} className="text-[10px] px-2 py-0.5 rounded bg-red-50 text-red-600">Del</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="text-[10px] text-[var(--color-stone-light)] mt-1">For image upload on events, use the full form in the Youth tab. Albums are public to all visitors.</div>
-            </div>
-
-            {/* Youth Albums management (the requested album editing under Events/Schedule) */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="font-medium">Youth Photo Albums</div>
-                <div className="flex gap-2">
-                  <button onClick={() => openAlbumForm()} className="text-xs px-3 py-1 bg-[var(--color-navy)] text-white rounded-full">+ New Album</button>
-                  <button onClick={fetchYouthAlbums} disabled={loadingYouthAlbums} className="text-xs px-3 py-1 border rounded">Refresh</button>
-                </div>
-              </div>
-
-              {loadingYouthAlbums ? (
-                <div className="text-sm text-[var(--color-stone-light)] py-4">Loading albums…</div>
-              ) : youthAlbums.length === 0 ? (
-                <div className="text-sm text-[var(--color-stone-light)] py-4 border border-dashed rounded-2xl px-4">No albums yet. Create one and add photos via the Youth tab.</div>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-3">
-                  {youthAlbums.map((album: any) => (
-                    <div key={album.id} className="border bg-white p-4 rounded-xl text-sm flex items-center justify-between">
-                      <div>
-                        <span className="font-medium">{album.title}</span>
-                        {album.date && <span className="ml-2 text-[var(--color-stone-light)] text-xs">{new Date(album.date).toLocaleDateString()}</span>}
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => openAlbumForm(album)} className="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-600">Edit</button>
-                        <button onClick={() => deleteYouthAlbum(album.id, album.title)} className="text-xs px-2 py-0.5 rounded bg-red-50 text-red-600">Delete</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="text-[10px] mt-1 text-[var(--color-stone-light)]">Select an album in the Youth tab to upload photos. Albums and photos are publicly visible to all site visitors.</div>
-            </div>
-          </div>
         </div>
       )}
 
@@ -2032,7 +1948,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* YOUTH EVENT MODAL - hoisted so "Add/Edit" buttons work from both Youth tab AND the Events/Schedule tab */}
+      {/* YOUTH EVENT MODAL (hoisted so it can be opened from the Youth tab) */}
       {showYouthEventForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" onClick={closeYouthEventForm}>
           <div className="bg-white rounded-3xl w-full max-w-lg p-8" onClick={e => e.stopPropagation()}>
@@ -2098,7 +2014,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ALBUM FORM MODAL - hoisted for use from Events tab "Youth Events & Albums" section */}
+      {/* ALBUM FORM MODAL (hoisted so it can be opened from the Youth tab) */}
       {showAlbumForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" onClick={closeAlbumForm}>
           <div className="bg-white rounded-3xl w-full max-w-md p-8" onClick={e => e.stopPropagation()}>
