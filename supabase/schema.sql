@@ -33,6 +33,38 @@ create table if not exists sermons (
   created_at timestamptz default now()
 );
 
+-- RLS for sermons: public can see curated (is_public) ones; approved members see everything; only admins manage.
+ALTER TABLE sermons ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can view curated (is_public) sermons" ON sermons;
+CREATE POLICY "Public can view curated (is_public) sermons"
+ON sermons FOR SELECT
+TO anon, authenticated
+USING (is_public = true);
+
+DROP POLICY IF EXISTS "Approved members can view all sermons" ON sermons;
+CREATE POLICY "Approved members can view all sermons"
+ON sermons FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles 
+    WHERE profiles.id = auth.uid() 
+      AND (profiles.role = 'approved' OR profiles.role = 'admin')
+  )
+);
+
+DROP POLICY IF EXISTS "Admins can manage sermons" ON sermons;
+CREATE POLICY "Admins can manage sermons"
+ON sermons FOR ALL
+TO authenticated
+USING (is_admin())
+WITH CHECK (is_admin());
+
+-- Grants so anon can read curated sermons
+GRANT SELECT ON public.sermons TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.sermons TO authenticated;
+
 -- BUILDING PHOTOS
 create table if not exists building_photos (
   id uuid primary key default gen_random_uuid(),
