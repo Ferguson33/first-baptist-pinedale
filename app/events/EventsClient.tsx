@@ -14,10 +14,9 @@ interface SpotlightEvent {
 
 interface EventsClientProps {
   spotlightEvents: SpotlightEvent[];
-  eventsGoogleDocUrl?: string | null;
 }
 
-export default function EventsClient({ spotlightEvents, eventsGoogleDocUrl }: EventsClientProps) {
+export default function EventsClient({ spotlightEvents }: EventsClientProps) {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -151,35 +150,24 @@ export default function EventsClient({ spotlightEvents, eventsGoogleDocUrl }: Ev
         </div>
       </div>
 
-      {/* Events Schedule Google Doc Embed (published read-only) */}
-      {eventsGoogleDocUrl ? (
-        <div className="mb-16">
-          <div className="mb-5">
-            <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Events Schedule</h2>
-            <p className="text-sm text-[var(--color-stone-light)] mt-1">Current schedule and details. This view is read-only.</p>
-          </div>
-          <div className="bg-white border border-[var(--color-gold)]/10 rounded-3xl overflow-hidden shadow-sm">
-            <iframe
-              src={eventsGoogleDocUrl}
-              width="100%"
-              height="900"
-              frameBorder="0"
-              title="Events Schedule"
-              className="w-full block"
-              style={{ minHeight: '600px', border: 'none' }}
-            />
-          </div>
+      {/* Events Schedule - embedded Google Doc (read-only) */}
+      <div className="mb-16">
+        <div className="mb-5">
+          <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Events Schedule</h2>
+          <p className="text-sm text-[var(--color-stone-light)] mt-1">Current schedule and details (read-only view).</p>
         </div>
-      ) : (
-        <div className="mb-16">
-          <div className="mb-5">
-            <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Events Schedule</h2>
-          </div>
-          <div className="text-center py-12 text-[var(--color-stone-light)] border border-[var(--color-gold)]/20 rounded-3xl">
-            Schedule embed will appear here once configured in the Admin Dashboard (Events tab).
-          </div>
+        <div className="bg-white border border-[var(--color-gold)]/10 rounded-3xl overflow-hidden shadow-sm">
+          <iframe
+            src="https://docs.google.com/document/d/e/2PACX-1vQLQT7CzHu1iPGt87DhtA_c_7Tx_Nk7InA9l1A35-x9-jdlZNgpXesefwNwHwjtPA/pub?embedded=true"
+            width="100%"
+            height="900"
+            frameBorder="0"
+            title="Events Schedule"
+            className="w-full block"
+            style={{ minHeight: '700px', border: 'none' }}
+          />
         </div>
-      )}
+      </div>
 
       {/* Photo Gallery Lightbox for Spotlight Events */}
       {galleryOpen && spotlightEvents.length > 0 && (

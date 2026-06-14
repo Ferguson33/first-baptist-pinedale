@@ -115,7 +115,6 @@ export default function AdminDashboard() {
     youth_sunday_school_date: "",
     youth_pastor_note: "",
     youth_google_doc_url: "",
-    events_google_doc_url: "",
     live_video_id: "",
     live_stream_active: false,
   });
@@ -817,7 +816,6 @@ export default function AdminDashboard() {
         youth_sunday_school_date: data.youth_sunday_school_date || "",
         youth_pastor_note: data.youth_pastor_note || "",
         youth_google_doc_url: data.youth_google_doc_url || "",
-        events_google_doc_url: data.events_google_doc_url || "",
         live_video_id: data.live_video_id || "",
         live_stream_active: data.live_stream_active || false,
       });
@@ -840,7 +838,6 @@ export default function AdminDashboard() {
         youth_sunday_school_date: sermonSettings.youth_sunday_school_date || null,
         youth_pastor_note: sermonSettings.youth_pastor_note || null,
         youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
-        events_google_doc_url: sermonSettings.events_google_doc_url || null,
         live_video_id: sermonSettings.live_video_id || null,
         live_stream_active: sermonSettings.live_stream_active || false,
         updated_at: new Date().toISOString(),
@@ -1941,37 +1938,6 @@ export default function AdminDashboard() {
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Events Schedule Google Doc Embed */}
-          <div className="mb-8">
-            <div className="mb-4">
-              <div className="font-semibold text-2xl">Events Schedule (Google Doc Embed)</div>
-              <div className="text-sm text-[var(--color-stone-light)]">
-                Embed a published Google Doc here (read-only / uneditable for visitors). Paste the published embed URL below. This will appear on the public Events page.
-              </div>
-            </div>
-
-            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8">
-              <label className="block font-medium mb-2 text-sm">Published Embed URL (must end with /pub?embedded=true)</label>
-              <input
-                type="text"
-                value={sermonSettings.events_google_doc_url}
-                onChange={(e) => setSermonSettings({ ...sermonSettings, events_google_doc_url: e.target.value })}
-                className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm font-mono"
-                placeholder="https://docs.google.com/document/d/e/1w4AnWZ8pldw7XqjZp-4CSheNHBjwEWtJ/pub?embedded=true"
-              />
-              <p className="text-xs text-[var(--color-stone-light)] mt-2">
-                In the Google Doc: File → Share → Publish to web → Publish. Then copy the <strong>src</strong> attribute from the &lt;iframe&gt; code it gives you. Do <strong>not</strong> paste the /edit link. This keeps it uneditable for site visitors.
-              </p>
-              <button
-                onClick={saveSermonSettings}
-                disabled={savingSermonSettings}
-                className="mt-4 px-6 py-2 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium disabled:opacity-60"
-              >
-                {savingSermonSettings ? "Saving..." : "Save Events Schedule Embed"}
-              </button>
-            </div>
           </div>
 
           {/* Youth Events & Albums — editing option under Events/Schedule (any admin has full access) */}
