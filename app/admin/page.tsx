@@ -945,31 +945,36 @@ function AdminDashboardContent() {
       return;
     }
 
-    const payload = {
-      title: sermonForm.title,
-      preacher: sermonForm.preacher,
-      date: sermonForm.date,
-      video_url: sermonForm.video_url,
-      thumbnail_url: "https://picsum.photos/id/1015/600/340", // TODO: could derive from YouTube or upload
-      description: sermonForm.description || "",
-      is_public: sermonForm.is_public,
-    };
+    setSavingSermon(true);
+    try {
+      const payload = {
+        title: sermonForm.title,
+        preacher: sermonForm.preacher,
+        date: sermonForm.date,
+        video_url: sermonForm.video_url,
+        thumbnail_url: "https://picsum.photos/id/1015/600/340", // TODO: could derive from YouTube or upload
+        description: sermonForm.description || "",
+        is_public: sermonForm.is_public,
+      };
 
-    let error;
-    if (editingSermon) {
-      ({ error } = await supabase.from('sermons').update(payload).eq('id', editingSermon.id));
-    } else {
-      ({ error } = await supabase.from('sermons').insert(payload));
-    }
+      let error;
+      if (editingSermon) {
+        ({ error } = await supabase.from('sermons').update(payload).eq('id', editingSermon.id));
+      } else {
+        ({ error } = await supabase.from('sermons').insert(payload));
+      }
 
-    if (error) {
-      toast.error("Failed to save sermon: " + error.message);
-    } else {
-      toast.success(editingSermon ? "Sermon updated!" : "Sermon added!");
-      closeSermonForm();
-      fetchRealSermons();
-      // Bust public sermons (curated + live settings affect homepage too)
-      fetch('/api/revalidate?paths=/sermons,/', { method: 'POST' }).catch(() => {});
+      if (error) {
+        toast.error("Failed to save sermon: " + error.message);
+      } else {
+        toast.success(editingSermon ? "Sermon updated!" : "Sermon added!");
+        closeSermonForm();
+        fetchRealSermons();
+        // Bust public sermons (curated + live settings affect homepage too)
+        fetch('/api/revalidate?paths=/sermons,/', { method: 'POST' }).catch(() => {});
+      }
+    } finally {
+      setSavingSermon(false);
     }
   }
 
@@ -980,6 +985,7 @@ function AdminDashboardContent() {
 
   // Track which sermon is currently being deleted (for loading state)
   const [deletingSermonId, setDeletingSermonId] = useState<string | null>(null);
+  const [savingSermon, setSavingSermon] = useState(false);
 
   async function deleteRealSermon(id: string, title: string) {
     if (!confirm(`Delete sermon "${title}"?\n\nThis cannot be undone.`)) return;
@@ -1365,8 +1371,14 @@ function AdminDashboardContent() {
                   </div>
 
                   <div className="flex gap-3 mt-6 justify-end">
-                    <button onClick={closeSermonForm} className="px-6 py-2 border rounded-full text-sm">Cancel</button>
-                    <button onClick={saveRealSermon} className="px-6 py-2 bg-[var(--color-navy)] text-white rounded-full text-sm font-semibold">Save Sermon</button>
+                    <button onClick={closeSermonForm} className="px-6 py-2 border rounded-full text-sm" disabled={savingSermon}>Cancel</button>
+                    <button 
+                      onClick={saveRealSermon} 
+                      disabled={savingSermon}
+                      className="px-6 py-2 bg-[var(--color-navy)] text-white rounded-full text-sm font-semibold disabled:opacity-60"
+                    >
+                      {savingSermon ? "Saving..." : "Save Sermon"}
+                    </button>
                   </div>
                   <p className="mt-3 text-[10px] text-[var(--color-stone-light)]">Clean YouTube embeds (iframe) are used on the public Sermons page. Mark "is_public" for curated sermons visible without login.</p>
                 </div>
@@ -1381,7 +1393,7 @@ function AdminDashboardContent() {
                   const isDeleting = deletingSermonId === s.id;
                   return (
                     <div key={s.id} className="bg-white border rounded-2xl p-5 relative group">
-                      <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <div className="absolute top-3 right-3 flex gap-1 opacity-75 group-hover:opacity-100 transition-all">
                         <button
                           onClick={() => openSermonForm(s)}
                           className="p-1.5 rounded-full bg-[var(--color-cream)] text-[var(--color-navy)] hover:bg-[var(--color-gold)] hover:text-white"
@@ -1514,7 +1526,7 @@ function AdminDashboardContent() {
                 {/* Delete button */}
                 <button
                   onClick={() => deleteBuildingPhoto(photo.id, photo.url)}
-                  className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
+                  className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-60 group-hover:opacity-100 transition"
                 >
                   Delete
                 </button>
@@ -1768,7 +1780,7 @@ function AdminDashboardContent() {
                         </div>
                         <button
                           onClick={() => deleteYouthPhoto(photo.id, photo.url)}
-                          className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition"
+                          className="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-60 group-hover:opacity-100 transition"
                         >
                           Delete
                         </button>
@@ -1825,7 +1837,7 @@ function AdminDashboardContent() {
                     {ev.description && <p className="text-sm mt-2 text-[var(--color-stone)] line-clamp-2">{ev.description}</p>}
                     {ev.link_url && <a href={ev.link_url} target="_blank" className="text-xs text-[var(--color-gold-dark)] mt-1 block">Link →</a>}
 
-                    <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100">
+                    <div className="absolute top-3 right-3 flex gap-1 opacity-75 group-hover:opacity-100">
                       <button onClick={() => openYouthEventForm(ev)} className="p-1.5 rounded bg-[var(--color-cream)] text-xs">Edit</button>
                       <button onClick={() => deleteYouthEvent(ev.id, ev.title)} className="p-1.5 rounded bg-red-50 text-red-600 text-xs">Delete</button>
                     </div>
@@ -2027,7 +2039,7 @@ function AdminDashboardContent() {
                         {ev.location && <div className="text-sm mt-1 text-[var(--color-stone)]">{ev.location}</div>}
                         {ev.description && <p className="mt-3 text-sm">{ev.description}</p>}
 
-                        <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                        <div className="absolute top-3 right-3 flex gap-1 opacity-75 group-hover:opacity-100 transition">
                           <button onClick={() => openEventForm(ev)} className="text-xs px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700">Edit</button>
                           <button onClick={() => deleteEvent(ev.id, ev.title || 'Untitled')} className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
                         </div>
