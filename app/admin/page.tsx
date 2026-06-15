@@ -132,6 +132,10 @@ function AdminDashboardContent() {
   const [progressNote, setProgressNote] = useState("");
 
   // Sermon Settings (Pastor Note + Upcoming Sermon + Sunday School for homepage)
+  // IMPORTANT: The initializer MUST list every key that loadSermonSettings() or
+  // the various onChange handlers (including the events_google_doc_url one in the
+  // Events tab) will ever set. Otherwise TS infers a narrow type and the
+  // "object literal may only specify known properties" error appears at build time.
   const [sermonSettings, setSermonSettings] = useState({
     pastor_note: "",
     upcoming_title: "",
