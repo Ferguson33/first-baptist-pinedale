@@ -150,6 +150,7 @@ function AdminDashboardContent() {
     youth_google_doc_url: "",
     events_google_doc_url: "",
     prayer_bulletin_google_doc_url: "",
+    nursery_schedule_google_doc_url: "",
     live_video_id: "",
     live_stream_active: false,
   });
@@ -876,6 +877,7 @@ function AdminDashboardContent() {
         youth_google_doc_url: data.youth_google_doc_url || "",
         events_google_doc_url: data.events_google_doc_url || "",
         prayer_bulletin_google_doc_url: data.prayer_bulletin_google_doc_url || "",
+        nursery_schedule_google_doc_url: data.nursery_schedule_google_doc_url || "",
         live_video_id: data.live_video_id || "",
         live_stream_active: data.live_stream_active || false,
       });
@@ -900,6 +902,7 @@ function AdminDashboardContent() {
         youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
         events_google_doc_url: sermonSettings.events_google_doc_url || null,
         prayer_bulletin_google_doc_url: sermonSettings.prayer_bulletin_google_doc_url || null,
+        nursery_schedule_google_doc_url: sermonSettings.nursery_schedule_google_doc_url || null,
         live_video_id: sermonSettings.live_video_id || null,
         live_stream_active: sermonSettings.live_stream_active || false,
         updated_at: new Date().toISOString(),
@@ -1374,6 +1377,47 @@ function AdminDashboardContent() {
                 className="mt-3 px-6 py-2 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium disabled:opacity-60"
               >
                 {savingSermonSettings ? "Saving..." : "Save Prayer Bulletin Embed"}
+              </button>
+            </div>
+          </div>
+
+          {/* Nursery Schedule Google Doc Embed (member-only, protected page) */}
+          <div>
+            <div className="mb-4">
+              <div className="font-semibold text-2xl">Nursery Schedule Google Doc (Approved Members Only)</div>
+              <div className="text-sm text-[var(--color-stone-light)]">
+                This embed will appear on the private /nursery-schedule page for approved members only.<br />
+                <strong>How to get the link:</strong> In the Google Doc → File → Share → Publish to web → click Publish. 
+                Copy the URL from inside the &lt;iframe src="..."&gt; example. <br />
+                You can paste either the bare URL or the entire &lt;iframe&gt; tag — we will automatically extract the correct link.
+              </div>
+            </div>
+
+            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8">
+              <label className="block font-medium mb-2 text-sm">Google Doc Publish Link (embed URL)</label>
+              <input
+                type="text"
+                value={sermonSettings.nursery_schedule_google_doc_url || ''}
+                onChange={(e) => {
+                  const url = extractGoogleDocEmbedUrl(e.target.value);
+                  setSermonSettings({ ...sermonSettings, nursery_schedule_google_doc_url: url });
+                }}
+                className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm font-mono"
+                placeholder="https://docs.google.com/document/d/e/XXXXXXXXXXXXXXXX/pub?embedded=true"
+              />
+              <p className="text-xs text-[var(--color-stone-light)] mt-2">
+                Protected page (approved members only). After saving here, the embed updates on the live site. 
+                Remember to also republish the Google Doc itself when you edit its content (there can be a short delay on Google's side).
+              </p>
+              <button
+                onClick={async () => {
+                  await saveSermonSettings();
+                  fetch('/api/revalidate?path=/nursery-schedule', { method: 'POST' }).catch(() => {});
+                }}
+                disabled={savingSermonSettings}
+                className="mt-3 px-6 py-2 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium disabled:opacity-60"
+              >
+                {savingSermonSettings ? "Saving..." : "Save Nursery Schedule Embed"}
               </button>
             </div>
           </div>

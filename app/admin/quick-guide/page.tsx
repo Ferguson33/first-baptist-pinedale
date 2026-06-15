@@ -20,6 +20,7 @@ export default function PastorQuickGuide() {
           <div className="font-bold tracking-wider text-[var(--color-gold-dark)] mb-1">DAILY / WEEKLY TASKS</div>
           <ul className="space-y-1 text-[var(--color-stone)]">
             <li>1. Maintain the Prayer Bulletin Google Doc (content appears on the Prayer Bulletin page)</li>
+            <li>1b. Maintain the Nursery Schedule Google Doc (content appears on the private /nursery-schedule page for approved members)</li>
             <li>2. Check Admin → Members tab for new membership requests</li>
             <li>3. Add Sunday’s sermon by Friday (title + YouTube embed + photo)</li>
             <li>4. Update Building Project progress after any milestone</li>

@@ -110,15 +110,9 @@ export function Navbar() {
                             <Link href="/prayer-bulletin" className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)]" onClick={() => setShowUserMenu(false)}>
                               <BookOpen className="w-4 h-4" /> Prayer Bulletin
                             </Link>
-                            <a
-                              href="https://calendar.google.com/calendar/embed?src=jncferguson18%40gmail.com&ctz=America%2FDenver"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)]"
-                              onClick={() => setShowUserMenu(false)}
-                            >
+                            <Link href="/nursery-schedule" className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)]" onClick={() => setShowUserMenu(false)}>
                               Nursery Schedule
-                            </a>
+                            </Link>
                           </>
                         )}
 
@@ -200,15 +194,9 @@ export function Navbar() {
                   <Link href="/prayer-bulletin" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>
                     Prayer Bulletin
                   </Link>
-                  <a
-                    href="https://calendar.google.com/calendar/embed?src=jncferguson18%40gmail.com&ctz=America%2FDenver"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg"
-                    onClick={() => setMobileOpen(false)}
-                  >
+                  <Link href="/nursery-schedule" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>
                     Nursery Schedule
-                  </a>
+                  </Link>
                 </>
               )}
 
