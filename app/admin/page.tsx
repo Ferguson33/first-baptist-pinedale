@@ -359,12 +359,12 @@ export default function AdminDashboard() {
     }
   }, [user, isAdmin, loading, router]);
 
-  // Mark that we are fully mounted on the client. Combined with the early guard below and
-  // the updated conditions on every data-loading useEffect, this prevents the heavy admin
-  // JSX (tabs, dozens of controlled inputs, maps/filters over realMembers/realSermons/events,
-  // hoisted modals, etc.) from rendering on the very first client pass after a hard refresh.
-  // This breaks the timing window where an in-flight AuthProvider set (even inside startTransition)
-  // could be seen by React as "updating while rendering".
+  // Mark the component as mounted after the first client effect tick.
+  // The data-loading useEffects below are guarded with && isMounted so that Supabase
+  // fetches (which do setState on this component) only start after mount.
+  // This reduces races on hard refresh (where the AuthProvider is still doing its
+  // startTransition sets for session/profile/loading) and on client navigation into /admin.
+  // The main !loading && isAdmin guard (above) controls when the heavy UI tree renders.
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -434,7 +434,7 @@ export default function AdminDashboard() {
 
 
 
-  if (loading || !isAdmin || !isMounted) {
+  if (loading || !isAdmin) {
     return <div className="min-h-[60vh] flex items-center justify-center">Checking permissions…</div>;
   }
 
