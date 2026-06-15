@@ -2,7 +2,9 @@
 
 import { useAuth } from '@/lib/auth-context';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { BookOpen, MessageCircle } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 /**
  * Prayer Bulletin Page
@@ -12,11 +14,13 @@ import { BookOpen, MessageCircle } from 'lucide-react';
  *
  * It requires an approved member login.
  *
- * The Google Doc embed URL still needs to be filled in (see TODO below).
+ * The embed URL is now configurable in the Admin Dashboard (Sermons tab).
  */
 
 export default function PrayerBulletin() {
   const { isApprovedMember, user, profile } = useAuth();
+  const [bulletinUrl, setBulletinUrl] = useState<string | null>(null);
+  const [loadingUrl, setLoadingUrl] = useState(true);
 
   if (!isApprovedMember) {
     if (user && profile?.role === 'pending') {
@@ -37,6 +41,30 @@ export default function PrayerBulletin() {
       </div>
     );
   }
+
+  // Fetch the configurable embed URL (protected page, only for approved)
+  useEffect(() => {
+    async function loadBulletinUrl() {
+      setLoadingUrl(true);
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from('sermon_settings')
+          .select('prayer_bulletin_google_doc_url')
+          .eq('id', 1)
+          .single();
+
+        if (data?.prayer_bulletin_google_doc_url) {
+          setBulletinUrl(data.prayer_bulletin_google_doc_url);
+        }
+      } catch (e) {
+        console.error('Failed to load prayer bulletin URL:', e);
+      } finally {
+        setLoadingUrl(false);
+      }
+    }
+    loadBulletinUrl();
+  }, []);
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-12">
@@ -76,24 +104,31 @@ export default function PrayerBulletin() {
         </div>
       </div>
 
-      {/* Coming Soon Notice */}
-      <div className="mb-6 rounded-2xl border border-[var(--color-gold)]/30 bg-[var(--color-cream)] p-6 text-center">
-        <div className="font-semibold text-[var(--color-navy)] mb-2">Prayer Bulletin — Coming Soon</div>
-        <p className="text-sm text-[var(--color-stone)]">
-          We’re currently setting up the private Prayer Bulletin for members. 
-          Check back soon or contact the church office for updates.
-        </p>
-      </div>
-
-      {/* Placeholder for future Google Doc embed */}
-      <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm mb-10 opacity-60 pointer-events-none">
-        <div className="p-8 text-center text-[var(--color-stone-light)]">
-          Prayer Bulletin content will appear here once configured.
+      {loadingUrl ? (
+        <div className="text-center py-12 text-[var(--color-stone-light)]">Loading Prayer Bulletin...</div>
+      ) : bulletinUrl ? (
+        <div className="bg-white border border-[var(--color-gold)]/10 rounded-3xl overflow-hidden shadow-sm mb-10">
+          <iframe
+            src={bulletinUrl}
+            width="100%"
+            height="1200"
+            frameBorder="0"
+            title="Prayer Bulletin"
+            className="w-full block"
+            style={{ minHeight: '900px', border: 'none' }}
+          />
         </div>
-      </div>
+      ) : (
+        <div className="mb-6 rounded-2xl border border-[var(--color-gold)]/30 bg-[var(--color-cream)] p-6 text-center">
+          <div className="font-semibold text-[var(--color-navy)] mb-2">Prayer Bulletin — Coming Soon</div>
+          <p className="text-sm text-[var(--color-stone)]">
+            The Prayer Bulletin embed is not yet configured. An admin can set it in the Sermons tab of the dashboard.
+          </p>
+        </div>
+      )}
 
       <div className="text-xs text-center mt-8 text-[var(--color-stone-light)]">
-        Updates to the bulletin are made in the Google Doc by the church office.
+        Updates to the bulletin are made in the Google Doc by the church office. The embed URL can be updated in the Admin Dashboard.
       </div>
     </div>
   );

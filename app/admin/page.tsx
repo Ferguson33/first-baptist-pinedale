@@ -149,6 +149,7 @@ function AdminDashboardContent() {
     youth_pastor_note: "",
     youth_google_doc_url: "",
     events_google_doc_url: "",
+    prayer_bulletin_google_doc_url: "",
     live_video_id: "",
     live_stream_active: false,
   });
@@ -855,6 +856,7 @@ function AdminDashboardContent() {
         youth_pastor_note: data.youth_pastor_note || "",
         youth_google_doc_url: data.youth_google_doc_url || "",
         events_google_doc_url: data.events_google_doc_url || "",
+        prayer_bulletin_google_doc_url: data.prayer_bulletin_google_doc_url || "",
         live_video_id: data.live_video_id || "",
         live_stream_active: data.live_stream_active || false,
       });
@@ -878,6 +880,7 @@ function AdminDashboardContent() {
         youth_pastor_note: sermonSettings.youth_pastor_note || null,
         youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
         events_google_doc_url: sermonSettings.events_google_doc_url || null,
+        prayer_bulletin_google_doc_url: sermonSettings.prayer_bulletin_google_doc_url || null,
         live_video_id: sermonSettings.live_video_id || null,
         live_stream_active: sermonSettings.live_stream_active || false,
         updated_at: new Date().toISOString(),
@@ -1312,6 +1315,40 @@ function AdminDashboardContent() {
               <p className="text-xs text-[var(--color-stone-light)] mt-2">
                 <strong>Admin toggle:</strong> Check "Live stream active" + paste ID/URL to show "Join Live Now" + embed for approved members only. Uncheck or clear to hide. Auto-detect not used (manual for reliability).
               </p>
+            </div>
+          </div>
+
+          {/* Prayer Bulletin Google Doc Embed (member-only, protected page) */}
+          <div>
+            <div className="mb-4">
+              <div className="font-semibold text-2xl">Prayer Bulletin Google Doc (Approved Members Only)</div>
+              <div className="text-sm text-[var(--color-stone-light)]">
+                This embed appears on the private /prayer-bulletin page for approved members. Paste the "Publish to web" embed URL.
+              </div>
+            </div>
+
+            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8">
+              <label className="block font-medium mb-2 text-sm">Google Doc Publish Link (embed URL)</label>
+              <input
+                type="text"
+                value={sermonSettings.prayer_bulletin_google_doc_url || ''}
+                onChange={(e) => setSermonSettings({ ...sermonSettings, prayer_bulletin_google_doc_url: e.target.value })}
+                className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm font-mono"
+                placeholder="https://docs.google.com/document/d/e/XXXXXXXXXXXXXXXX/pub?embedded=true"
+              />
+              <p className="text-xs text-[var(--color-stone-light)] mt-2">
+                The page is protected — only approved members see the embed. Update the Google Doc and republish as usual.
+              </p>
+              <button
+                onClick={async () => {
+                  await saveSermonSettings();
+                  fetch('/api/revalidate?path=/prayer-bulletin', { method: 'POST' }).catch(() => {});
+                }}
+                disabled={savingSermonSettings}
+                className="mt-3 px-6 py-2 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium disabled:opacity-60"
+              >
+                {savingSermonSettings ? "Saving..." : "Save Prayer Bulletin Embed"}
+              </button>
             </div>
           </div>
 

@@ -45,6 +45,7 @@ export type SermonSettings = {
   youth_pastor_note?: string | null;
   youth_google_doc_url?: string | null;
   events_google_doc_url?: string | null;
+  prayer_bulletin_google_doc_url?: string | null;
   live_video_id?: string | null;
   live_stream_active?: boolean;
   updated_at?: string;
