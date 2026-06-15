@@ -144,6 +144,7 @@ function AdminDashboardContent() {
     youth_sunday_school_date: "",
     youth_pastor_note: "",
     youth_google_doc_url: "",
+    events_google_doc_url: "",
     live_video_id: "",
     live_stream_active: false,
   });
