@@ -16,11 +16,12 @@ export default function Home() {
 
   // ============================================
   // MEET THE PASTORS - YouTube Video IDs
-  // Update these when the short intro videos are ready
+  // Update these when the short intro videos are ready.
+  // If left as placeholder, the sections are gracefully hidden (no broken embeds).
   // ============================================
-  const PASTOR_YORK_VIDEO_ID = "PASTOR_YORK_VIDEO_ID";      // Ted & Teresa York
-  const PASTOR_HOLMES_VIDEO_ID = "PASTOR_HOLMES_VIDEO_ID";  // Heath & Tessa Holmes
-  const CHURCH_TEASER_VIDEO_ID = "CHURCH_TEASER_VIDEO_ID";  // Church intro / teaser video
+  const PASTOR_YORK_VIDEO_ID = "";      // e.g. "dQw4w9wg" - Ted & Teresa York
+  const PASTOR_HOLMES_VIDEO_ID = "";  // e.g. "dQw4w9wg" - Heath & Tessa Holmes
+  const CHURCH_TEASER_VIDEO_ID = "";  // Church intro / teaser video
 
   // Sermon teaser content from admin (including Youth Sunday School)
   const [sermonTeaser, setSermonTeaser] = useState({
@@ -292,91 +293,93 @@ export default function Home() {
           </div>
         </div>
 
-        {/* MEET THE PASTORS - Short intro videos */}
-        <div className="max-w-6xl mx-auto mt-8">
+        {/* MEET THE PASTORS - Short intro videos (gracefully hidden if no video IDs configured yet) */}
+        {(PASTOR_YORK_VIDEO_ID || PASTOR_HOLMES_VIDEO_ID) && (
+          <div className="max-w-6xl mx-auto mt-8">
+            <div className="text-center mb-8">
+              <div className="uppercase tracking-[3px] text-xs text-[var(--color-gold-dark)]">OUR PASTORAL TEAM</div>
+              <h2 className="text-4xl font-semibold tracking-tighter mt-2 text-[var(--color-navy)]">Meet the Pastors</h2>
+              <p className="mt-2 text-[var(--color-stone)] max-w-md mx-auto">
+                Get to know the families who lead and serve at First Baptist Church of Pinedale.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
+              {/* Pastor Ted & Teresa York */}
+              {PASTOR_YORK_VIDEO_ID && (
+                <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm">
+                  <div className="aspect-video bg-black">
+                    <iframe
+                      src={`https://www.youtube.com/embed/${PASTOR_YORK_VIDEO_ID}`}
+                      title="Meet Pastor Ted &amp; Teresa York"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full"
+                    />
+                  </div>
+                  <div className="p-6">
+                    <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)]">Lead Pastor</div>
+                    <div className="font-semibold text-2xl tracking-tight text-[var(--color-navy)] mt-1">
+                      Pastor Ted &amp; Teresa York
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Pastor Heath & Tessa Holmes */}
+              {PASTOR_HOLMES_VIDEO_ID && (
+                <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm">
+                  <div className="aspect-video bg-black">
+                    <iframe
+                      src={`https://www.youtube.com/embed/${PASTOR_HOLMES_VIDEO_ID}`}
+                      title="Meet Pastor Heath &amp; Tessa Holmes"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full"
+                    />
+                  </div>
+                  <div className="p-6">
+                    <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)]">Assistant Pastor / Youth &amp; Music</div>
+                    <div className="font-semibold text-2xl tracking-tight text-[var(--color-navy)] mt-1">
+                      Pastor Heath &amp; Tessa Holmes
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* STEP INSIDE OUR CHURCH HOME - Teaser Video (hidden until real ID is set) */}
+      {CHURCH_TEASER_VIDEO_ID && (
+        <div className="max-w-4xl mx-auto mt-10">
           <div className="text-center mb-8">
-            <div className="uppercase tracking-[3px] text-xs text-[var(--color-gold-dark)]">OUR PASTORAL TEAM</div>
-            <h2 className="text-4xl font-semibold tracking-tighter mt-2 text-[var(--color-navy)]">Meet the Pastors</h2>
+            <div className="uppercase tracking-[3px] text-xs text-[var(--color-gold-dark)]">OUR CHURCH HOME</div>
+            <h2 className="text-4xl font-semibold tracking-tighter mt-2 text-[var(--color-navy)]">Step Inside Our Church Home</h2>
             <p className="mt-2 text-[var(--color-stone)] max-w-md mx-auto">
-              Get to know the families who lead and serve at First Baptist Church of Pinedale.
+              Take a quick walk through our building, experience our ministry in action, and get a feel for who we are.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
-            {/* Pastor Ted & Teresa York */}
-            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm">
-              <div className="aspect-video bg-black">
-                {/* TODO: Replace with the final YouTube video ID for Pastor Ted & Teresa */}
-                <iframe
-                  src={`https://www.youtube.com/embed/${PASTOR_YORK_VIDEO_ID}`}
-                  title="Meet Pastor Ted &amp; Teresa York"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full"
-                />
-              </div>
-              <div className="p-6">
-                <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)]">Lead Pastor</div>
-                <div className="font-semibold text-2xl tracking-tight text-[var(--color-navy)] mt-1">
-                  Pastor Ted &amp; Teresa York
-                </div>
-              </div>
+          <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm max-w-3xl mx-auto">
+            <div className="aspect-video bg-black">
+              <iframe
+                src={`https://www.youtube.com/embed/${CHURCH_TEASER_VIDEO_ID}`}
+                title="Step Inside Our Church Home"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full"
+              />
             </div>
-
-            {/* Pastor Heath & Tessa Holmes */}
-            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm">
-              <div className="aspect-video bg-black">
-                {/* TODO: Replace with the final YouTube video ID for Pastor Heath &amp; Tessa */}
-                <iframe
-                  src={`https://www.youtube.com/embed/${PASTOR_HOLMES_VIDEO_ID}`}
-                  title="Meet Pastor Heath &amp; Tessa Holmes"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full"
-                />
-              </div>
-              <div className="p-6">
-                <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)]">Assistant Pastor / Youth &amp; Music</div>
-                <div className="font-semibold text-2xl tracking-tight text-[var(--color-navy)] mt-1">
-                  Pastor Heath &amp; Tessa Holmes
-                </div>
-              </div>
+            <div className="p-6 text-center">
+              <p className="text-[var(--color-stone)] text-sm">
+                A short look at our sanctuary, fellowship, and heart for Pinedale.
+              </p>
             </div>
           </div>
-
-          <p className="text-center text-xs text-[var(--color-stone-light)] mt-6">
-            Short videos introducing our pastoral families — coming soon.
-          </p>
         </div>
-      </div>
-
-      {/* STEP INSIDE OUR CHURCH HOME - Teaser Video */}
-      <div className="max-w-4xl mx-auto mt-10">
-        <div className="text-center mb-8">
-          <div className="uppercase tracking-[3px] text-xs text-[var(--color-gold-dark)]">OUR CHURCH HOME</div>
-          <h2 className="text-4xl font-semibold tracking-tighter mt-2 text-[var(--color-navy)]">Step Inside Our Church Home</h2>
-          <p className="mt-2 text-[var(--color-stone)] max-w-md mx-auto">
-            Take a quick walk through our building, experience our ministry in action, and get a feel for who we are.
-          </p>
-        </div>
-
-        <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm max-w-3xl mx-auto">
-          <div className="aspect-video bg-black">
-            <iframe
-              src={`https://www.youtube.com/embed/${CHURCH_TEASER_VIDEO_ID}`}
-              title="Step Inside Our Church Home"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="w-full h-full"
-            />
-          </div>
-          <div className="p-6 text-center">
-            <p className="text-[var(--color-stone)] text-sm">
-              A short look at our sanctuary, fellowship, and heart for Pinedale.
-            </p>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* BUILDING PROJECT HIGHLIGHT */}
       <div className="bg-[var(--color-cream)] py-16 border-y">

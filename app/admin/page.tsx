@@ -261,6 +261,8 @@ function AdminDashboardContent() {
         }]);
 
         toast.success("Photo uploaded successfully!", { id: 'upload' });
+        // Bust public building page cache for visitors
+        fetch('/api/revalidate?path=/building-project', { method: 'POST' }).catch(() => {});
       } catch (error: any) {
         console.error('Upload error:', error);
         toast.error("Failed to upload photo: " + (error.message || "Unknown error"), { id: 'upload' });
@@ -602,6 +604,8 @@ function AdminDashboardContent() {
         toast.success(editingYouthEvent ? "Event updated!" : "Event added!");
         closeYouthEventForm();
         fetchYouthEvents();
+        // Remote update for public youth page
+        fetch('/api/revalidate?path=/youth-ministry', { method: 'POST' }).catch(() => {});
       }
     } catch (err: any) {
       console.error('Unexpected error saving youth event:', err);
@@ -878,6 +882,8 @@ function AdminDashboardContent() {
       toast.error("Failed to save sermon settings. Did you run the sermon-settings-update.sql file?");
     } else {
       toast.success("Homepage content updated!");
+      // Bust caches for homepage and related public pages (remote management)
+      fetch('/api/revalidate?paths=/,/sermons,/youth-ministry', { method: 'POST' }).catch(() => {});
     }
   }
 
@@ -957,6 +963,8 @@ function AdminDashboardContent() {
       toast.success(editingSermon ? "Sermon updated!" : "Sermon added!");
       closeSermonForm();
       fetchRealSermons();
+      // Bust public sermons (curated + live settings affect homepage too)
+      fetch('/api/revalidate?paths=/sermons,/', { method: 'POST' }).catch(() => {});
     }
   }
 
@@ -1025,6 +1033,9 @@ function AdminDashboardContent() {
       toast.success("Note saved! It will appear on the public Building Project page.");
       // Also update local progress state
       setProgress(prev => ({ ...prev, physical_note: progressNote || null }));
+      // Remote cache bust so public sees it immediately
+      fetch('/api/revalidate?path=/building-project', { method: 'POST' }).catch(() => {});
+      fetch('/api/revalidate?path=/', { method: 'POST' }).catch(() => {});
     }
   }
 
@@ -1103,6 +1114,54 @@ function AdminDashboardContent() {
               <li>Update building progress percentages anytime</li>
             </ol>
             <div className="mt-6 text-[10px] font-mono bg-[var(--color-cream)] p-3 rounded">TIP: Use the printable Pastor Quick Guide tab for a one-page cheat sheet you can keep by your desk.</div>
+          </div>
+
+          {/* Remote Site Management / Cache Busting - no local terminal needed */}
+          <div className="admin-section bg-white p-8 rounded-3xl">
+            <div className="font-semibold mb-4 flex items-center gap-2 text-lg">
+              <span>Remote Site Management</span>
+              <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">No terminal required</span>
+            </div>
+            <p className="text-sm text-[var(--color-stone)] mb-4">
+              After making content changes, use these to instantly push updates to visitors (busts Next.js cache + Supabase freshness).
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <button 
+                onClick={async () => {
+                  const res = await fetch('/api/revalidate?all=1', { method: 'POST' });
+                  if (res.ok) toast.success("All key pages revalidated! Visitors will see latest content.");
+                  else toast.error("Revalidate failed — check console.");
+                }}
+                className="px-4 py-2 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium"
+              >
+                Revalidate Entire Site
+              </button>
+              <button 
+                onClick={() => fetch('/api/revalidate?path=/', { method: 'POST' }).then(() => toast.success("Homepage updated for visitors"))}
+                className="px-4 py-2 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
+              >
+                Revalidate Homepage
+              </button>
+              <button 
+                onClick={() => fetch('/api/revalidate?path=/events', { method: 'POST' }).then(() => toast.success("Events page updated"))}
+                className="px-4 py-2 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
+              >
+                Revalidate Events
+              </button>
+              <button 
+                onClick={() => fetch('/api/revalidate?path=/sermons', { method: 'POST' }).then(() => toast.success("Sermons page updated"))}
+                className="px-4 py-2 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
+              >
+                Revalidate Sermons
+              </button>
+              <button 
+                onClick={() => fetch('/api/revalidate?paths=/building-project,/youth-ministry', { method: 'POST' }).then(() => toast.success("Project & Youth pages updated"))}
+                className="px-4 py-2 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
+              >
+                Revalidate Building + Youth
+              </button>
+            </div>
+            <div className="mt-3 text-[10px] text-[var(--color-stone-light)]">These call the same revalidate API used automatically by some saves. Safe to use anytime.</div>
           </div>
         </div>
       )}
