@@ -85,16 +85,35 @@ export default function NurserySchedule() {
       {loadingUrl ? (
         <div className="text-center py-12 text-[var(--color-stone-light)]">Loading Nursery Schedule...</div>
       ) : scheduleUrl ? (
-        <div className="bg-white border border-[var(--color-gold)]/10 rounded-3xl overflow-hidden shadow-sm mb-10">
-          <iframe
-            src={scheduleUrl}
-            width="100%"
-            height="1200"
-            frameBorder="0"
-            title="Nursery Schedule"
-            className="w-full block"
-            style={{ minHeight: '900px', border: 'none' }}
-          />
+        <div className="mb-10">
+          {/* Nice header "window" thanking volunteers + KJV verse */}
+          <div className="bg-[var(--color-cream)] border border-[var(--color-gold)]/30 rounded-3xl p-8 md:p-10 mb-6 text-center">
+            <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)] mb-4">
+              Thank You, Nursery Volunteers!
+            </h2>
+            <p className="text-[var(--color-stone)] max-w-prose mx-auto text-lg leading-relaxed">
+              We are deeply grateful for your faithful and joyful service in caring for our little ones. 
+              Your willingness to serve allows families to worship together in peace and focus on the Lord.
+            </p>
+            <p className="mt-6 text-[var(--color-stone)] italic text-lg max-w-prose mx-auto">
+              “And the King shall answer and say unto them, Verily I say unto you, Inasmuch as ye have done it unto one of the least of these my brethren, ye have done it unto me.”
+              <br />
+              — Matthew 25:40 (KJV)
+            </p>
+          </div>
+
+          {/* Embed window */}
+          <div className="bg-white border border-[var(--color-gold)]/10 rounded-3xl overflow-hidden shadow-sm">
+            <iframe
+              src={scheduleUrl}
+              width="100%"
+              height="1200"
+              frameBorder="0"
+              title="Nursery Schedule"
+              className="w-full block"
+              style={{ minHeight: '900px', border: 'none' }}
+            />
+          </div>
         </div>
       ) : (
         <div className="mb-6 rounded-2xl border border-[var(--color-gold)]/30 bg-[var(--color-cream)] p-6 text-center">
