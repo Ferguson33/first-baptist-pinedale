@@ -20,6 +20,26 @@ create table if not exists profiles (
 -- Enable RLS
 alter table profiles enable row level security;
 
+-- is_admin() helper (SECURITY DEFINER so policies can safely check role without recursion issues).
+-- Must be defined early because many RLS policies (sermons, events, youth, profiles, etc.) depend on it.
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE id = auth.uid()
+      AND role = 'admin'
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO anon;
+
 -- SERMONS
 create table if not exists sermons (
   id uuid primary key default gen_random_uuid(),
@@ -111,9 +131,24 @@ create table if not exists events (
   created_at timestamptz default now()
 );
 
--- Simple starter policies (tighten for production)
-create policy "Public can read approved profiles" on profiles for select using (role = 'approved' or role = 'admin');
-create policy "Users can read own profile" on profiles for select using (auth.uid() = id);
+-- Profiles SELECT policies (cleaned for reload stability + admin access)
+-- Any authenticated user can read their own profile (critical for fetchProfile on refresh).
+-- Admins can read all profiles (for Members tab + role subqueries in other policies).
+-- We use is_admin() for consistency with the rest of the app (sermons, youth, events, etc.).
+DROP POLICY IF EXISTS "Public can read approved profiles" ON profiles;
+DROP POLICY IF EXISTS "Users can read own profile" ON profiles;
+DROP POLICY IF EXISTS "Admins can read all profiles" ON profiles;
+DROP POLICY IF EXISTS "Admins can select all profiles" ON profiles;
+
+CREATE POLICY "Users can read own profile"
+ON profiles FOR SELECT
+TO authenticated
+USING (auth.uid() = id);
+
+CREATE POLICY "Admins can read all profiles"
+ON profiles FOR SELECT
+TO authenticated
+USING (is_admin());
 
 -- Allow new users (right after auth.signUp) to create their own pending profile row.
 -- This is required for pending membership flow to work reliably on refresh.
