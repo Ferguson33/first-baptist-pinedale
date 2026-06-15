@@ -22,28 +22,19 @@ export default function PrayerBulletin() {
   const [bulletinUrl, setBulletinUrl] = useState<string | null>(null);
   const [loadingUrl, setLoadingUrl] = useState(true);
 
-  if (!isApprovedMember) {
-    if (user && profile?.role === 'pending') {
-      return (
-        <div className="max-w-md mx-auto text-center py-20 px-6">
-          <h2 className="font-semibold text-2xl">Membership Pending Approval</h2>
-          <p className="mt-3">Thank you for joining! The Prayer Bulletin will be available here once the pastors approve your membership.</p>
-          <Link href="/" className="mt-6 inline-block underline">Back to homepage</Link>
-        </div>
-      );
+  // Fetch the configurable embed URL.
+  // IMPORTANT: All hooks (useState, useEffect) must be called unconditionally
+  // at the top of the component, before any early returns based on auth.
+  // This prevents hook order mismatches during auth hydration/refresh,
+  // which was the root cause of the React #310 "update while rendering"
+  // crashes on the admin dashboard and now on this protected page.
+  useEffect(() => {
+    if (!isApprovedMember) {
+      setLoadingUrl(false);
+      setBulletinUrl(null);
+      return;
     }
 
-    return (
-      <div className="max-w-md mx-auto text-center py-20 px-6">
-        <h2 className="font-semibold text-2xl">Private Prayer Bulletin</h2>
-        <p className="mt-3">This page is only available to approved church members.</p>
-        <Link href="/login" className="mt-6 inline-block underline">Sign in with your member account</Link>
-      </div>
-    );
-  }
-
-  // Fetch the configurable embed URL (protected page, only for approved)
-  useEffect(() => {
     async function loadBulletinUrl() {
       setLoadingUrl(true);
       try {
@@ -64,7 +55,27 @@ export default function PrayerBulletin() {
       }
     }
     loadBulletinUrl();
-  }, []);
+  }, [isApprovedMember]);
+
+  if (!isApprovedMember) {
+    if (user && profile?.role === 'pending') {
+      return (
+        <div className="max-w-md mx-auto text-center py-20 px-6">
+          <h2 className="font-semibold text-2xl">Membership Pending Approval</h2>
+          <p className="mt-3">Thank you for joining! The Prayer Bulletin will be available here once the pastors approve your membership.</p>
+          <Link href="/" className="mt-6 inline-block underline">Back to homepage</Link>
+        </div>
+      );
+    }
+
+    return (
+      <div className="max-w-md mx-auto text-center py-20 px-6">
+        <h2 className="font-semibold text-2xl">Private Prayer Bulletin</h2>
+        <p className="mt-3">This page is only available to approved church members.</p>
+        <Link href="/login" className="mt-6 inline-block underline">Sign in with your member account</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-12">
