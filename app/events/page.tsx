@@ -41,7 +41,21 @@ export default async function EventsPage() {
 
   const spotlightEvents = data ?? [];
 
+  // Fetch the events schedule Google Doc embed URL (configurable in Admin > Events)
+  // Falls back to the previous hardcoded one if not set.
+  const { data: settingsData } = await supabase
+    .from('sermon_settings')
+    .select('events_google_doc_url')
+    .eq('id', 1)
+    .single();
+
+  const scheduleEmbedUrl = settingsData?.events_google_doc_url ||
+    'https://docs.google.com/document/d/e/2PACX-1vQLQT7CzHu1iPGt87DhtA_c_7Tx_Nk7InA9l1A35-x9-jdlZNgpXesefwNwHwjtPA/pub?embedded=true';
+
   return (
-    <EventsClient spotlightEvents={spotlightEvents as SpotlightEvent[]} />
+    <EventsClient 
+      spotlightEvents={spotlightEvents as SpotlightEvent[]} 
+      scheduleEmbedUrl={scheduleEmbedUrl} 
+    />
   );
 }

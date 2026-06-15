@@ -14,9 +14,12 @@ interface SpotlightEvent {
 
 interface EventsClientProps {
   spotlightEvents: SpotlightEvent[];
+  scheduleEmbedUrl?: string;
 }
 
-export default function EventsClient({ spotlightEvents }: EventsClientProps) {
+export default function EventsClient({ spotlightEvents, scheduleEmbedUrl }: EventsClientProps) {
+  // Fallback to the original hardcoded URL if none provided from DB
+  const embedSrc = scheduleEmbedUrl || 'https://docs.google.com/document/d/e/2PACX-1vQLQT7CzHu1iPGt87DhtA_c_7Tx_Nk7InA9l1A35-x9-jdlZNgpXesefwNwHwjtPA/pub?embedded=true';
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -158,7 +161,7 @@ export default function EventsClient({ spotlightEvents }: EventsClientProps) {
         </div>
         <div className="bg-white border border-[var(--color-gold)]/10 rounded-3xl overflow-hidden shadow-sm">
           <iframe
-            src="https://docs.google.com/document/d/e/2PACX-1vQLQT7CzHu1iPGt87DhtA_c_7Tx_Nk7InA9l1A35-x9-jdlZNgpXesefwNwHwjtPA/pub?embedded=true"
+            src={embedSrc}
             width="100%"
             height="900"
             frameBorder="0"

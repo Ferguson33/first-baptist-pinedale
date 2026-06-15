@@ -423,6 +423,8 @@ function AdminDashboardContent() {
   useEffect(() => {
     if (activeTab === 'events' && isMounted) {
       fetchEvents();
+      // Load schedule Google Doc URL from DB so it can be edited remotely in admin
+      loadSermonSettings();
     }
   }, [activeTab, isMounted]);
 
@@ -847,6 +849,7 @@ function AdminDashboardContent() {
         youth_sunday_school_date: data.youth_sunday_school_date || "",
         youth_pastor_note: data.youth_pastor_note || "",
         youth_google_doc_url: data.youth_google_doc_url || "",
+        events_google_doc_url: data.events_google_doc_url || "",
         live_video_id: data.live_video_id || "",
         live_stream_active: data.live_stream_active || false,
       });
@@ -869,6 +872,7 @@ function AdminDashboardContent() {
         youth_sunday_school_date: sermonSettings.youth_sunday_school_date || null,
         youth_pastor_note: sermonSettings.youth_pastor_note || null,
         youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
+        events_google_doc_url: sermonSettings.events_google_doc_url || null,
         live_video_id: sermonSettings.live_video_id || null,
         live_stream_active: sermonSettings.live_stream_active || false,
         updated_at: new Date().toISOString(),
@@ -2031,6 +2035,42 @@ function AdminDashboardContent() {
                   })}
               </div>
             )}
+          </div>
+
+          {/* Weekly Schedule Google Doc - editable here for remote management (no code change needed) */}
+          <div className="mt-12">
+            <div className="mb-4">
+              <div className="font-semibold text-2xl">Weekly Schedule Google Doc</div>
+              <div className="text-sm text-[var(--color-stone-light)]">
+                This embed appears on the public Events page below the spotlight events. 
+                Paste the "Publish to web" embed URL (from File &gt; Share &gt; Publish to web in the Google Doc).
+              </div>
+            </div>
+
+            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8">
+              <label className="block font-medium mb-2 text-sm">Google Doc Publish Link (embed URL)</label>
+              <input
+                type="text"
+                value={sermonSettings.events_google_doc_url || ''}
+                onChange={(e) => setSermonSettings({ ...sermonSettings, events_google_doc_url: e.target.value })}
+                className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm font-mono"
+                placeholder="https://docs.google.com/document/d/e/XXXXXXXXXXXXXXXX/pub?embedded=true"
+              />
+              <p className="text-xs text-[var(--color-stone-light)] mt-2">
+                After saving, the change will appear on the public /events page (may take a minute for Google to propagate the published version).
+              </p>
+              <button
+                onClick={async () => {
+                  await saveSermonSettings();
+                  // Revalidate the events page so the new embed URL is picked up immediately
+                  fetch('/api/revalidate?path=/events', { method: 'POST' }).catch(() => {});
+                }}
+                disabled={savingSermonSettings}
+                className="mt-3 px-6 py-2 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium disabled:opacity-60"
+              >
+                {savingSermonSettings ? "Saving..." : "Save Events Schedule Embed"}
+              </button>
+            </div>
           </div>
         </div>
       )}
