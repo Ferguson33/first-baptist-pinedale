@@ -511,6 +511,25 @@ function AdminDashboardContent() {
     });
   }
 
+  // Helper to make pasting Google Doc embeds user-friendly.
+  // Users often copy the entire <iframe src="..."> tag from Google's "Publish to web" dialog.
+  // This extracts just the URL so the input always ends up with a clean publish link.
+  function extractGoogleDocEmbedUrl(input: string): string {
+    const trimmed = input.trim();
+    if (!trimmed) return '';
+
+    // If it contains an iframe tag, pull out the src attribute
+    if (trimmed.toLowerCase().includes('<iframe')) {
+      const match = trimmed.match(/src\s*=\s*["']([^"']+)["']/i);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+
+    // Otherwise assume they already gave us the bare URL
+    return trimmed;
+  }
+
   async function fetchYouthAlbums() {
     const { data, error } = await supabase
       .from('youth_albums')
@@ -1323,7 +1342,10 @@ function AdminDashboardContent() {
             <div className="mb-4">
               <div className="font-semibold text-2xl">Prayer Bulletin Google Doc (Approved Members Only)</div>
               <div className="text-sm text-[var(--color-stone-light)]">
-                This embed appears on the private /prayer-bulletin page for approved members. Paste the "Publish to web" embed URL.
+                This embed appears on the private /prayer-bulletin page for approved members only.<br />
+                <strong>How to get the link:</strong> In the Google Doc → File → Share → Publish to web → click Publish. 
+                Copy the URL from inside the &lt;iframe src="..."&gt; example. <br />
+                You can paste either the bare URL or the entire &lt;iframe&gt; tag — we will automatically extract the correct link.
               </div>
             </div>
 
@@ -1332,12 +1354,16 @@ function AdminDashboardContent() {
               <input
                 type="text"
                 value={sermonSettings.prayer_bulletin_google_doc_url || ''}
-                onChange={(e) => setSermonSettings({ ...sermonSettings, prayer_bulletin_google_doc_url: e.target.value })}
+                onChange={(e) => {
+                  const url = extractGoogleDocEmbedUrl(e.target.value);
+                  setSermonSettings({ ...sermonSettings, prayer_bulletin_google_doc_url: url });
+                }}
                 className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm font-mono"
                 placeholder="https://docs.google.com/document/d/e/XXXXXXXXXXXXXXXX/pub?embedded=true"
               />
               <p className="text-xs text-[var(--color-stone-light)] mt-2">
-                The page is protected — only approved members see the embed. Update the Google Doc and republish as usual.
+                Protected page (approved members only). After saving here, the embed updates on the live site. 
+                Remember to also republish the Google Doc itself when you edit its content (there can be a short delay on Google's side).
               </p>
               <button
                 onClick={async () => {
@@ -1607,7 +1633,8 @@ function AdminDashboardContent() {
             <div className="mb-4">
               <div className="font-semibold text-2xl">Youth Google Doc Embed</div>
               <div className="text-sm text-[var(--color-stone-light)]">
-                Optional: Embed a Google Doc on the Youth Ministry page (similar to the Member Directory and Prayer Bulletin pages).
+                Optional: Embed a Google Doc on the Youth Ministry page (similar to the Prayer Bulletin and Events schedule).<br />
+                <strong>How to get the link:</strong> In the Google Doc → File → Share → Publish to web. Copy the URL from the &lt;iframe src=...&gt; (or paste the whole tag — we extract it).
               </div>
             </div>
 
@@ -1616,7 +1643,10 @@ function AdminDashboardContent() {
               <input
                 type="text"
                 value={sermonSettings.youth_google_doc_url}
-                onChange={(e) => setSermonSettings({ ...sermonSettings, youth_google_doc_url: e.target.value })}
+                onChange={(e) => {
+                  const url = extractGoogleDocEmbedUrl(e.target.value);
+                  setSermonSettings({ ...sermonSettings, youth_google_doc_url: url });
+                }}
                 className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm"
                 placeholder="https://docs.google.com/document/d/e/XXXXXXXXXXXXXXXX/pub?embedded=true"
               />
@@ -2096,8 +2126,10 @@ function AdminDashboardContent() {
             <div className="mb-4">
               <div className="font-semibold text-2xl">Weekly Schedule Google Doc</div>
               <div className="text-sm text-[var(--color-stone-light)]">
-                This embed appears on the public Events page below the spotlight events. 
-                Paste the "Publish to web" embed URL (from File &gt; Share &gt; Publish to web in the Google Doc).
+                This embed appears on the public Events page below the spotlight events.<br />
+                <strong>How to get the link:</strong> In the Google Doc → File → Share → Publish to web → click Publish. 
+                Copy the URL from inside the &lt;iframe src="..."&gt; example.<br />
+                Paste the bare URL or the full &lt;iframe&gt; tag — we extract the link automatically.
               </div>
             </div>
 
@@ -2106,7 +2138,10 @@ function AdminDashboardContent() {
               <input
                 type="text"
                 value={sermonSettings.events_google_doc_url || ''}
-                onChange={(e) => setSermonSettings({ ...sermonSettings, events_google_doc_url: e.target.value })}
+                onChange={(e) => {
+                  const url = extractGoogleDocEmbedUrl(e.target.value);
+                  setSermonSettings({ ...sermonSettings, events_google_doc_url: url });
+                }}
                 className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm font-mono"
                 placeholder="https://docs.google.com/document/d/e/XXXXXXXXXXXXXXXX/pub?embedded=true"
               />
