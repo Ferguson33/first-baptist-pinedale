@@ -77,6 +77,9 @@ function AdminDashboardContent() {
   const { profile } = useAuth(); // re-consume cheaply for the welcome name in header
   const router = useRouter(); // local if needed (redirect is handled in shell)
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  // Note: We intentionally always start on 'overview' (no sessionStorage or auto-restore).
+  // This is the safe default that prevents the #310 crash on hard refresh inside admin.
+  // Refreshing the admin dashboard will land you back here — this is acceptable per current requirements.
 
   // Client-only mounted flag inside the content. We use it only to gate the
   // data-loading useEffects (so fetches don't start on the absolute first render
