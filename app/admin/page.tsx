@@ -47,18 +47,40 @@ interface LocalEvent {
 }
 
 export default function AdminDashboard() {
-  const supabase = createClient();
-  const { user, profile, isAdmin, loading } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
   const router = useRouter();
+
+  // Redirect non-admins. This lives in the thin shell so we never mount the heavy
+  // AdminDashboardContent (with 100+ lines of useState, effects, controlled forms,
+  // lists, and JSX) while the AuthProvider is still settling on hard refresh.
+  // The separate component mount happens only after the provider's startTransition
+  // updates have committed, which is the reliable way to avoid React #310.
+  useEffect(() => {
+    if (!loading && (!user || !isAdmin)) {
+      router.push('/login');
+      toast.error("Admin access only. Please sign in with an administrator account.");
+    }
+  }, [user, isAdmin, loading, router]);
+
+  if (loading || !isAdmin) {
+    return <div className="min-h-[60vh] flex items-center justify-center">Checking permissions…</div>;
+  }
+
+  // Auth is good and stable. Mount the heavy dashboard content in its own component.
+  // This breaks the timing where provider updates (even in startTransition) could
+  // coincide with the initial render of the giant admin tree.
+  return <AdminDashboardContent />;
+}
+
+function AdminDashboardContent() {
+  const supabase = createClient();
+  const { profile } = useAuth(); // re-consume cheaply for the welcome name in header
+  const router = useRouter(); // local if needed (redirect is handled in shell)
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
 
-  // Client-only mounted flag. On hard refresh (or any mount), we stay in the lightweight
-  // "Checking permissions…" state until after the first client effect tick. This gives the
-  // AuthProvider's startTransition updates (and any Supabase listener re-fires) time to settle
-  // before we render the very large admin tab tree + all its controlled forms, lists, and
-  // useEffect-driven data loads. This is a standard stabilization for "update a component while
-  // rendering a different component" (React #310) when an ancestor context updates during the
-  // initial render of a complex descendant page.
+  // Client-only mounted flag inside the content. We use it only to gate the
+  // data-loading useEffects (so fetches don't start on the absolute first render
+  // of the heavy tree). The UI itself is already protected by the shell.
   const [isMounted, setIsMounted] = useState(false);
 
   // Local state for demo (replace with real Supabase calls once connected)
@@ -351,20 +373,10 @@ export default function AdminDashboard() {
     }
   };
 
-  // Redirect non-admins
-  useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
-      router.push('/login');
-      toast.error("Admin access only. Please sign in with an administrator account.");
-    }
-  }, [user, isAdmin, loading, router]);
-
-  // Mark the component as mounted after the first client effect tick.
-  // The data-loading useEffects below are guarded with && isMounted so that Supabase
-  // fetches (which do setState on this component) only start after mount.
-  // This reduces races on hard refresh (where the AuthProvider is still doing its
-  // startTransition sets for session/profile/loading) and on client navigation into /admin.
-  // The main !loading && isAdmin guard (above) controls when the heavy UI tree renders.
+  // Mark this content component as mounted after the first client effect tick.
+  // The data-loading useEffects are guarded with && isMounted so fetches (which
+  // perform setState) only start after the heavy tree has mounted. The shell
+  // already ensures we only mount this content when auth is settled.
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -386,57 +398,51 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (!loading && isAdmin && isMounted) {
+    if (isMounted) {
       loadBuildingProgress();
       fetchBuildingPhotos();
       fetchMembers();
       fetchRealSermons();
     }
-  }, [loading, isAdmin, isMounted]);
+  }, [isMounted]);
 
   // Fetch building photos when the building tab is active (helps when returning to the page)
   useEffect(() => {
-    if (activeTab === 'building' && !loading && isAdmin && isMounted) {
+    if (activeTab === 'building' && isMounted) {
       fetchBuildingPhotos();
       loadBuildingProgress();
     }
-  }, [activeTab, loading, isAdmin, isMounted]);
+  }, [activeTab, isMounted]);
 
   // Fetch events data when the events tab is active (so data loads on tab switch and on refresh if tab is restored)
   useEffect(() => {
-    if (activeTab === 'events' && !loading && isAdmin && isMounted) {
+    if (activeTab === 'events' && isMounted) {
       fetchEvents();
     }
-  }, [activeTab, loading, isAdmin, isMounted]);
+  }, [activeTab, isMounted]);
 
   // Auto-load data for other tabs on activation or restore after auth
   useEffect(() => {
-    if (activeTab === 'members' && !loading && isAdmin && isMounted) {
+    if (activeTab === 'members' && isMounted) {
       fetchMembers();
     }
-  }, [activeTab, loading, isAdmin, isMounted]);
+  }, [activeTab, isMounted]);
 
   useEffect(() => {
-    if (activeTab === 'sermons' && !loading && isAdmin && isMounted) {
+    if (activeTab === 'sermons' && isMounted) {
       loadSermonSettings();
       fetchRealSermons();
     }
-  }, [activeTab, loading, isAdmin, isMounted]);
+  }, [activeTab, isMounted]);
 
   useEffect(() => {
-    if (activeTab === 'youth' && !loading && isAdmin && isMounted) {
+    if (activeTab === 'youth' && isMounted) {
       fetchYouthPhotos();
       fetchYouthAlbums();
       loadSermonSettings();
       fetchYouthEvents();
     }
-  }, [activeTab, loading, isAdmin, isMounted]);
-
-
-
-  if (loading || !isAdmin) {
-    return <div className="min-h-[60vh] flex items-center justify-center">Checking permissions…</div>;
-  }
+  }, [activeTab, isMounted]);
 
   const tabs: { id: AdminTab; label: string; icon: any }[] = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
