@@ -29,6 +29,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Refs to avoid unnecessary state updates / re-renders of consumers when the listener
+  // or init re-fires with essentially the same data (common with Supabase on mount/nav).
+  // Combined with startTransition + value useMemo, this further reduces the chance of
+  // #310 during admin page entry or refresh.
+  const userRef = React.useRef<User | null>(null);
+  const profileRef = React.useRef<Profile | null>(null);
+
   const isAdmin = profile?.role === 'admin';
   const isApprovedMember = profile?.role === 'approved' || profile?.role === 'admin';
 
@@ -56,7 +63,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     try {
       const prof = await fetchProfile(user.id);
-      if (prof) startTransition(() => setProfile(prof));
+      if (prof) {
+        const profChanged = prof.id !== profileRef.current?.id;
+        if (profChanged) profileRef.current = prof;
+        startTransition(() => {
+          if (profChanged) setProfile(prof);
+        });
+      }
     } catch (err) {
       console.error('refreshProfile error (non-blocking):', err);
       // Do not throw; keep UI responsive
@@ -75,18 +88,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (!isMounted) return;
 
-        startTransition(() => {
-          setSession(session);
-          setUser(session?.user ?? null);
-        });
+        const nextUser = session?.user ?? null;
+        // Only set if actually a different user (by id) to reduce provider re-renders
+        if (nextUser?.id !== userRef.current?.id) {
+          userRef.current = nextUser;
+          startTransition(() => {
+            setSession(session);
+            setUser(nextUser);
+          });
+        } else {
+          // still ensure session is current even if user same
+          startTransition(() => setSession(session));
+        }
 
         if (session?.user) {
           const prof = await fetchProfile(session.user.id);
           if (isMounted) {
-            startTransition(() => {
-              setProfile(prof);
-              setLoading(false);
-            });
+            const nextProf = prof;
+            if (nextProf?.id !== profileRef.current?.id || !profileRef.current) {
+              profileRef.current = nextProf;
+              startTransition(() => {
+                setProfile(nextProf);
+                setLoading(false);
+              });
+            } else {
+              startTransition(() => setLoading(false));
+            }
           }
         } else {
           if (isMounted) startTransition(() => setLoading(false));
@@ -109,17 +136,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event: AuthChangeEvent, session: Session | null) => {
         if (!isMounted) return;
 
-        startTransition(() => {
-          setSession(session);
-          setUser(session?.user ?? null);
-        });
+        const nextUser = session?.user ?? null;
+        if (nextUser?.id !== userRef.current?.id) {
+          userRef.current = nextUser;
+          startTransition(() => {
+            setSession(session);
+            setUser(nextUser);
+          });
+        } else {
+          startTransition(() => setSession(session));
+        }
 
         if (session?.user) {
           try {
             const prof = await fetchProfile(session.user.id);
             if (isMounted) {
+              const nextProf = prof;
+              const profChanged = nextProf?.id !== profileRef.current?.id || !profileRef.current;
+              if (profChanged) {
+                profileRef.current = nextProf;
+              }
               startTransition(() => {
-                setProfile(prof);
+                if (profChanged) {
+                  setProfile(nextProf);
+                }
 
                 // Show friendly message on login (non-blocking)
                 if (event === 'SIGNED_IN') {
@@ -135,10 +175,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           } catch (err) {
             console.error('Auth state profile fetch error (non-blocking):', err);
-            if (isMounted) startTransition(() => setProfile(null));
+            if (isMounted) {
+              profileRef.current = null;
+              startTransition(() => setProfile(null));
+            }
           }
         } else {
-          if (isMounted) startTransition(() => setProfile(null));
+          if (isMounted) {
+            profileRef.current = null;
+            startTransition(() => setProfile(null));
+          }
         }
         if (isMounted) startTransition(() => setLoading(false));
       }
@@ -207,6 +253,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Let the middleware handle cookie/session clearing on next request.
     // Aggressive localStorage clearing can cause auth state to desync with the new SSR setup.
+    userRef.current = null;
+    profileRef.current = null;
     startTransition(() => {
       setUser(null);
       setSession(null);
