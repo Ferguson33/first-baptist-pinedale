@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useMemo, startTransition } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback, startTransition } from 'react';
 import { User, Session, type AuthChangeEvent } from '@supabase/supabase-js';
 import { createClient } from './supabase/client';
 import type { Profile } from './supabase';
@@ -11,11 +11,12 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  signingOut: boolean;
   isAdmin: boolean;
   isApprovedMember: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error?: string }>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<{ error?: string }>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
 
   // Refs to avoid unnecessary state updates / re-renders of consumers when the listener
   // or init re-fires with essentially the same data (common with Supabase on mount/nav).
@@ -35,6 +37,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // #310 during admin page entry or refresh.
   const userRef = React.useRef<User | null>(null);
   const profileRef = React.useRef<Profile | null>(null);
+
+  const clearAuthState = useCallback((immediate = false) => {
+    userRef.current = null;
+    profileRef.current = null;
+    const apply = () => {
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setLoading(false);
+    };
+    // Logout must update the UI right away; startTransition can defer it past navigation.
+    if (immediate) {
+      apply();
+    } else {
+      startTransition(apply);
+    }
+  }, []);
 
   const isAdmin = profile?.role === 'admin';
   const isApprovedMember = profile?.role === 'approved' || profile?.role === 'admin';
@@ -136,6 +155,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event: AuthChangeEvent, session: Session | null) => {
         if (!isMounted) return;
 
+        if (event === 'SIGNED_OUT') {
+          clearAuthState(true);
+          return;
+        }
+
         const nextUser = session?.user ?? null;
         if (nextUser?.id !== userRef.current?.id) {
           userRef.current = nextUser;
@@ -194,7 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [clearAuthState, supabase.auth]);
 
   async function signUp(email: string, password: string, fullName: string) {
     const { data, error } = await supabase.auth.signUp({
@@ -248,20 +272,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return {};
   }
 
-  async function signOut() {
-    await supabase.auth.signOut();
+  const signOut = useCallback(async (): Promise<{ error?: string }> => {
+    if (signingOut) return {};
 
-    // Let the middleware handle cookie/session clearing on next request.
-    // Aggressive localStorage clearing can cause auth state to desync with the new SSR setup.
-    userRef.current = null;
-    profileRef.current = null;
-    startTransition(() => {
-      setUser(null);
-      setSession(null);
-      setProfile(null);
-    });
-    toast.success("Signed out successfully");
-  }
+    setSigningOut(true);
+
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      if (error) {
+        toast.error(`Sign out failed: ${error.message}`);
+        return { error: error.message };
+      }
+
+      clearAuthState(true);
+      toast.success('Signed out successfully');
+      return {};
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Sign out failed';
+      toast.error(message);
+      return { error: message };
+    } finally {
+      setSigningOut(false);
+    }
+  }, [clearAuthState, signingOut, supabase.auth]);
 
   // Memoize context value so consumers only re-render when actual auth state changes.
   // Combined with startTransition on all internal sets, this eliminates #310 during
@@ -271,13 +304,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     profile,
     loading,
+    signingOut,
     isAdmin,
     isApprovedMember,
     signUp,
     signIn,
     signOut,
     refreshProfile,
-  }), [user, session, profile, loading, isAdmin, isApprovedMember]);
+  }), [user, session, profile, loading, signingOut, isAdmin, isApprovedMember, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

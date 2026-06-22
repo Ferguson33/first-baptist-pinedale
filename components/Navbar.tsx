@@ -2,15 +2,31 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { Menu, X, User, LogOut, Shield, Users, BookOpen } from 'lucide-react';
+import { Menu, X, User, LogOut, Shield, Users, BookOpen, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function Navbar() {
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, profile, isAdmin, isApprovedMember, signOut } = useAuth();
+  const { user, profile, isAdmin, isApprovedMember, signOut, signingOut } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const handleSignOut = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (signingOut) return;
+
+    const result = await signOut();
+    if (result.error) return;
+
+    setShowUserMenu(false);
+    setMobileOpen(false);
+    router.push('/');
+    router.refresh();
+  };
 
   const navLinks = [
     { href: '/what-we-believe', label: 'What We Believe' },
@@ -123,15 +139,17 @@ export function Navbar() {
                         )}
 
                         <button
-                          onClick={async () => {
-                            await signOut();
-                            setShowUserMenu(false);
-                            // Use router for clean navigation if possible, but window.location is fine for full reset
-                            window.location.href = '/';
-                          }}
-                          className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-red-50 text-red-700 border-t mt-1"
+                          type="button"
+                          onClick={handleSignOut}
+                          disabled={signingOut}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-red-50 text-red-700 border-t mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                          <LogOut className="w-4 h-4" /> Sign Out
+                          {signingOut ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <LogOut className="w-4 h-4" />
+                          )}
+                          {signingOut ? 'Signing out…' : 'Sign Out'}
                         </button>
                       </motion.div>
                     )}
@@ -202,6 +220,22 @@ export function Navbar() {
 
               {isAdmin && (
                 <Link href="/admin" className="py-3 px-2 text-[var(--color-gold-dark)] font-medium" onClick={() => setMobileOpen(false)}>Admin Dashboard</Link>
+              )}
+
+              {isLoggedIn && (
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="py-3 px-2 text-left text-red-700 hover:bg-red-50 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {signingOut ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <LogOut className="w-4 h-4" />
+                  )}
+                  {signingOut ? 'Signing out…' : 'Sign Out'}
+                </button>
               )}
 
               <div className="pt-3 mt-2 border-t">
