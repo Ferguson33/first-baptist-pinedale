@@ -123,7 +123,7 @@ export default function BuildingProject() {
       <div className="max-w-3xl">
         <div className="uppercase text-xs text-[var(--color-gold-dark)] tracking-[3px]">MULTIPLYING OUR MINISTRY</div>
         <h1 className="text-6xl font-semibold tracking-tighter mt-3 text-[var(--color-navy)]">The Building Project</h1>
-        <p className="text-xl mt-4 text-[var(--color-stone)]">We are expanding our sanctuary, adding much-needed classroom space, and improving accessibility so that every generation in Pinedale and the surrounding ranches can gather comfortably to worship and grow in God’s Word.</p>
+        <p className="text-xl mt-4 text-[var(--color-stone)]">We are expanding our sanctuary, adding much-needed classroom space, and improving accessibility so that every generation in Pinedale and the surrounding communities can gather comfortably to worship and grow in God’s Word.</p>
       </div>
 
       {/* Animated Progress Bars */}
