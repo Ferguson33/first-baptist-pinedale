@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
@@ -18,11 +18,33 @@ const playfair = Playfair_Display({
   weight: ["600", "700"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#1a365d",
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   title: "First Baptist Church | Pinedale, Wyoming",
   description: "A welcoming Bible-centered church family in Pinedale, Wyoming. Join us for worship, fellowship, and growing in faith together. Pastor Ted York and Pastor Heath Holmes.",
+  applicationName: "FBC Pinedale",
+  appleWebApp: {
+    capable: true,
+    title: "FBC Pinedale",
+    statusBarStyle: "default",
+  },
+  formatDetection: {
+    telephone: true,
+  },
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
   },
   openGraph: {
     title: "First Baptist Church Pinedale",

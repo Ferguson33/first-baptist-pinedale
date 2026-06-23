@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="First Baptist Church Pinedale">
+  <rect width="512" height="512" fill="#1a365d" rx="96"/>
+  <rect x="72" y="72" width="368" height="368" fill="none" stroke="#c5a46e" stroke-width="10" rx="56"/>
+  <rect x="232" y="132" width="48" height="220" fill="#d4b98a" rx="10"/>
+  <rect x="156" y="208" width="200" height="48" fill="#d4b98a" rx="10"/>
+  <text x="256" y="418" text-anchor="middle" fill="#c5a46e" font-family="Georgia, 'Times New Roman', serif" font-size="52" font-weight="700">FBC</text>
+</svg>
