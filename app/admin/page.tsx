@@ -160,6 +160,7 @@ function AdminDashboardContent() {
   // Real members from Supabase (for approval / access control)
   const [realMembers, setRealMembers] = useState<any[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [memberActionId, setMemberActionId] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<any>(null); // For viewing full profile in modal
 
   // Real sermons from Supabase (for Admin management)
@@ -205,7 +206,57 @@ function AdminDashboardContent() {
       toast.error("Failed to approve member");
     } else {
       toast.success("Member approved!");
-      fetchMembers(); // refresh list
+      fetchMembers();
+    }
+  }
+
+  async function removeMemberAccount(
+    userId: string,
+    memberName: string,
+    action: 'deny' | 'delete'
+  ) {
+    const verb = action === 'deny' ? 'deny membership for' : 'remove';
+    const confirmed = confirm(
+      `${action === 'deny' ? 'Deny' : 'Remove'} ${memberName}?\n\nThis deletes their login and profile. They will lose member access and must sign up again to rejoin. This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setMemberActionId(userId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Your admin session expired. Please sign in again.');
+        return;
+      }
+
+      const res = await fetch('/api/admin/members/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      const result = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        toast.error(result.error || `Failed to ${verb} member`);
+        return;
+      }
+
+      toast.success(
+        action === 'deny'
+          ? `${memberName} was denied and removed from the member list.`
+          : `${memberName} was removed from the church member accounts.`
+      );
+      setSelectedMember(null);
+      fetchMembers();
+    } catch (err) {
+      console.error('removeMemberAccount error:', err);
+      toast.error(`Failed to ${verb} member`);
+    } finally {
+      setMemberActionId(null);
     }
   }
 
@@ -1917,7 +1968,7 @@ function AdminDashboardContent() {
       {activeTab === 'members' && (
         <div>
           <div className="flex justify-between items-center mb-6">
-            <div className="font-semibold text-2xl">Members — Approve New Access</div>
+            <div className="font-semibold text-2xl">Members — Approve, Deny, or Remove</div>
             <button 
               onClick={fetchMembers} 
               disabled={loadingMembers}
@@ -1955,18 +2006,44 @@ function AdminDashboardContent() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end" onClick={e => e.stopPropagation()}>
                     {m.role === 'pending' ? (
-                      <button 
-                        onClick={() => approveRealMember(m.id)} 
-                        className="px-5 py-1.5 bg-[var(--color-gold)] text-white rounded-full text-xs font-semibold whitespace-nowrap"
-                      >
-                        APPROVE MEMBERSHIP
-                      </button>
-                    ) : (
-                      <span className="text-xs px-4 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
-                        {m.role === 'admin' ? 'Admin' : 'Approved'}
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => removeMemberAccount(m.id, m.full_name, 'deny')}
+                          disabled={memberActionId === m.id}
+                          className="px-4 py-1.5 border border-red-200 text-red-700 rounded-full text-xs font-semibold whitespace-nowrap hover:bg-red-50 disabled:opacity-60"
+                        >
+                          {memberActionId === m.id ? 'Working…' : 'DENY'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => approveRealMember(m.id)}
+                          disabled={memberActionId === m.id}
+                          className="px-5 py-1.5 bg-[var(--color-gold)] text-white rounded-full text-xs font-semibold whitespace-nowrap disabled:opacity-60"
+                        >
+                          APPROVE
+                        </button>
+                      </>
+                    ) : m.role === 'admin' ? (
+                      <span className="text-xs px-4 py-1 rounded-full bg-[var(--color-gold)]/15 text-[var(--color-gold-dark)] whitespace-nowrap">
+                        Admin
                       </span>
+                    ) : (
+                      <>
+                        <span className="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap">
+                          Approved
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeMemberAccount(m.id, m.full_name, 'delete')}
+                          disabled={memberActionId === m.id}
+                          className="px-4 py-1.5 border border-red-200 text-red-700 rounded-full text-xs font-semibold whitespace-nowrap hover:bg-red-50 disabled:opacity-60"
+                        >
+                          {memberActionId === m.id ? 'Working…' : 'REMOVE'}
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -1974,7 +2051,12 @@ function AdminDashboardContent() {
             })}
           </div>
 
-          <div className="mt-6 text-sm">When you approve someone they gain access to the Member Directory, Prayer Bulletin, and other private areas.</div>
+          <div className="mt-6 text-sm text-[var(--color-stone)] space-y-1">
+            <p><strong>Approve</strong> — gives access to the Directory, Prayer Bulletin, and other member areas.</p>
+            <p><strong>Deny</strong> — removes a pending signup entirely.</p>
+            <p><strong>Remove</strong> — deletes an approved member&apos;s login (they can sign up again later if needed).</p>
+            <p>Admin accounts cannot be removed from this screen.</p>
+          </div>
         </div>
       )}
 
@@ -1997,20 +2079,47 @@ function AdminDashboardContent() {
             </div>
             <div className="text-sm text-[var(--color-stone-light)] mb-6">{selectedMember.email}</div>
 
-            <div className="mt-8 flex justify-end gap-3">
+            <div className="mb-6 text-sm text-[var(--color-stone)] capitalize">
+              Status: <span className="font-medium">{selectedMember.role}</span>
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-3">
               {selectedMember.role === 'pending' && (
-                <button 
-                  onClick={() => {
-                    approveRealMember(selectedMember.id);
-                    setSelectedMember(null);
-                  }} 
-                  className="px-6 py-2 bg-[var(--color-gold)] text-white rounded-full text-sm font-semibold"
+                <>
+                  <button
+                    type="button"
+                    onClick={() => removeMemberAccount(selectedMember.id, selectedMember.full_name, 'deny')}
+                    disabled={memberActionId === selectedMember.id}
+                    className="px-6 py-2 border border-red-200 text-red-700 rounded-full text-sm font-semibold hover:bg-red-50 disabled:opacity-60"
+                  >
+                    {memberActionId === selectedMember.id ? 'Working…' : 'Deny Membership'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      approveRealMember(selectedMember.id);
+                      setSelectedMember(null);
+                    }}
+                    disabled={memberActionId === selectedMember.id}
+                    className="px-6 py-2 bg-[var(--color-gold)] text-white rounded-full text-sm font-semibold disabled:opacity-60"
+                  >
+                    Approve Membership
+                  </button>
+                </>
+              )}
+              {selectedMember.role === 'approved' && (
+                <button
+                  type="button"
+                  onClick={() => removeMemberAccount(selectedMember.id, selectedMember.full_name, 'delete')}
+                  disabled={memberActionId === selectedMember.id}
+                  className="px-6 py-2 border border-red-200 text-red-700 rounded-full text-sm font-semibold hover:bg-red-50 disabled:opacity-60"
                 >
-                  Approve Membership
+                  {memberActionId === selectedMember.id ? 'Working…' : 'Remove Member'}
                 </button>
               )}
-              <button 
-                onClick={() => setSelectedMember(null)} 
+              <button
+                type="button"
+                onClick={() => setSelectedMember(null)}
                 className="px-6 py-2 border rounded-full text-sm"
               >
                 Close
