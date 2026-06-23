@@ -54,7 +54,7 @@ export const missionaries: Missionary[] = [
     field: "Pinedale, Wy",
     country: "United States",
     org: "New",
-    // photo: "/images/Missionaries/hultquist.jpg"  // add when available
+    photo: "/images/Missionaries/hultquist.jpg",
   },
   {
     name: "Dan and Dee Kowach",
