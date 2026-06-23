@@ -179,7 +179,7 @@ export default function Home() {
           </p>
 
           <p className="mt-6 max-w-lg mx-auto text-xl md:text-2xl text-white/95 leading-snug drop-shadow-[0_2px_6px_rgba(0,0,0,0.75)]">
-            A warm, Bible-centered family of faith serving families in Pinedale and the surrounding communities of western Wyoming.
+            A warm, Bible-centered family of faith serving families in Pinedale and the surrounding communities of Sublette County.
           </p>
 
           <div className="mt-10 flex justify-center">
