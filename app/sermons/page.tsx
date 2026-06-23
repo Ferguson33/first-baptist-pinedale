@@ -221,9 +221,6 @@ export default function SermonsPage() {
           <div className="mb-4">
             <div className="uppercase text-xs tracking-[3px] text-[var(--color-gold-dark)]">SELECTED MESSAGES</div>
             <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Curated Sermons</h2>
-            <p className="text-sm text-[var(--color-stone-light)] mt-2">
-              Selected messages marked “Always embed” play here. Others follow automatic or YouTube-link settings.
-            </p>
           </div>
 
           {loading ? (
