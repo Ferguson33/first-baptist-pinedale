@@ -40,7 +40,7 @@ export const missionaries: Missionary[] = [
     field: "Dalton GA",
     country: "United States",
     org: "Rock of Ages Prison Ministry",
-    // photo: "/images/Missionaries/ellis.jpg"
+    photo: "/images/Missionaries/ellis.jpg",
   },
   {
     name: "Heath & Tessa Holmes",
