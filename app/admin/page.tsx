@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
+import { SERMON_EMBED_MODE_LABELS, normalizeEmbedMode, type SermonEmbedMode } from '@/lib/sermon-display';
 import { format } from 'date-fns';
 
 // Types for admin
@@ -175,6 +176,7 @@ function AdminDashboardContent() {
     video_url: "",
     description: "",
     is_public: false,
+    embed_mode: 'auto' as SermonEmbedMode,
   });
 
   async function fetchMembers() {
@@ -948,6 +950,7 @@ function AdminDashboardContent() {
         video_url: sermon.video_url || "",
         description: sermon.description || "",
         is_public: sermon.is_public || false,
+        embed_mode: normalizeEmbedMode(sermon.embed_mode),
       });
     } else {
       setEditingSermon(null);
@@ -958,6 +961,7 @@ function AdminDashboardContent() {
         video_url: "",
         description: "",
         is_public: false,
+        embed_mode: 'auto',
       });
     }
     setShowSermonForm(true);
@@ -984,6 +988,7 @@ function AdminDashboardContent() {
         thumbnail_url: "https://picsum.photos/id/1015/600/340", // TODO: could derive from YouTube or upload
         description: sermonForm.description || "",
         is_public: sermonForm.is_public,
+        embed_mode: sermonForm.embed_mode,
       };
 
       let error;
@@ -1345,7 +1350,7 @@ function AdminDashboardContent() {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <div className="font-semibold text-2xl">Archived Sermons</div>
-                <div className="text-sm text-[var(--color-stone-light)]">Manage the full list. Toggle "Show on public site (curated)" for sermons visible to everyone (no login required). The Sermons page embeds only the newest message; older ones open on YouTube. When live stream is active, archived sermons become links only.</div>
+                <div className="text-sm text-[var(--color-stone-light)]">Manage the full list. Choose Automatic, Always embed, or YouTube link for each sermon. Automatic embeds only the newest message; pin popular ones with Always embed. When live stream is active, automatic embeds pause but pinned embeds stay.</div>
               </div>
               <div className="flex gap-3">
                 <button 
@@ -1397,6 +1402,21 @@ function AdminDashboardContent() {
                       <input type="checkbox" checked={sermonForm.is_public} onChange={e => setSermonForm({...sermonForm, is_public: e.target.checked})} />
                       Show on public site (curated / selected sermon for non-members)
                     </label>
+                    <div>
+                      <label className="text-sm font-medium">Display on Sermons page</label>
+                      <select
+                        value={sermonForm.embed_mode}
+                        onChange={(e) => setSermonForm({ ...sermonForm, embed_mode: e.target.value as SermonEmbedMode })}
+                        className="w-full mt-1 border rounded-xl p-3 text-sm bg-white"
+                      >
+                        {(Object.entries(SERMON_EMBED_MODE_LABELS) as [SermonEmbedMode, string][]).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                      <p className="mt-1.5 text-[10px] text-[var(--color-stone-light)]">
+                        Use <strong>Always embed</strong> for a popular message you want to keep on the site. Use <strong>YouTube link only</strong> to keep older messages in the list without a player.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="flex gap-3 mt-6 justify-end">
@@ -1409,7 +1429,7 @@ function AdminDashboardContent() {
                       {savingSermon ? "Saving..." : "Save Sermon"}
                     </button>
                   </div>
-                  <p className="mt-3 text-[10px] text-[var(--color-stone-light)]">Only the newest sermon is embedded on the Sermons page; older ones become YouTube links automatically. Mark "is_public" for curated sermons visible without login.</p>
+                  <p className="mt-3 text-[10px] text-[var(--color-stone-light)]">Automatic = newest embeds. Always embed = stays on the site. YouTube link = opens on YouTube only.</p>
                 </div>
               </div>
             )}
@@ -1445,9 +1465,20 @@ function AdminDashboardContent() {
                         {s.preacher} • {new Date(s.date).toLocaleDateString()}
                       </div>
                       <div className="text-xs mt-2 text-[var(--color-gold-dark)] truncate font-mono">{s.video_url}</div>
-                      {s.is_public && (
-                        <span className="inline-block mt-2 text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded">Public / Curated</span>
-                      )}
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {s.is_public && (
+                          <span className="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded">Public / Curated</span>
+                        )}
+                        <span className={`text-[10px] px-2 py-0.5 rounded ${
+                          normalizeEmbedMode(s.embed_mode) === 'embed'
+                            ? 'bg-[var(--color-navy)] text-white'
+                            : normalizeEmbedMode(s.embed_mode) === 'link'
+                              ? 'bg-[var(--color-cream)] text-[var(--color-stone)]'
+                              : 'bg-[var(--color-gold)]/15 text-[var(--color-gold-dark)]'
+                        }`}>
+                          {SERMON_EMBED_MODE_LABELS[normalizeEmbedMode(s.embed_mode)]}
+                        </span>
+                      </div>
 
                       {isDeleting && (
                         <div className="mt-3 text-xs text-red-600">Deleting...</div>
@@ -1463,7 +1494,7 @@ function AdminDashboardContent() {
             )}
 
             <div className="mt-6 admin-help text-xs">
-              Use the form to add sermons with title, date, description and YouTube URL. Toggle "Show on public site" for curated sermons visible to everyone (no login). The newest sermon embeds on the Sermons page; older ones link to YouTube. When live stream is on, archive sermons are links only.
+              Use the form to add sermons with title, date, description and YouTube URL. Set display to Automatic, Always embed, or YouTube link. Toggle "Show on public site" for curated sermons visible without login.
             </div>
           </div>
         </div>

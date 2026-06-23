@@ -19,6 +19,8 @@ export type Profile = {
   created_at: string;
 };
 
+export type SermonEmbedMode = 'auto' | 'embed' | 'link';
+
 export type Sermon = {
   id: string;
   title: string;
@@ -28,6 +30,7 @@ export type Sermon = {
   thumbnail_url: string;
   description?: string;
   is_public?: boolean; // curated for public (non-members) view
+  embed_mode?: SermonEmbedMode; // auto | embed | link
   created_at: string;
 };
 
