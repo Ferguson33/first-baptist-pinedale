@@ -19,7 +19,7 @@ export const missionaries: Missionary[] = [
     field: "Namibia",
     country: "South Africa",
     org: "New",
-    // photo: "/images/Missionaries/boyle.jpg"
+    photo: "/images/Missionaries/boyle.jpg",
   },
   {
     name: "Terry and Wendy Broyles",
