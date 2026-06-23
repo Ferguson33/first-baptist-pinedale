@@ -56,7 +56,7 @@ Create the following public buckets:
 - `youth-photos`
 - `member-photos`
 
-For each bucket, set these policies (or make them public for the prototype):
+For each bucket, set these policies (or make them public for development):
 - `INSERT`: authenticated users (admins)
 - `SELECT`: public (for photos to show on site)
 

@@ -214,7 +214,7 @@ export default function BuildingProject() {
             ))
           ) : (
             <div className="col-span-full text-center py-12 text-[var(--color-stone-light)]">
-              Construction photos will appear here soon.
+              Photos will be added as the building project continues.
             </div>
           )}
         </div>

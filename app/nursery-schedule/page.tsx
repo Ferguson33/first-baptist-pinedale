@@ -6,13 +6,8 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 /**
- * Nursery Schedule Page
- *
- * This page shows the nursery schedule as a Google Doc embed (maintained by the nursery coordinator).
- *
- * It requires an approved member login (behind the member wall).
- *
- * The embed URL is configurable in the Admin Dashboard (Sermons tab).
+ * Nursery Schedule Page — Google Doc embed for approved members.
+ * Maintained by the nursery coordinator.
  */
 
 export default function NurserySchedule() {
@@ -117,16 +112,15 @@ export default function NurserySchedule() {
         </div>
       ) : (
         <div className="mb-6 rounded-2xl border border-[var(--color-gold)]/30 bg-[var(--color-cream)] p-6 text-center">
-          <div className="font-semibold text-[var(--color-navy)] mb-2">Nursery Schedule — Coming Soon</div>
+          <div className="font-semibold text-[var(--color-navy)] mb-2">Nursery Schedule Temporarily Unavailable</div>
           <p className="text-sm text-[var(--color-stone)]">
-            The Nursery Schedule embed is not yet configured. An admin can set it in the Sermons tab of the dashboard.
+            The schedule is not displaying right now. Please contact the church office at (307) 367-4567 for the current nursery rotation.
           </p>
         </div>
       )}
 
       <div className="text-xs text-center mt-8 text-[var(--color-stone-light)]">
-        Updates to the schedule are made in the Google Doc by the nursery coordinator. 
-        The embed URL can be updated in the Admin Dashboard (Sermons tab).
+        The nursery schedule is maintained by the nursery coordinator in Google Docs.
       </div>
     </div>
   );

@@ -47,7 +47,7 @@ export default function MissionsPage() {
                   <div className="w-20 h-20 rounded-full bg-[var(--color-navy)] text-white flex items-center justify-center text-2xl font-semibold tracking-tight">
                     {getInitials(missionary.name)}
                   </div>
-                  <div className="text-[10px] uppercase tracking-[1.5px] text-[var(--color-stone-light)] mt-3">Photo coming soon</div>
+
                 </div>
               )}
             </div>

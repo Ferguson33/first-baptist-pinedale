@@ -15,27 +15,10 @@ import { format } from 'date-fns';
 // Types for admin
 type AdminTab = 'overview' | 'sermons' | 'building' | 'youth' | 'members' | 'events' | 'guide';
 
-interface LocalSermon {
-  id: string;
-  title: string;
-  preacher: string;
-  date: string;
-  video_url: string;
-  thumbnail_url: string;
-  description: string;
-}
-
 interface LocalBuildingPhoto {
   id: string;
   url: string;
   caption: string;
-}
-
-interface LocalMember {
-  id: string;
-  name: string;
-  email?: string;
-  approved: boolean;
 }
 
 interface LocalEvent {
@@ -87,10 +70,6 @@ function AdminDashboardContent() {
   // of the heavy tree). The UI itself is already protected by the shell.
   const [isMounted, setIsMounted] = useState(false);
 
-  // Local state for demo (replace with real Supabase calls once connected)
-  const [sermons, setSermons] = useState<LocalSermon[]>([
-    { id: '1', title: "The Faith That Moves Mountains", preacher: "Ted York", date: "2025-02-23", video_url: "https://youtube.com/watch?v=dQw4w9wg", thumbnail_url: "https://picsum.photos/id/1016/600/340", description: "Mark 11:22-24" }
-  ]);
   const [buildingPhotos, setBuildingPhotos] = useState<any[]>([]);
   const [youthPhotos, setYouthPhotos] = useState<any[]>([]);
   const [youthAlbums, setYouthAlbums] = useState<any[]>([]);
@@ -120,9 +99,6 @@ function AdminDashboardContent() {
   const [eventForm, setEventForm] = useState({ title: "", date: "", time: "", description: "", location: "" });
   const [savingEvent, setSavingEvent] = useState(false);
 
-  const [directory, setDirectory] = useState<LocalMember[]>([
-    { id: 'm1', name: "Robert Thompson", email: "robert@example.com", approved: true }
-  ]);
   const [events, setEvents] = useState<any[]>([]);
 
   const [progress, setProgress] = useState({ 
@@ -383,26 +359,14 @@ function AdminDashboardContent() {
     }
   };
 
-  const approveMember = (id: string) => {
-    setDirectory(prev => prev.map(m => m.id === id ? { ...m, approved: true } : m));
-    toast.success("Member approved. They now have access to the directory and Prayer Bulletin.");
-  };
-
-  const addSermon = () => {
-    const title = prompt("Sermon title?");
-    if (!title) return;
-    const newSermon: LocalSermon = {
-      id: Date.now().toString(),
-      title,
-      preacher: "Ted York",
-      date: new Date().toISOString().split('T')[0],
-      video_url: "https://www.youtube.com/embed/dQw4w9wg",
-      thumbnail_url: "https://picsum.photos/id/1015/600/340",
-      description: "New sermon added via admin"
-    };
-    setSermons(prev => [newSermon, ...prev]);
-    toast.success("Sermon added! In production you would also upload a custom thumbnail via drag & drop.");
-  };
+  async function refreshPublicPages() {
+    const res = await fetch('/api/revalidate?all=1', { method: 'POST' });
+    if (res.ok) {
+      toast.success('Site pages refreshed.');
+    } else {
+      toast.error("Refresh didn't complete. Please try again.");
+    }
+  }
 
   const updateProgress = async () => {
     const phys = prompt("New physical progress % (0-100)?", progress.physical_percent.toString());
@@ -690,7 +654,7 @@ function AdminDashboardContent() {
       }
     } catch (err: any) {
       console.error('Unexpected error saving youth event:', err);
-      toast.error("Failed to save youth event. Check console for details.");
+      toast.error("Failed to save youth event. Please try again.");
     } finally {
       setSavingYouthEvent(false);
     }
@@ -966,7 +930,7 @@ function AdminDashboardContent() {
 
     if (error) {
       console.error('Failed to save sermon settings:', error);
-      toast.error("Failed to save sermon settings. Did you run the sermon-settings-update.sql file?");
+      toast.error("Couldn't save settings. Please try again, or contact the site administrator if this continues.");
     } else {
       toast.success("Homepage content updated!");
       // Bust caches for homepage and related public pages (remote management)
@@ -1126,7 +1090,7 @@ function AdminDashboardContent() {
       console.error("Failed to save progress note:", error);
       toast.error("Failed to save note: " + (error.message || "Permission denied"));
     } else {
-      toast.success("Note saved! It will appear on the public Building Project page.");
+      toast.success("Progress note saved.");
       // Also update local progress state
       setProgress(prev => ({ ...prev, physical_note: progressNote || null }));
       // Remote cache bust so public sees it immediately
@@ -1164,7 +1128,7 @@ function AdminDashboardContent() {
         <div>
           <div className="uppercase text-xs tracking-[3px] text-[var(--color-gold-dark)]">CHURCH ADMINISTRATION</div>
           <h1 className="text-5xl font-semibold tracking-tighter text-[var(--color-navy)]">Admin Dashboard</h1>
-          <p className="text-[var(--color-stone-light)] mt-1">Welcome back, {profile?.full_name?.split(' ')[0] || 'Pastor'}. Everything here is simple — no coding required.</p>
+          <p className="text-[var(--color-stone-light)] mt-1">Welcome back, {profile?.full_name?.split(' ')[0] || 'Pastor'}.</p>
         </div>
         <a href="/admin/quick-guide" target="_blank" className="text-sm px-4 py-2 border rounded-full hover:bg-white">Open Printable Quick Guide →</a>
       </div>
@@ -1198,66 +1162,31 @@ function AdminDashboardContent() {
               <div className="flex justify-between"><span>Sermons Published</span><span className="font-semibold">{realSermons.length}</span></div>
               <div className="flex justify-between"><span>Building Progress</span><span className="font-semibold">{progress.physical_percent}%</span></div>
             </div>
-            <div className="text-xs mt-6 text-[var(--color-stone-light)]">All changes you make here update the website instantly for your members and visitors.</div>
+            <div className="text-xs mt-6 text-[var(--color-stone-light)]">Saved changes usually appear right away for members and visitors.</div>
           </div>
 
           <div className="admin-section bg-white p-8 rounded-3xl">
             <div className="font-semibold mb-4 text-lg">Getting Started</div>
             <ol className="space-y-3 text-sm text-[var(--color-stone)] list-decimal list-inside">
               <li>Upload new construction photos in the Building tab</li>
-              <li>Add this week’s sermon (title + YouTube link + thumbnail)</li>
+              <li>Add this week’s sermon (title + YouTube link)</li>
               <li>Approve new members in the Members tab</li>
               <li>Update building progress percentages anytime</li>
             </ol>
-            <div className="mt-6 text-[10px] font-mono bg-[var(--color-cream)] p-3 rounded">TIP: Use the printable Pastor Quick Guide tab for a one-page cheat sheet you can keep by your desk.</div>
+            <p className="mt-6 text-xs text-[var(--color-stone-light)]">Open the Pastor Quick Guide tab for a printable one-page reference.</p>
           </div>
 
-          {/* Remote Site Management / Cache Busting - no local terminal needed */}
-          <div className="admin-section bg-white p-8 rounded-3xl">
-            <div className="font-semibold mb-4 flex items-center gap-2 text-lg">
-              <span>Remote Site Management</span>
-              <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">No terminal required</span>
-            </div>
+          <div className="admin-section bg-white p-8 rounded-3xl md:col-span-2">
+            <div className="font-semibold mb-2 text-lg">Refresh Site Pages</div>
             <p className="text-sm text-[var(--color-stone)] mb-4">
-              After making content changes, use these to instantly push updates to visitors (busts Next.js cache + Supabase freshness).
+              If a page still shows old content after saving, refresh all public pages here. Most saves update automatically.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <button 
-                onClick={async () => {
-                  const res = await fetch('/api/revalidate?all=1', { method: 'POST' });
-                  if (res.ok) toast.success("All key pages revalidated! Visitors will see latest content.");
-                  else toast.error("Revalidate failed — check console.");
-                }}
-                className="px-4 py-2 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium"
-              >
-                Revalidate Entire Site
-              </button>
-              <button 
-                onClick={() => fetch('/api/revalidate?path=/', { method: 'POST' }).then(() => toast.success("Homepage updated for visitors"))}
-                className="px-4 py-2 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
-              >
-                Revalidate Homepage
-              </button>
-              <button 
-                onClick={() => fetch('/api/revalidate?path=/events', { method: 'POST' }).then(() => toast.success("Events page updated"))}
-                className="px-4 py-2 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
-              >
-                Revalidate Events
-              </button>
-              <button 
-                onClick={() => fetch('/api/revalidate?path=/sermons', { method: 'POST' }).then(() => toast.success("Sermons page updated"))}
-                className="px-4 py-2 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
-              >
-                Revalidate Sermons
-              </button>
-              <button 
-                onClick={() => fetch('/api/revalidate?paths=/building-project,/youth-ministry', { method: 'POST' }).then(() => toast.success("Project & Youth pages updated"))}
-                className="px-4 py-2 border border-[var(--color-gold)] text-[var(--color-navy)] rounded-2xl text-sm"
-              >
-                Revalidate Building + Youth
-              </button>
-            </div>
-            <div className="mt-3 text-[10px] text-[var(--color-stone-light)]">These call the same revalidate API used automatically by some saves. Safe to use anytime.</div>
+            <button
+              onClick={refreshPublicPages}
+              className="px-6 py-2.5 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium"
+            >
+              Refresh All Pages
+            </button>
           </div>
         </div>
       )}
@@ -1285,7 +1214,7 @@ function AdminDashboardContent() {
                   className="w-full border border-[var(--color-gold)]/30 rounded-2xl p-4 text-sm"
                   placeholder="Example: Dear church family, as we continue through the Gospel of Mark..."
                 />
-                <p className="text-xs text-[var(--color-stone-light)] mt-1">This will be shown prominently on the homepage.</p>
+                <p className="text-xs text-[var(--color-stone-light)] mt-1">Shown on the homepage.</p>
               </div>
 
               {/* This Week’s Service */}
@@ -1388,10 +1317,10 @@ function AdminDashboardContent() {
                 value={sermonSettings.live_video_id}
                 onChange={(e) => setSermonSettings({ ...sermonSettings, live_video_id: e.target.value })}
                 className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm font-mono"
-                placeholder="e.g. dQw4w9wg or https://www.youtube.com/watch?v=dQw4w9wg"
+                placeholder="e.g. abc123XYZ or https://www.youtube.com/watch?v=abc123XYZ"
               />
               <p className="text-xs text-[var(--color-stone-light)] mt-2">
-                <strong>Admin toggle:</strong> Check "Live stream active" + paste ID/URL to show "Join Live Now" + embed for approved members only. Uncheck or clear to hide. Auto-detect not used (manual for reliability).
+                Check &quot;Live stream active&quot; and paste the video ID or URL to show the live player for approved members. Uncheck or clear the field to hide it.
               </p>
             </div>
           </div>
@@ -1557,7 +1486,7 @@ function AdminDashboardContent() {
           <div className="flex justify-between mb-6">
             <div>
               <div className="font-semibold text-2xl">Building Project Management</div>
-              <div className="text-sm text-[var(--color-stone-light)]">Update progress &amp; add construction photos that appear on the public page.</div>
+              <div className="text-sm text-[var(--color-stone-light)]">Update progress and add construction photos for the Building Project page.</div>
             </div>
             <div className="flex gap-3">
               <button 
@@ -1593,7 +1522,7 @@ function AdminDashboardContent() {
 
             {/* Editable Physical Progress Note */}
             <div className="mt-6">
-              <div className="font-medium mb-2">Physical Progress Note (shown on public page)</div>
+              <div className="font-medium mb-2">Physical Progress Note</div>
               <textarea
                 value={progressNote}
                 onChange={(e) => setProgressNote(e.target.value)}
@@ -1644,7 +1573,7 @@ function AdminDashboardContent() {
               </div>
             ))}
           </div>
-          <div className="admin-help mt-4">Photos you add here will appear on the public Building Project page with beautiful masonry layout.</div>
+          <div className="admin-help mt-4">Photos appear on the Building Project page in a masonry layout.</div>
         </div>
       )}
 
@@ -1656,7 +1585,7 @@ function AdminDashboardContent() {
             <div className="mb-4">
               <div className="font-semibold text-2xl">Note from the Youth Pastor</div>
               <div className="text-sm text-[var(--color-stone-light)]">
-                This will appear prominently on the Youth Ministry page.
+                A short note for teens and families on the Youth Ministry page.
               </div>
             </div>
 
@@ -1668,7 +1597,7 @@ function AdminDashboardContent() {
                 className="w-full border border-[var(--color-gold)]/30 rounded-2xl p-4 text-sm"
                 placeholder="Example: Hey teens! This week we're talking about..."
               />
-              <p className="text-xs text-[var(--color-stone-light)] mt-2">This note will be shown on the /youth-ministry page.</p>
+              <p className="text-xs text-[var(--color-stone-light)] mt-2">Leave blank to hide this section.</p>
             </div>
           </div>
 
@@ -1677,8 +1606,7 @@ function AdminDashboardContent() {
             <div className="mb-4">
               <div className="font-semibold text-2xl">Youth Google Doc Embed</div>
               <div className="text-sm text-[var(--color-stone-light)]">
-                Optional: Embed a Google Doc on the Youth Ministry page (similar to the Prayer Bulletin and Events schedule).<br />
-                <strong>How to get the link:</strong> In the Google Doc → File → Share → Publish to web. Copy the URL from the &lt;iframe src=...&gt; (or paste the whole tag — we extract it).
+                Optional Google Doc embed for the Youth Ministry page. In the doc: File → Share → Publish to web, then paste the embed URL (or full iframe tag).
               </div>
             </div>
 
@@ -1712,7 +1640,7 @@ function AdminDashboardContent() {
             <div className="mb-4">
               <div className="font-semibold text-2xl">Youth Sunday School (Homepage)</div>
               <div className="text-sm text-[var(--color-stone-light)]">
-                This will appear on the main page in the Youth section.
+                Lesson details shown in the Youth section on the homepage.
               </div>
             </div>
 
@@ -1906,7 +1834,7 @@ function AdminDashboardContent() {
               )}
             </div>
 
-            <div className="admin-help mt-4">Photos will appear grouped by album on the public Youth page.</div>
+            <div className="admin-help mt-4">Photos appear grouped by album on the Youth Ministry page.</div>
           </div> {/* close photos section */}
 
           {/* Upcoming Youth Events (editable by any admin) */}
@@ -1914,7 +1842,7 @@ function AdminDashboardContent() {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <div className="font-semibold text-2xl">Upcoming Youth Events</div>
-                <div className="text-sm text-[var(--color-stone-light)]">These appear on the public /youth-ministry page. Add image by uploading (uses youth-photos storage).</div>
+                <div className="text-sm text-[var(--color-stone-light)]">Upcoming events on the Youth Ministry page. Add an optional image when creating each event.</div>
               </div>
               <div className="flex gap-3">
                 <button 
@@ -1938,7 +1866,7 @@ function AdminDashboardContent() {
 
             {youthEvents.length === 0 ? (
               <div className="text-center py-8 text-[var(--color-stone-light)] border border-dashed rounded-3xl">
-                No upcoming youth events yet. Add some for the public /youth page.
+                No upcoming youth events yet. Click &quot;Add Event&quot; above.
               </div>
             ) : (
               <div className="grid md:grid-cols-2 gap-4">
@@ -2228,10 +2156,7 @@ function AdminDashboardContent() {
             <div className="mb-4">
               <div className="font-semibold text-2xl">Weekly Schedule Google Doc</div>
               <div className="text-sm text-[var(--color-stone-light)]">
-                This embed appears on the public Events page below the spotlight events.<br />
-                <strong>How to get the link:</strong> In the Google Doc → File → Share → Publish to web → click Publish. 
-                Copy the URL from inside the &lt;iframe src="..."&gt; example.<br />
-                Paste the bare URL or the full &lt;iframe&gt; tag — we extract the link automatically.
+                Weekly schedule embed on the Events page. In the Google Doc: File → Share → Publish to web, then paste the embed URL (or full iframe tag).
               </div>
             </div>
 
@@ -2248,7 +2173,7 @@ function AdminDashboardContent() {
                 placeholder="https://docs.google.com/document/d/e/XXXXXXXXXXXXXXXX/pub?embedded=true"
               />
               <p className="text-xs text-[var(--color-stone-light)] mt-2">
-                After saving, the change will appear on the public /events page (may take a minute for Google to propagate the published version).
+                Google may take a minute to publish doc changes. Use Refresh Site Pages on the Overview tab if the Events page looks out of date.
               </p>
               <button
                 onClick={async () => {
@@ -2274,10 +2199,11 @@ function AdminDashboardContent() {
           <a href="/admin/quick-guide" target="_blank" className="inline-block bg-[var(--color-gold)] text-white px-8 py-4 rounded-2xl font-semibold">Open Printable Pastor Quick Guide →</a>
           
           <div className="mt-10 text-xs space-y-1 text-[var(--color-stone-light)]">
-            <div>• Update Building Progress anytime from the Building tab</div>
-            <div>• Maintain the Prayer Bulletin Google Doc for the Prayer Bulletin page</div>
-            <div>• Add YouTube links for sermons (embed format preferred)</div>
-            <div>• Drag photos directly onto the big drop zones — no file naming required</div>
+            <div>• Update building progress and photos from the Building tab</div>
+            <div>• Maintain the Prayer Bulletin and Nursery Schedule Google Docs</div>
+            <div>• Add sermons with YouTube links; choose Automatic, Always embed, or YouTube link</div>
+            <div>• Approve, deny, or remove members from the Members tab</div>
+            <div>• Drag photos onto the drop zones — no special file names needed</div>
           </div>
         </div>
       )}

@@ -233,7 +233,7 @@ export default function SermonsPage() {
             renderSermonList(publicSermons)
           ) : (
             <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-10 text-center text-[var(--color-stone-light)]">
-              Selected sermons will appear here soon.
+              Sermon selections are being added — please check back soon.
             </div>
           )}
         </div>
@@ -268,8 +268,8 @@ export default function SermonsPage() {
               <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Full Sermon Archive</h2>
               <p className="text-sm text-[var(--color-stone-light)] mt-2">
                 {memberLiveActive
-                  ? 'Watch the live service above. Pinned embeds stay on this page; other messages follow your admin embed/link settings.'
-                  : 'The newest automatic sermon embeds below. Pin popular messages to “Always embed” in Admin → Sermons.'}
+                  ? 'Watch the live service above. Selected sermons stay embedded below during the live stream.'
+                  : 'Recent messages play here. Older sermons open on YouTube.'}
               </p>
             </div>
 

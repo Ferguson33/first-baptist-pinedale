@@ -495,7 +495,7 @@ export default function YouthMinistry() {
           </div>
         ) : (
           <div className="text-center py-12 text-[var(--color-stone-light)] border border-[var(--color-gold)]/20 rounded-3xl">
-            Photo albums will appear here once added by the youth leaders.
+            Youth photo albums will be posted here as they are added.
           </div>
         )}
       </div>

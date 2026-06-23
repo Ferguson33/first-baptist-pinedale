@@ -56,7 +56,7 @@ export class ErrorBoundary extends Component<Props, State> {
               Something went wrong
             </h2>
             <p className="text-[var(--color-stone)] mb-6">
-              We hit a temporary issue loading your account or membership status.
+              Something went wrong while loading this page. Please try again.
               This can happen after signing up or on refresh.
             </p>
             <button

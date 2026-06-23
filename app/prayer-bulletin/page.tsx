@@ -7,14 +7,8 @@ import { BookOpen, MessageCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 /**
- * Prayer Bulletin Page
- *
- * This page shows the church's Prayer Bulletin as a Google Doc embed.
- * It also links to the church's GroupMe prayer group.
- *
- * It requires an approved member login.
- *
- * The embed URL is now configurable in the Admin Dashboard (Sermons tab).
+ * Prayer Bulletin Page — Google Doc embed for approved members.
+ * Also links to the church GroupMe prayer group.
  */
 
 export default function PrayerBulletin() {
@@ -131,15 +125,15 @@ export default function PrayerBulletin() {
         </div>
       ) : (
         <div className="mb-6 rounded-2xl border border-[var(--color-gold)]/30 bg-[var(--color-cream)] p-6 text-center">
-          <div className="font-semibold text-[var(--color-navy)] mb-2">Prayer Bulletin — Coming Soon</div>
+          <div className="font-semibold text-[var(--color-navy)] mb-2">Prayer Bulletin Temporarily Unavailable</div>
           <p className="text-sm text-[var(--color-stone)]">
-            The Prayer Bulletin embed is not yet configured. An admin can set it in the Sermons tab of the dashboard.
+            The bulletin is not displaying right now. Please contact the church office at (307) 367-4567 if you need the current prayer list.
           </p>
         </div>
       )}
 
       <div className="text-xs text-center mt-8 text-[var(--color-stone-light)]">
-        Updates to the bulletin are made in the Google Doc by the church office. The embed URL can be updated in the Admin Dashboard.
+        The Prayer Bulletin is maintained by the church office in Google Docs.
       </div>
     </div>
   );
