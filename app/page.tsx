@@ -399,7 +399,7 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-6 text-center">
           <div className="text-xs uppercase tracking-[3px] text-[var(--color-gold-dark)]">OUR JOURNEY OF FAITH</div>
           <h3 className="mt-3 text-4xl font-semibold text-[var(--color-navy)] tracking-tight">Multiplying Our Ministry</h3>
-          <p className="mt-4 text-xl text-[var(--color-stone)] max-w-prose mx-auto">We are expanding our sanctuary and classrooms to better serve families in Pinedale and the surrounding ranches.</p>
+          <p className="mt-4 text-xl text-[var(--color-stone)] max-w-prose mx-auto">We are expanding our sanctuary and classrooms to better serve families in Pinedale and the surrounding communities.</p>
           
           <div className="mt-8 max-w-md mx-auto">
             <div className="flex justify-between text-sm mb-2 font-medium">

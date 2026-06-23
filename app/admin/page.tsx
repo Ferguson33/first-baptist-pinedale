@@ -1345,7 +1345,7 @@ function AdminDashboardContent() {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <div className="font-semibold text-2xl">Archived Sermons</div>
-                <div className="text-sm text-[var(--color-stone-light)]">Manage the full list. Toggle "Show on public site (curated)" for sermons visible to everyone (no login required). Full list + live stream shown to approved members only.</div>
+                <div className="text-sm text-[var(--color-stone-light)]">Manage the full list. Toggle "Show on public site (curated)" for sermons visible to everyone (no login required). The Sermons page embeds only the newest message; older ones open on YouTube. When live stream is active, archived sermons become links only.</div>
               </div>
               <div className="flex gap-3">
                 <button 
@@ -1409,7 +1409,7 @@ function AdminDashboardContent() {
                       {savingSermon ? "Saving..." : "Save Sermon"}
                     </button>
                   </div>
-                  <p className="mt-3 text-[10px] text-[var(--color-stone-light)]">Clean YouTube embeds (iframe) are used on the public Sermons page. Mark "is_public" for curated sermons visible without login.</p>
+                  <p className="mt-3 text-[10px] text-[var(--color-stone-light)]">Only the newest sermon is embedded on the Sermons page; older ones become YouTube links automatically. Mark "is_public" for curated sermons visible without login.</p>
                 </div>
               </div>
             )}
@@ -1463,7 +1463,7 @@ function AdminDashboardContent() {
             )}
 
             <div className="mt-6 admin-help text-xs">
-              Use the form to add sermons with title, date, description and YouTube URL. Toggle "Show on public site" for curated sermons visible to everyone (no login). Full archive + live only for approved/logged-in members.
+              Use the form to add sermons with title, date, description and YouTube URL. Toggle "Show on public site" for curated sermons visible to everyone (no login). The newest sermon embeds on the Sermons page; older ones link to YouTube. When live stream is on, archive sermons are links only.
             </div>
           </div>
         </div>
