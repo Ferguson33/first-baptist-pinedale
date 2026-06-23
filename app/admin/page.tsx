@@ -1318,7 +1318,7 @@ function AdminDashboardContent() {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <div className="font-semibold text-2xl">Archived Sermons</div>
-                <div className="text-sm text-[var(--color-stone-light)]">Manage the full list. Choose Automatic, Always embed, or YouTube link for each sermon. Automatic embeds only the newest message; pin popular ones with Always embed. When live stream is active, automatic embeds pause but pinned embeds stay.</div>
+                <div className="text-sm text-[var(--color-stone-light)]">Add title, date, and YouTube link. Newest sermon embeds automatically.</div>
               </div>
               <div className="flex gap-3">
                 <button 
@@ -1368,7 +1368,7 @@ function AdminDashboardContent() {
                     </div>
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input type="checkbox" checked={sermonForm.is_public} onChange={e => setSermonForm({...sermonForm, is_public: e.target.checked})} />
-                      Show on public site (curated / selected sermon for non-members)
+                      Show to visitors without login
                     </label>
                     <div>
                       <label className="text-sm font-medium">Display on Sermons page</label>
@@ -1381,9 +1381,6 @@ function AdminDashboardContent() {
                           <option key={value} value={value}>{label}</option>
                         ))}
                       </select>
-                      <p className="mt-1.5 text-[10px] text-[var(--color-stone-light)]">
-                        Use <strong>Always embed</strong> for a popular message you want to keep on the site. Use <strong>YouTube link only</strong> to keep older messages in the list without a player.
-                      </p>
                     </div>
                   </div>
 
@@ -1397,7 +1394,6 @@ function AdminDashboardContent() {
                       {savingSermon ? "Saving..." : "Save Sermon"}
                     </button>
                   </div>
-                  <p className="mt-3 text-[10px] text-[var(--color-stone-light)]">Automatic = newest embeds. Always embed = stays on the site. YouTube link = opens on YouTube only.</p>
                 </div>
               </div>
             )}
@@ -1461,9 +1457,6 @@ function AdminDashboardContent() {
               </div>
             )}
 
-            <div className="mt-6 admin-help text-xs">
-              Use the form to add sermons with title, date, description and YouTube URL. Set display to Automatic, Always embed, or YouTube link. Toggle "Show on public site" for curated sermons visible without login.
-            </div>
           </div>
         </div>
       )}
