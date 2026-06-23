@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { formatAlbumDate, formatLocalDate } from '@/lib/format-date';
 
 interface YouthAlbum {
   id: string;
@@ -56,30 +57,6 @@ export default function YouthMinistry() {
 
   // Overall page loading (for initial)
   const [initialLoading, setInitialLoading] = useState(true);
-
-  // Safe date formatters (avoid timezone day-shift)
-  function formatLocalDate(dateString: string | null | undefined) {
-    if (!dateString) return '';
-    const [year, month, day] = dateString.split('-').map(Number);
-    if (!year || !month || !day) return '';
-    const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-  }
-
-  function formatAlbumDate(dateString: string | null | undefined) {
-    if (!dateString) return '';
-    const [year, month, day] = dateString.split('-').map(Number);
-    if (!year || !month || !day) return '';
-    const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long' 
-    });
-  }
 
   // Robust fetchers with error + loading handling
   const fetchYouthContent = useCallback(async () => {

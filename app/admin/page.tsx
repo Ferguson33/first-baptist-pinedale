@@ -10,7 +10,7 @@ import {
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { SERMON_EMBED_MODE_LABELS, normalizeEmbedMode, type SermonEmbedMode } from '@/lib/sermon-display';
-import { format } from 'date-fns';
+import { formatAlbumDate, formatLocalDate, todayLocalDateString } from '@/lib/format-date';
 
 // Types for admin
 type AdminTab = 'overview' | 'sermons' | 'building' | 'youth' | 'members' | 'events' | 'guide';
@@ -149,7 +149,7 @@ function AdminDashboardContent() {
   const [sermonForm, setSermonForm] = useState({
     title: "",
     preacher: "Pastor Ted York",
-    date: new Date().toISOString().split('T')[0],
+    date: todayLocalDateString(),
     video_url: "",
     description: "",
     is_public: false,
@@ -517,18 +517,6 @@ function AdminDashboardContent() {
     }
   }
 
-  // Safe album date formatter (prevents "losing a day" due to timezone)
-  function formatAlbumDate(dateString: string | null | undefined) {
-    if (!dateString) return '';
-    const [year, month, day] = dateString.split('-').map(Number);
-    if (!year || !month || !day) return '';
-    const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long' 
-    });
-  }
-
   // Helper to make pasting Google Doc embeds user-friendly.
   // Users often copy the entire <iframe src="..."> tag from Google's "Publish to web" dialog.
   // This extracts just the URL so the input always ends up with a clean publish link.
@@ -680,7 +668,7 @@ function AdminDashboardContent() {
       setAlbumForm({ title: album.title || "", date: album.date || "" });
     } else {
       setEditingAlbum(null);
-      setAlbumForm({ title: "", date: new Date().toISOString().split('T')[0] });
+      setAlbumForm({ title: "", date: todayLocalDateString() });
     }
     setShowAlbumForm(true);
   }
@@ -795,7 +783,7 @@ function AdminDashboardContent() {
       setEditingEvent(null);
       setEventForm({
         title: "",
-        date: new Date().toISOString().split('T')[0],
+        date: todayLocalDateString(),
         time: "",
         description: "",
         location: "",
@@ -961,7 +949,7 @@ function AdminDashboardContent() {
       setSermonForm({
         title: sermon.title || "",
         preacher: sermon.preacher || "Pastor Ted York",
-        date: sermon.date || new Date().toISOString().split('T')[0],
+        date: sermon.date || todayLocalDateString(),
         video_url: sermon.video_url || "",
         description: sermon.description || "",
         is_public: sermon.is_public || false,
@@ -972,7 +960,7 @@ function AdminDashboardContent() {
       setSermonForm({
         title: "",
         preacher: "Pastor Ted York",
-        date: new Date().toISOString().split('T')[0],
+        date: todayLocalDateString(),
         video_url: "",
         description: "",
         is_public: false,
@@ -1442,7 +1430,7 @@ function AdminDashboardContent() {
 
                       <div className="font-semibold text-[var(--color-navy)] pr-16">{s.title}</div>
                       <div className="text-sm mt-1 text-[var(--color-stone)]">
-                        {s.preacher} • {new Date(s.date).toLocaleDateString()}
+                        {s.preacher} • {formatLocalDate(s.date)}
                       </div>
                       <div className="text-xs mt-2 text-[var(--color-gold-dark)] truncate font-mono">{s.video_url}</div>
                       <div className="flex flex-wrap gap-2 mt-2">
@@ -1876,7 +1864,7 @@ function AdminDashboardContent() {
                       <img src={ev.image_url} alt="" className="w-full h-32 object-cover rounded mb-3" />
                     )}
                     <div className="font-semibold text-[var(--color-navy)]">{ev.title}</div>
-                    {ev.date && <div className="text-sm text-[var(--color-gold-dark)] mt-1">{new Date(ev.date).toLocaleDateString()}</div>}
+                    {ev.date && <div className="text-sm text-[var(--color-gold-dark)] mt-1">{formatLocalDate(ev.date)}</div>}
                     {ev.description && <p className="text-sm mt-2 text-[var(--color-stone)] line-clamp-2">{ev.description}</p>}
                     {ev.link_url && <a href={ev.link_url} target="_blank" className="text-xs text-[var(--color-gold-dark)] mt-1 block">Link →</a>}
 
@@ -2127,9 +2115,7 @@ function AdminDashboardContent() {
                 {events
                   .filter((ev: any) => ev && ev.id)
                   .map((ev: any) => {
-                    const displayDate = ev.date
-                      ? new Date(ev.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-                      : 'No date';
+                    const displayDate = ev.date ? formatLocalDate(ev.date) : 'No date';
                     return (
                       <div key={ev.id} className="border bg-white p-6 rounded-2xl relative group">
                         <div className="font-semibold text-xl">{ev.title || 'Untitled Event'}</div>

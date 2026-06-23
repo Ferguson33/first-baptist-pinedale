@@ -7,9 +7,10 @@ import { useAuth } from '@/lib/auth-context';
 import { createClient } from '@/lib/supabase/client';
 import { shouldEmbedSermonOnSite } from '@/lib/sermon-display';
 import type { Sermon } from '@/lib/supabase';
+import { formatLocalDate } from '@/lib/format-date';
 
 function formatSermonDate(date: string) {
-  return new Date(date).toLocaleDateString('en-US', {
+  return formatLocalDate(date, {
     weekday: 'long',
     month: 'long',
     day: 'numeric',

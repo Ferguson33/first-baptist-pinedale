@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { ArrowRight, Clock, MapPin, Users, Heart } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { formatLocalDate } from '@/lib/format-date';
 
 // Note: Progress is now fetched via direct Supabase REST + cache:'no-store' for guaranteed fresh data.
 // The client is still used for other dynamic content (sermon teaser).
@@ -51,20 +52,6 @@ export default function Home() {
     youth_pastor_note: "",
     youth_google_doc_url: "",
   });
-
-  // Safely format YYYY-MM-DD strings from Supabase as local dates
-  // (avoids JavaScript treating them as UTC and shifting by a day)
-  function formatLocalDate(dateString: string | null | undefined) {
-    if (!dateString) return '';
-    const [year, month, day] = dateString.split('-').map(Number);
-    if (!year || !month || !day) return '';
-    const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-  }
 
   const fetchProgress = async () => {
     setProgressLoading(true);

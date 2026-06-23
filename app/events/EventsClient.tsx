@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { formatLocalDate } from '@/lib/format-date';
 
 interface SpotlightEvent {
   id: string;
@@ -80,11 +81,7 @@ export default function EventsClient({ spotlightEvents, scheduleEmbedUrl }: Even
                   <div>
                     <div className="text-2xl font-semibold tracking-tight">{event.title}</div>
                     <div className="mt-2 text-[var(--color-gold-light)] text-lg">
-                      {new Date(event.date).toLocaleDateString('en-US', { 
-                        weekday: 'long', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}
+                      {formatLocalDate(event.date)}
                       {event.time && ` • ${event.time}`}
                     </div>
                     {event.location && (
@@ -215,11 +212,7 @@ export default function EventsClient({ spotlightEvents, scheduleEmbedUrl }: Even
               <div className="mt-4 text-center text-white">
                 <div className="text-xl font-semibold">{spotlightEvents[currentIndex]?.title}</div>
                 <div className="text-[var(--color-gold-light)]">
-                  {new Date(spotlightEvents[currentIndex].date).toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
+                  {formatLocalDate(spotlightEvents[currentIndex].date)}
                   {spotlightEvents[currentIndex].time && ` • ${spotlightEvents[currentIndex].time}`}
                 </div>
               </div>
