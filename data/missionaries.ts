@@ -75,7 +75,7 @@ export const missionaries: Missionary[] = [
     field: "Papua New Guinea",
     country: "Papua New Guinea",
     org: "Baptist World Mission",
-    // photo: "/images/Missionaries/lohse.jpg"
+    photo: "/images/Missionaries/lohse.jpg",
   },
   {
     name: "Dean and Lorie Loftus",
