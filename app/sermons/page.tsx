@@ -94,22 +94,17 @@ export default function SermonsPage() {
   const fullArchive = sermons;
   const memberLiveActive = liveStreamActive && !!liveVideoId;
 
-  function renderEmbeddedSermon(sermon: Sermon, showPublicBadge = false) {
+  function renderEmbeddedSermon(sermon: Sermon) {
     const embedUrl = getYouTubeEmbed(sermon.video_url);
 
     return (
       <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden">
         <div className="p-6 md:p-8 border-b">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-            <div>
-              <h3 className="text-2xl font-semibold text-[var(--color-navy)]">{sermon.title}</h3>
-              <p className="text-sm text-[var(--color-stone-light)] mt-1">
-                {sermon.preacher} • {formatSermonDate(sermon.date)}
-              </p>
-            </div>
-            {showPublicBadge && sermon.is_public && (
-              <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded self-start">Also public</span>
-            )}
+          <div>
+            <h3 className="text-2xl font-semibold text-[var(--color-navy)]">{sermon.title}</h3>
+            <p className="text-sm text-[var(--color-stone-light)] mt-1">
+              {sermon.preacher} • {formatSermonDate(sermon.date)}
+            </p>
           </div>
           {sermon.description && (
             <p className="mt-4 text-[var(--color-stone)]">{sermon.description}</p>
@@ -135,7 +130,7 @@ export default function SermonsPage() {
     );
   }
 
-  function renderLinkedSermon(sermon: Sermon, showPublicBadge = false) {
+  function renderLinkedSermon(sermon: Sermon) {
     const watchUrl = getYouTubeWatchUrl(sermon.video_url);
 
     return (
@@ -148,9 +143,6 @@ export default function SermonsPage() {
             </p>
             {sermon.description && (
               <p className="mt-2 text-sm text-[var(--color-stone)]">{sermon.description}</p>
-            )}
-            {showPublicBadge && sermon.is_public && (
-              <span className="inline-block mt-2 text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded">Also public</span>
             )}
           </div>
 
@@ -173,7 +165,7 @@ export default function SermonsPage() {
 
   function renderSermonList(
     list: Sermon[],
-    options: { liveStreamActive?: boolean; showPublicBadge?: boolean } = {}
+    options: { liveStreamActive?: boolean } = {}
   ) {
     if (list.length === 0) return null;
 
@@ -186,9 +178,7 @@ export default function SermonsPage() {
 
           return (
             <div key={sermon.id}>
-              {embed
-                ? renderEmbeddedSermon(sermon, options.showPublicBadge)
-                : renderLinkedSermon(sermon, options.showPublicBadge)}
+              {embed ? renderEmbeddedSermon(sermon) : renderLinkedSermon(sermon)}
             </div>
           );
         })}
@@ -219,19 +209,19 @@ export default function SermonsPage() {
       {!isApprovedMember && (
         <div className="mb-12">
           <div className="mb-4">
-            <div className="uppercase text-xs tracking-[3px] text-[var(--color-gold-dark)]">SELECTED MESSAGES</div>
-            <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Curated Sermons</h2>
+            <div className="uppercase text-xs tracking-[3px] text-[var(--color-gold-dark)]">MESSAGES FROM GOD&apos;S WORD</div>
+            <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Featured Sermons</h2>
           </div>
 
           {loading ? (
-            <div className="text-center py-12 text-[var(--color-stone-light)]">Loading curated sermons...</div>
+            <div className="text-center py-12 text-[var(--color-stone-light)]">Loading sermons...</div>
           ) : error ? (
             <div className="text-center py-8 text-red-600">{error}</div>
           ) : publicSermons.length > 0 ? (
             renderSermonList(publicSermons)
           ) : (
             <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-10 text-center text-[var(--color-stone-light)]">
-              Sermon selections are being added — please check back soon.
+              More sermons coming soon.
             </div>
           )}
         </div>
@@ -254,21 +244,13 @@ export default function SermonsPage() {
                     Join Live Now →
                   </button>
                 </div>
-                <p className="text-sm text-[var(--color-stone)]">
-                  Live worship is streaming now. Automatic archive embeds pause during live; sermons pinned to “Always embed” still play below.
-                </p>
               </div>
             </div>
           )}
 
           <div>
             <div className="mb-4">
-              <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Full Sermon Archive</h2>
-              <p className="text-sm text-[var(--color-stone-light)] mt-2">
-                {memberLiveActive
-                  ? 'Watch the live service above. Selected sermons stay embedded below during the live stream.'
-                  : 'Recent messages play here. Older sermons open on YouTube.'}
-              </p>
+              <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Sermon Archive</h2>
             </div>
 
             {loading ? (
@@ -276,10 +258,10 @@ export default function SermonsPage() {
             ) : error ? (
               <div className="text-center py-8 text-red-600">{error}</div>
             ) : fullArchive.length > 0 ? (
-              renderSermonList(fullArchive, { liveStreamActive: memberLiveActive, showPublicBadge: true })
+              renderSermonList(fullArchive, { liveStreamActive: memberLiveActive })
             ) : (
               <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-10 text-center">
-                <p className="text-[var(--color-stone)]">No sermons have been added yet. Check back soon.</p>
+                <p className="text-[var(--color-stone)]">No sermons posted yet. Check back soon.</p>
               </div>
             )}
           </div>
@@ -312,7 +294,7 @@ export default function SermonsPage() {
                   className="w-full h-full"
                 />
               </div>
-              <p className="text-center text-xs text-white/60 mt-3">Live stream embedded from YouTube. Close this to return to the archive.</p>
+              <p className="text-center text-xs text-white/60 mt-3">Tap × to close</p>
             </div>
           </div>
         </div>

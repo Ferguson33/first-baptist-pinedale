@@ -114,7 +114,7 @@ export function Navbar() {
                           <div className="font-semibold text-[var(--color-navy)]">{profile?.full_name}</div>
                           <div className="text-xs text-[var(--color-stone-light)]">{profile?.email}</div>
                           <div className="mt-1 text-[10px] uppercase tracking-widest text-[var(--color-gold-dark)]">
-                            {profile?.role === 'admin' ? 'Pastor / Admin' : profile?.role === 'approved' ? 'Member' : 'Pending Approval'}
+                            {profile?.role === 'admin' ? 'Pastor' : profile?.role === 'approved' ? 'Member' : 'Pending Approval'}
                           </div>
                         </div>
 
@@ -134,7 +134,7 @@ export function Navbar() {
 
                         {isAdmin && (
                           <Link href="/admin" className="flex items-center gap-2 px-4 py-2.5 hover:bg-[var(--color-cream)] text-[var(--color-navy)]" onClick={() => setShowUserMenu(false)}>
-                            <Shield className="w-4 h-4" /> Admin Dashboard
+                            <Shield className="w-4 h-4" /> Dashboard
                           </Link>
                         )}
 
@@ -219,7 +219,7 @@ export function Navbar() {
               )}
 
               {isAdmin && (
-                <Link href="/admin" className="py-3 px-2 text-[var(--color-gold-dark)] font-medium" onClick={() => setMobileOpen(false)}>Admin Dashboard</Link>
+                <Link href="/admin" className="py-3 px-2 text-[var(--color-gold-dark)] font-medium" onClick={() => setMobileOpen(false)}>Dashboard</Link>
               )}
 
               {isLoggedIn && (

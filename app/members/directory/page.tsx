@@ -8,12 +8,8 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
  * Member Directory Page (dedicated view)
  * 
  * Provides a link to the official First Baptist Church Directory Google Doc.
- * This page is read-only — the directory is maintained off-site in Google Docs by an administrator.
+ * Member directory link — maintained by the church office in Google Docs.
  * Protected to approved members only.
- *
- * This is one of the primary destinations linked from the user menu.
- *
- * To update the document, an administrator edits the master Google Doc directly.
  */
 
 export default function MemberDirectory() {
@@ -51,7 +47,7 @@ export default function MemberDirectory() {
           <div className="text-xs uppercase tracking-[2px] text-[var(--color-gold-dark)]">OFFICIAL CHURCH DIRECTORY</div>
           <h1 className="text-4xl font-semibold tracking-tight mt-1">Member Directory</h1>
           <p className="text-[var(--color-stone)] text-sm mt-2 max-w-2xl">
-            Current contact information for our church family. The directory is maintained off-site in Google Docs by an administrator.
+            Current contact information for our church family, maintained by the church office.
           </p>
         </div>
 

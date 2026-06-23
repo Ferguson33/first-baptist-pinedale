@@ -158,8 +158,8 @@ export default function LoginPage() {
         </div>
 
         <div className="text-center mt-8 text-xs text-[var(--color-stone-light)]">
-          For pastoral or technical help logging in, call the church office at (307) 367-4567.<br />
-          <Link href="/" className="underline hover:text-[var(--color-navy)]">Return to public site</Link>
+          Need help logging in? Call the church office at (307) 367-4567.<br />
+          <Link href="/" className="underline hover:text-[var(--color-navy)]">Return to homepage</Link>
         </div>
       </div>
     </div>
