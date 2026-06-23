@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import { shouldEmbedSermonOnSite } from '@/lib/sermon-display';
 import type { Sermon } from '@/lib/supabase';
 import { formatLocalDate } from '@/lib/format-date';
+import { extractYouTubeVideoId, getYouTubeEmbedUrl, getYouTubeWatchUrl } from '@/lib/youtube';
 
 function formatSermonDate(date: string) {
   return formatLocalDate(date, {
@@ -46,14 +47,18 @@ export default function SermonsPage() {
           setSermons(sermonsData || []);
         }
 
-        const { data: settingsData } = await supabase
+        const { data: settingsData, error: settingsErr } = await supabase
           .from('sermon_settings')
           .select('live_video_id, live_stream_active')
           .eq('id', 1)
           .single();
 
+        if (settingsErr) {
+          console.error('Error loading live stream settings:', settingsErr);
+        }
+
         if (settingsData) {
-          const id = extractVideoId(settingsData.live_video_id || '');
+          const id = extractYouTubeVideoId(settingsData.live_video_id || '');
           setLiveVideoId(id);
           setLiveStreamActive(!!settingsData.live_stream_active && !!id);
         } else {
@@ -71,23 +76,17 @@ export default function SermonsPage() {
     fetchData();
   }, []);
 
-  function extractVideoId(urlOrId: string): string | null {
-    if (!urlOrId) return null;
-    const match = urlOrId.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
-    return match ? match[1] : urlOrId.length === 11 ? urlOrId : null;
-  }
-
   function getYouTubeEmbed(urlOrId: string, autoplay = 0) {
-    const id = extractVideoId(urlOrId);
+    const id = extractYouTubeVideoId(urlOrId);
     if (!id) return null;
-    return `https://www.youtube.com/embed/${id}?autoplay=${autoplay}&rel=0`;
+    return getYouTubeEmbedUrl(id, autoplay);
   }
 
-  function getYouTubeWatchUrl(urlOrId: string): string | null {
-    const id = extractVideoId(urlOrId);
+  function getYouTubeWatchLink(urlOrId: string): string | null {
+    const id = extractYouTubeVideoId(urlOrId);
     if (!id) return null;
     if (urlOrId.startsWith('http')) return urlOrId;
-    return `https://www.youtube.com/watch?v=${id}`;
+    return getYouTubeWatchUrl(id);
   }
 
   const publicSermons = sermons.filter((s) => s.is_public);
@@ -131,7 +130,7 @@ export default function SermonsPage() {
   }
 
   function renderLinkedSermon(sermon: Sermon) {
-    const watchUrl = getYouTubeWatchUrl(sermon.video_url);
+    const watchUrl = getYouTubeWatchLink(sermon.video_url);
 
     return (
       <div className="bg-white border border-[var(--color-gold)]/20 rounded-2xl p-5 md:p-6 hover:border-[var(--color-gold)]/50 transition">
@@ -196,6 +195,25 @@ export default function SermonsPage() {
         </p>
       </div>
 
+      {liveStreamActive && liveVideoId && (
+        <div className="mb-12">
+          <div className="bg-red-50 border border-red-200 rounded-3xl p-6 md:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="px-3 py-1 bg-red-600 text-white text-xs font-bold tracking-widest rounded">LIVE</div>
+                <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-navy)]">Live Worship</h2>
+              </div>
+              <button
+                onClick={() => setShowLiveModal(true)}
+                className="inline-flex items-center justify-center px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-semibold transition text-sm"
+              >
+                Join Live Now →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!isApprovedMember && user && profile?.role === 'pending' && (
         <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8 mb-10 text-center max-w-2xl mx-auto">
           <h2 className="text-2xl font-semibold text-[var(--color-navy)] mb-2">Membership Pending Approval</h2>
@@ -229,25 +247,6 @@ export default function SermonsPage() {
 
       {isApprovedMember && (
         <>
-          {liveStreamActive && liveVideoId && (
-            <div className="mb-12">
-              <div className="bg-red-50 border border-red-200 rounded-3xl p-6 md:p-8">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="px-3 py-1 bg-red-600 text-white text-xs font-bold tracking-widest rounded">LIVE</div>
-                    <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-navy)]">Live Worship</h2>
-                  </div>
-                  <button
-                    onClick={() => setShowLiveModal(true)}
-                    className="inline-flex items-center justify-center px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-semibold transition text-sm"
-                  >
-                    Join Live Now →
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           <div>
             <div className="mb-4">
               <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Sermon Archive</h2>
@@ -287,7 +286,7 @@ export default function SermonsPage() {
             <div className="w-full max-w-5xl">
               <div className="aspect-video bg-black rounded-2xl overflow-hidden border border-white/10">
                 <iframe
-                  src={`https://www.youtube.com/embed/${liveVideoId}?autoplay=1&rel=0`}
+                  src={getYouTubeEmbedUrl(liveVideoId, 1)}
                   title="Live Service"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen

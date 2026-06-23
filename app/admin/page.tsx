@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { SERMON_EMBED_MODE_LABELS, normalizeEmbedMode, type SermonEmbedMode } from '@/lib/sermon-display';
 import { formatAlbumDate, formatLocalDate, todayLocalDateString } from '@/lib/format-date';
+import { extractYouTubeVideoId } from '@/lib/youtube';
 
 // Types for admin
 type AdminTab = 'overview' | 'sermons' | 'building' | 'youth' | 'members' | 'events' | 'guide';
@@ -889,8 +890,13 @@ function AdminDashboardContent() {
     }
   }
 
-  async function saveSermonSettings() {
+  function normalizedLiveVideoId(): string | null {
+    return extractYouTubeVideoId(sermonSettings.live_video_id) || sermonSettings.live_video_id?.trim() || null;
+  }
+
+  async function saveSermonSettings(successMessage = 'Homepage content updated!') {
     setSavingSermonSettings(true);
+    const liveVideoId = normalizedLiveVideoId();
     const { error } = await supabase
       .from('sermon_settings')
       .update({
@@ -908,8 +914,8 @@ function AdminDashboardContent() {
         events_google_doc_url: sermonSettings.events_google_doc_url || null,
         prayer_bulletin_google_doc_url: sermonSettings.prayer_bulletin_google_doc_url || null,
         nursery_schedule_google_doc_url: sermonSettings.nursery_schedule_google_doc_url || null,
-        live_video_id: sermonSettings.live_video_id || null,
-        live_stream_active: sermonSettings.live_stream_active || false,
+        live_video_id: liveVideoId,
+        live_stream_active: sermonSettings.live_stream_active && !!liveVideoId,
         updated_at: new Date().toISOString(),
       })
       .eq('id', 1);
@@ -920,10 +926,25 @@ function AdminDashboardContent() {
       console.error('Failed to save sermon settings:', error);
       toast.error("Couldn't save settings. Please try again, or contact the site administrator if this continues.");
     } else {
-      toast.success("Homepage content updated!");
-      // Bust caches for homepage and related public pages (remote management)
+      if (liveVideoId !== sermonSettings.live_video_id) {
+        setSermonSettings((prev) => ({ ...prev, live_video_id: liveVideoId || '' }));
+      }
+      toast.success(successMessage);
       fetch('/api/revalidate?paths=/,/sermons,/youth-ministry', { method: 'POST' }).catch(() => {});
     }
+  }
+
+  async function saveLiveStreamSettings() {
+    const liveVideoId = normalizedLiveVideoId();
+    if (sermonSettings.live_stream_active && !liveVideoId) {
+      toast.error('Paste a YouTube link or video ID before turning on the live stream.');
+      return;
+    }
+    await saveSermonSettings(
+      sermonSettings.live_stream_active
+        ? 'Live stream is on. Visitors will see it on the Sermons page.'
+        : 'Live stream is off.'
+    );
   }
 
   // Load and manage real archived sermons
@@ -1269,7 +1290,7 @@ function AdminDashboardContent() {
               </div>
 
               <button
-                onClick={saveSermonSettings}
+                onClick={() => saveSermonSettings()}
                 disabled={savingSermonSettings}
                 className="w-full md:w-auto px-8 py-3 bg-[var(--color-navy)] text-white rounded-2xl font-medium disabled:opacity-60"
               >
@@ -1283,7 +1304,7 @@ function AdminDashboardContent() {
             <div className="mb-4">
               <div className="font-semibold text-2xl">Live Stream</div>
               <div className="text-sm text-[var(--color-stone-light)]">
-                Enter the YouTube Video ID (or full URL) for the current live service. Approved members will see the live player on the Sermons page.
+                Paste the YouTube live link for the current service. It appears on the Sermons page for everyone when saved.
               </div>
             </div>
 
@@ -1308,8 +1329,15 @@ function AdminDashboardContent() {
                 placeholder="e.g. abc123XYZ or https://www.youtube.com/watch?v=abc123XYZ"
               />
               <p className="text-xs text-[var(--color-stone-light)] mt-2">
-                Check &quot;Live stream active&quot; and paste the video ID or URL to show the live player for approved members. Uncheck or clear the field to hide it.
+                Paste the YouTube live link, check &quot;Live stream active&quot;, then click Save below.
               </p>
+              <button
+                onClick={saveLiveStreamSettings}
+                disabled={savingSermonSettings}
+                className="mt-4 px-6 py-2.5 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium disabled:opacity-60"
+              >
+                {savingSermonSettings ? 'Saving...' : 'Save Live Stream'}
+              </button>
             </div>
           </div>
 
@@ -1608,7 +1636,7 @@ function AdminDashboardContent() {
               </p>
             </div>
             <button
-              onClick={saveSermonSettings}
+              onClick={() => saveSermonSettings()}
               disabled={savingSermonSettings}
               className="mt-3 px-6 py-2 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium disabled:opacity-60"
             >
@@ -1659,7 +1687,7 @@ function AdminDashboardContent() {
               </div>
 
               <button
-                onClick={saveSermonSettings}
+                onClick={() => saveSermonSettings()}
                 disabled={savingSermonSettings}
                 className="mt-6 w-full md:w-auto px-8 py-3 bg-[var(--color-navy)] text-white rounded-2xl font-medium disabled:opacity-60"
               >
