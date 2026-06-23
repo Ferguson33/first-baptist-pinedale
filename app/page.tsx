@@ -320,15 +320,17 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm">
-              <div className="aspect-video bg-black">
-                <iframe
-                  src={`https://www.youtube.com/embed/${welcomeVideoId}?rel=0`}
-                  title="Welcome to First Baptist Church"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full"
-                />
+            <div className="flex justify-center">
+              <div className="w-full max-w-[280px] sm:max-w-[320px] md:max-w-[360px] bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm">
+                <div className="aspect-[9/16] bg-black">
+                  <iframe
+                    src={`https://www.youtube.com/embed/${welcomeVideoId}?rel=0`}
+                    title="Welcome to First Baptist Church"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full"
+                  />
+                </div>
               </div>
             </div>
           </div>
