@@ -43,3 +43,8 @@ export function getYouTubeEmbedUrl(videoId: string, autoplay = 0): string {
 export function getYouTubeWatchUrl(videoId: string): string {
   return `https://www.youtube.com/watch?v=${videoId}`;
 }
+
+/** Direct watch URL for live broadcasts (works when site embedding is disabled). */
+export function getYouTubeLiveWatchUrl(videoId: string): string {
+  return `https://www.youtube.com/live/${videoId}`;
+}

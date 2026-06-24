@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
-import { getYouTubeEmbedUrl } from '@/lib/youtube';
+import { getYouTubeLiveWatchUrl } from '@/lib/youtube';
+import LiveYouTubePlayer from '@/components/LiveYouTubePlayer';
 
 type LiveApiResponse = {
   active: boolean;
@@ -16,21 +17,22 @@ type LiveApiResponse = {
 };
 
 export default function LiveStreamSection() {
-  const { loading: authLoading } = useAuth();
+  const { loading: authLoading, user } = useAuth();
   const [live, setLive] = useState<LiveApiResponse | null>(null);
   const [liveLoading, setLiveLoading] = useState(true);
   const [liveError, setLiveError] = useState<string | null>(null);
   const [showLiveModal, setShowLiveModal] = useState(false);
-  const [embedError, setEmbedError] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
 
     let cancelled = false;
 
-    async function loadLive() {
-      setLiveLoading(true);
-      setLiveError(null);
+    async function loadLive(background = false) {
+      if (!background) {
+        setLiveLoading(true);
+        setLiveError(null);
+      }
 
       try {
         const res = await fetch('/api/sermons/live', { credentials: 'include', cache: 'no-store' });
@@ -42,31 +44,38 @@ export default function LiveStreamSection() {
 
         if (!cancelled) {
           setLive(data);
+          if (!data.active) {
+            setShowLiveModal(false);
+          }
         }
       } catch (err) {
         console.error('Live stream fetch error:', err);
-        if (!cancelled) {
+        if (!cancelled && !background) {
           setLiveError('Unable to check live stream status right now.');
           setLive(null);
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && !background) {
           setLiveLoading(false);
         }
       }
     }
 
-    loadLive();
-    const interval = setInterval(loadLive, 60_000);
+    loadLive(false);
+    const interval = setInterval(() => loadLive(true), 60_000);
 
     return () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [authLoading]);
+  }, [authLoading, user?.id]);
 
-  if (authLoading || liveLoading) {
-    return null;
+  if (authLoading || (liveLoading && !live)) {
+    return (
+      <div className="mb-12 rounded-3xl border border-[var(--color-gold)]/20 bg-white/60 p-6 text-center text-sm text-[var(--color-stone-light)]">
+        Checking live stream status…
+      </div>
+    );
   }
 
   if (liveError) {
@@ -94,15 +103,22 @@ export default function LiveStreamSection() {
             </div>
 
             {live.canWatch && live.videoId ? (
-              <button
-                onClick={() => {
-                  setEmbedError(false);
-                  setShowLiveModal(true);
-                }}
-                className="inline-flex items-center justify-center self-start px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-semibold transition text-sm"
-              >
-                Join Live Now →
-              </button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <a
+                  href={getYouTubeLiveWatchUrl(live.videoId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-semibold transition text-sm"
+                >
+                  Watch on YouTube →
+                </a>
+                <button
+                  onClick={() => setShowLiveModal(true)}
+                  className="inline-flex items-center justify-center px-6 py-3 border border-red-600 text-red-700 hover:bg-red-50 rounded-full font-semibold transition text-sm"
+                >
+                  Watch Here
+                </button>
+              </div>
             ) : pendingApproval ? (
               <p className="text-sm text-[var(--color-stone)]">
                 This live broadcast is for approved members. Your membership request is with the pastors — check back after approval.
@@ -142,31 +158,19 @@ export default function LiveStreamSection() {
           <div className="flex-1 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
             <div className="w-full max-w-5xl">
               <div className="aspect-video bg-black rounded-2xl overflow-hidden border border-white/10">
-                {embedError ? (
-                  <div className="h-full flex flex-col items-center justify-center text-white/80 px-6 text-center gap-4">
-                    <p>The player could not load here.</p>
-                    <a
-                      href={`https://www.youtube.com/watch?v=${live.videoId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-6 py-3 rounded-full bg-red-600 text-white font-semibold text-sm"
-                    >
-                      Open on YouTube
-                    </a>
-                  </div>
-                ) : (
-                  <iframe
-                    src={getYouTubeEmbedUrl(live.videoId, 1)}
-                    title="Live Service"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    allowFullScreen
-                    className="w-full h-full"
-                    onError={() => setEmbedError(true)}
-                  />
-                )}
+                <LiveYouTubePlayer videoId={live.videoId} />
               </div>
-              <p className="text-center text-xs text-white/60 mt-3">Tap × to close</p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-4">
+                <a
+                  href={getYouTubeLiveWatchUrl(live.videoId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-5 py-2 rounded-full bg-red-600 hover:bg-red-700 text-white font-semibold text-sm"
+                >
+                  Watch on YouTube
+                </a>
+                <p className="text-xs text-white/60">Tap × to close</p>
+              </div>
             </div>
           </div>
         </div>

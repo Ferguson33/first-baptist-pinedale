@@ -1345,6 +1345,11 @@ function AdminDashboardContent() {
               <p className="text-xs text-[var(--color-stone-light)] mt-2">
                 Check &quot;Live stream active&quot;, paste the YouTube link, then click Save Live Stream.
               </p>
+              <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mt-3">
+                For &quot;Watch Here&quot; on the site to work: in YouTube Studio open the live stream → Details →
+                Show more → turn on <strong>Allow embedding</strong>. If that is off, visitors can still use
+                &quot;Watch on YouTube.&quot;
+              </p>
               <button
                 onClick={saveLiveStreamSettings}
                 disabled={savingSermonSettings}
