@@ -9,6 +9,7 @@ import { shouldEmbedSermonOnSite } from '@/lib/sermon-display';
 import type { Sermon } from '@/lib/supabase';
 import { formatLocalDate } from '@/lib/format-date';
 import { extractYouTubeVideoId, getYouTubeEmbedUrl, getYouTubeWatchUrl } from '@/lib/youtube';
+import LiveStreamSection from '@/components/LiveStreamSection';
 
 function formatSermonDate(date: string) {
   return formatLocalDate(date, {
@@ -23,11 +24,9 @@ export default function SermonsPage() {
   const supabase = createClient();
   const { isApprovedMember, user, profile } = useAuth();
   const [sermons, setSermons] = useState<Sermon[]>([]);
-  const [liveVideoId, setLiveVideoId] = useState<string | null>(null);
   const [liveStreamActive, setLiveStreamActive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showLiveModal, setShowLiveModal] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -47,22 +46,11 @@ export default function SermonsPage() {
           setSermons(sermonsData || []);
         }
 
-        const { data: settingsData, error: settingsErr } = await supabase
-          .from('sermon_settings')
-          .select('live_video_id, live_stream_active')
-          .eq('id', 1)
-          .single();
-
-        if (settingsErr) {
-          console.error('Error loading live stream settings:', settingsErr);
-        }
-
-        if (settingsData) {
-          const id = extractYouTubeVideoId(settingsData.live_video_id || '');
-          setLiveVideoId(id);
-          setLiveStreamActive(!!settingsData.live_stream_active && !!id);
+        const liveRes = await fetch('/api/sermons/live', { credentials: 'include', cache: 'no-store' });
+        if (liveRes.ok) {
+          const liveData = await liveRes.json();
+          setLiveStreamActive(!!liveData.active);
         } else {
-          setLiveVideoId(null);
           setLiveStreamActive(false);
         }
       } catch (e) {
@@ -91,7 +79,7 @@ export default function SermonsPage() {
 
   const publicSermons = sermons.filter((s) => s.is_public);
   const fullArchive = sermons;
-  const memberLiveActive = liveStreamActive && !!liveVideoId;
+  const memberLiveActive = liveStreamActive;
 
   function renderEmbeddedSermon(sermon: Sermon) {
     const embedUrl = getYouTubeEmbed(sermon.video_url);
@@ -195,24 +183,7 @@ export default function SermonsPage() {
         </p>
       </div>
 
-      {liveStreamActive && liveVideoId && (
-        <div className="mb-12">
-          <div className="bg-red-50 border border-red-200 rounded-3xl p-6 md:p-8">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="px-3 py-1 bg-red-600 text-white text-xs font-bold tracking-widest rounded">LIVE</div>
-                <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-navy)]">Live Worship</h2>
-              </div>
-              <button
-                onClick={() => setShowLiveModal(true)}
-                className="inline-flex items-center justify-center px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-full font-semibold transition text-sm"
-              >
-                Join Live Now →
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <LiveStreamSection />
 
       {!isApprovedMember && user && profile?.role === 'pending' && (
         <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8 mb-10 text-center max-w-2xl mx-auto">
@@ -267,37 +238,6 @@ export default function SermonsPage() {
         </>
       )}
 
-      {showLiveModal && liveVideoId && (
-        <div className="fixed inset-0 bg-black/90 z-[70] flex flex-col" onClick={() => setShowLiveModal(false)}>
-          <div className="flex-shrink-0 h-14 flex items-center justify-between px-4 bg-black/70 z-[80]">
-            <div className="text-white text-sm font-medium flex items-center gap-2">
-              <span className="px-2 py-0.5 bg-red-600 text-white text-xs rounded">LIVE</span> Live Service
-            </div>
-            <button
-              onClick={() => setShowLiveModal(false)}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-white text-[var(--color-navy)] text-3xl font-bold hover:bg-[var(--color-gold)] hover:text-white"
-              aria-label="Close live player"
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="flex-1 flex items-center justify-center p-4" onClick={e => e.stopPropagation()}>
-            <div className="w-full max-w-5xl">
-              <div className="aspect-video bg-black rounded-2xl overflow-hidden border border-white/10">
-                <iframe
-                  src={getYouTubeEmbedUrl(liveVideoId, 1)}
-                  title="Live Service"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full"
-                />
-              </div>
-              <p className="text-center text-xs text-white/60 mt-3">Tap × to close</p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

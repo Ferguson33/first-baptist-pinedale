@@ -52,6 +52,7 @@ export type SermonSettings = {
   nursery_schedule_google_doc_url?: string | null;
   live_video_id?: string | null;
   live_stream_active?: boolean;
+  live_stream_public?: boolean;
   updated_at?: string;
 };
 

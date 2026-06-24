@@ -24,7 +24,20 @@ export function extractYouTubeVideoId(urlOrId: string | null | undefined): strin
 }
 
 export function getYouTubeEmbedUrl(videoId: string, autoplay = 0): string {
-  return `https://www.youtube.com/embed/${videoId}?autoplay=${autoplay}&rel=0`;
+  const origin =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_SITE_URL || 'https://firstbaptistpinedale.org';
+
+  const params = new URLSearchParams({
+    autoplay: String(autoplay),
+    rel: '0',
+    modestbranding: '1',
+    playsinline: '1',
+    origin,
+  });
+
+  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
 }
 
 export function getYouTubeWatchUrl(videoId: string): string {

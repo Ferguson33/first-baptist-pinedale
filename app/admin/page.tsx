@@ -131,6 +131,7 @@ function AdminDashboardContent() {
     nursery_schedule_google_doc_url: "",
     live_video_id: "",
     live_stream_active: false,
+    live_stream_public: false,
   });
   const [savingSermonSettings, setSavingSermonSettings] = useState(false);
 
@@ -886,6 +887,7 @@ function AdminDashboardContent() {
         nursery_schedule_google_doc_url: data.nursery_schedule_google_doc_url || "",
         live_video_id: data.live_video_id || "",
         live_stream_active: data.live_stream_active || false,
+        live_stream_public: data.live_stream_public || false,
       });
     }
   }
@@ -916,6 +918,7 @@ function AdminDashboardContent() {
         nursery_schedule_google_doc_url: sermonSettings.nursery_schedule_google_doc_url || null,
         live_video_id: liveVideoId,
         live_stream_active: sermonSettings.live_stream_active && !!liveVideoId,
+        live_stream_public: sermonSettings.live_stream_public && !!liveVideoId,
         updated_at: new Date().toISOString(),
       })
       .eq('id', 1);
@@ -942,7 +945,9 @@ function AdminDashboardContent() {
     }
     await saveSermonSettings(
       sermonSettings.live_stream_active
-        ? 'Live stream is on. Visitors will see it on the Sermons page.'
+        ? sermonSettings.live_stream_public
+          ? 'Live stream is on and public on the Sermons page.'
+          : 'Live stream is on for members only on the Sermons page.'
         : 'Live stream is off.'
     );
   }
@@ -1304,7 +1309,7 @@ function AdminDashboardContent() {
             <div className="mb-4">
               <div className="font-semibold text-2xl">Live Stream</div>
               <div className="text-sm text-[var(--color-stone-light)]">
-                Paste the YouTube live link for the current service. It appears on the Sermons page for everyone when saved.
+                Paste the YouTube live link, choose Public or Private, then save.
               </div>
             </div>
 
@@ -1328,8 +1333,17 @@ function AdminDashboardContent() {
                 className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm font-mono"
                 placeholder="e.g. abc123XYZ or https://www.youtube.com/watch?v=abc123XYZ"
               />
+              <label className="flex items-center gap-2 text-sm cursor-pointer mt-4">
+                <input
+                  type="checkbox"
+                  checked={sermonSettings.live_stream_public}
+                  onChange={(e) => setSermonSettings({ ...sermonSettings, live_stream_public: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                Public — show to everyone (unchecked = members only)
+              </label>
               <p className="text-xs text-[var(--color-stone-light)] mt-2">
-                Paste the YouTube live link, check &quot;Live stream active&quot;, then click Save below.
+                Check &quot;Live stream active&quot;, paste the YouTube link, then click Save Live Stream.
               </p>
               <button
                 onClick={saveLiveStreamSettings}
