@@ -14,12 +14,12 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null;
 
     if (!file) {
-      return NextResponse.json({ error: 'No file provided in form data' }, { status: 400 });
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
     const result = await processAdminStorageUpload(auth.supabaseAdmin, {
       file,
-      bucket: 'youth-photos',
+      bucket: String(formData.get('bucket') || ''),
       albumId: formData.get('album_id') as string | null,
       caption: formData.get('caption') as string | null,
       target: String(formData.get('target') || 'album'),
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error: unknown) {
-    console.error('Youth upload error:', error);
+    console.error('Admin storage upload error:', error);
     const message = error instanceof Error ? error.message : 'Upload failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }

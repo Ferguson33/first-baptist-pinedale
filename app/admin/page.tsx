@@ -12,6 +12,8 @@ import { createClient } from '@/lib/supabase/client';
 import { SERMON_EMBED_MODE_LABELS, normalizeEmbedMode, type SermonEmbedMode } from '@/lib/sermon-display';
 import { formatAlbumDate, formatLocalDate, todayLocalDateString } from '@/lib/format-date';
 import { extractYouTubeVideoId } from '@/lib/youtube';
+import { ensureAccessToken, uploadFileViaApi, type UploadProgress } from '@/lib/storage-upload';
+import { UploadProgressBanner } from '@/components/UploadProgressBanner';
 
 // Types for admin
 type AdminTab = 'overview' | 'sermons' | 'building' | 'youth' | 'members' | 'events' | 'guide';
@@ -86,6 +88,14 @@ function AdminDashboardContent() {
     link_url: "",
   });
   const [uploadingEventImage, setUploadingEventImage] = useState(false);
+  const [uploadingBuilding, setUploadingBuilding] = useState(false);
+  const [uploadingYouth, setUploadingYouth] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
+  const [lastFailedUpload, setLastFailedUpload] = useState<{
+    files: File[];
+    type: string;
+    caption?: string;
+  } | null>(null);
   const [savingYouthEvent, setSavingYouthEvent] = useState(false);
 
   // Album form (nice modal instead of prompt() — fixes bugginess)
@@ -201,17 +211,13 @@ function AdminDashboardContent() {
 
     setMemberActionId(userId);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        toast.error('Your admin session expired. Please sign in again.');
-        return;
-      }
+      const accessToken = await ensureAccessToken(supabase);
 
       const res = await fetch('/api/admin/members/delete', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ userId }),
       });
@@ -247,119 +253,135 @@ function AdminDashboardContent() {
     e.currentTarget.classList.remove('dragover');
   };
 
-  const handleImageUpload = async (files: FileList | null, type: string) => {
+  function resetFileInput(id: string) {
+    const input = document.getElementById(id) as HTMLInputElement | null;
+    if (input) input.value = '';
+  }
+
+  const handleImageUpload = async (
+    files: FileList | null,
+    type: string,
+    options: { caption?: string; isRetry?: boolean } = {}
+  ) => {
     if (!files || files.length === 0) return;
 
-    const file = files[0];
-    if (!file.type.startsWith('image/')) {
-      toast.error("Please upload an image file (JPG, PNG, etc.)");
+    const fileArray = Array.from(files).filter(
+      (file) => file.type.startsWith('image/') || file.type.startsWith('video/')
+    );
+
+    if (fileArray.length === 0) {
+      toast.error('Please upload an image or video file (JPG, PNG, MP4, etc.)');
+      return;
+    }
+
+    if (type === 'sermon-thumb') {
+      toast.info('Thumbnail selected. Fill out the form below and save.');
       return;
     }
 
     if (type === 'building') {
-      const caption = prompt("Enter a short caption for this photo (e.g. 'Roof trusses installed')") || "New construction photo";
+      const prompted =
+        options.caption ??
+        prompt("Enter a short caption for this photo (e.g. 'Roof trusses installed')");
+
+      if (prompted === null) return;
+
+      const caption = prompted.trim() || 'New construction photo';
+
+      setUploadingBuilding(true);
+      setLastFailedUpload(null);
 
       try {
-        toast.loading("Uploading photo...", { id: 'upload' });
+        for (const file of fileArray) {
+          const result = await uploadFileViaApi(supabase, file, {
+            bucket: 'building-photos',
+            caption,
+            target: 'building',
+            onProgress: setUploadProgress,
+          });
 
-        // Create unique filename
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const filePath = `building/${fileName}`;
-
-        // Upload to Supabase Storage
-        const { error: uploadError } = await supabase.storage
-          .from('building-photos')
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from('building-photos')
-          .getPublicUrl(filePath);
-
-        // Insert record into database
-        const { data: insertData, error: insertError } = await supabase
-          .from('building_photos')
-          .insert({
-            url: urlData.publicUrl,
-            caption: caption,
-          })
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-
-        // Add to local state
-        setBuildingPhotos(prev => [...prev, {
-          id: insertData.id,
-          url: insertData.url,
-          caption: insertData.caption
-        }]);
-
-        toast.success("Photo uploaded successfully!", { id: 'upload' });
-        // Bust public building page cache for visitors
-        fetch('/api/revalidate?path=/building-project', { method: 'POST' }).catch(() => {});
-      } catch (error: any) {
-        console.error('Upload error:', error);
-        toast.error("Failed to upload photo: " + (error.message || "Unknown error"), { id: 'upload' });
-      }
-    } 
-    else if (type === 'sermon-thumb') {
-      // For sermon upload flow
-      toast.info("Thumbnail selected. Fill out the form below and save.");
-      // Could open a modal in a full version
-    }
-    else if (type === 'youth') {
-      // Direct client upload (same pattern that just started working for you)
-      // Includes album_id so photos go into the selected album
-      const albumId = selectedYouthAlbumId;
-
-      for (const file of Array.from(files)) {
-        if (!file.type.startsWith('image/')) continue;
-
-        const toastId = toast.loading(`Uploading ${file.name}...`);
-
-        try {
-          const fileExt = file.name.split('.').pop();
-          const fileName = `youth-${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
-          const filePath = `youth/${fileName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from('youth-photos')
-            .upload(filePath, file);
-
-          if (uploadError) throw uploadError;
-
-          const { data: urlData } = supabase.storage
-            .from('youth-photos')
-            .getPublicUrl(filePath);
-
-          const { data: insertData, error: insertError } = await supabase
-            .from('youth_photos')
-            .insert({
-              url: urlData.publicUrl,
-              caption: null,           // no captions on upload, per your request
-              album_id: albumId || null,
-            })
-            .select()
-            .single();
-
-          if (insertError) throw insertError;
-
-          setYouthPhotos(prev => [insertData, ...prev]);
-          toast.success("Uploaded!", { id: toastId });
-        } catch (error: any) {
-          console.error('Youth upload error:', error);
-          toast.error(`Failed: ${error.message || error}`, { id: toastId });
+          setBuildingPhotos((prev) => [
+            ...prev,
+            {
+              id: result.id,
+              url: result.url,
+              caption,
+            },
+          ]);
         }
+
+        setUploadProgress({ phase: 'done', percent: 100, message: 'Upload complete' });
+        toast.success('Photo uploaded successfully!');
+        fetch('/api/revalidate?path=/building-project', { method: 'POST' }).catch(() => {});
+        resetFileInput('building-upload');
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Upload error:', error);
+        setUploadProgress({ phase: 'error', percent: 0, message });
+        setLastFailedUpload({ files: fileArray, type, caption });
+        toast.error(`Failed to upload: ${message}`);
+      } finally {
+        setUploadingBuilding(false);
+        window.setTimeout(() => setUploadProgress(null), 4000);
       }
 
-      // Refresh list after the batch finishes
-      fetchYouthPhotos();
+      return;
+    }
+
+    if (type === 'youth') {
+      const albumId = selectedYouthAlbumId;
+      setUploadingYouth(true);
+      setLastFailedUpload(null);
+
+      try {
+        for (const file of fileArray) {
+          const result = await uploadFileViaApi(supabase, file, {
+            bucket: 'youth-photos',
+            albumId,
+            target: 'album',
+            onProgress: setUploadProgress,
+          });
+
+          if (result.id) {
+            setYouthPhotos((prev) => [
+              {
+                id: result.id,
+                url: result.url,
+                caption: null,
+                album_id: albumId || null,
+              },
+              ...prev,
+            ]);
+          }
+        }
+
+        setUploadProgress({ phase: 'done', percent: 100, message: 'All uploads complete' });
+        toast.success(fileArray.length > 1 ? 'Photos uploaded!' : 'Photo uploaded!');
+        await fetchYouthPhotos();
+        resetFileInput('youth-upload');
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Youth upload error:', error);
+        setUploadProgress({ phase: 'error', percent: 0, message });
+        setLastFailedUpload({ files: fileArray, type });
+        toast.error(`Upload failed: ${message}`);
+      } finally {
+        setUploadingYouth(false);
+        window.setTimeout(() => setUploadProgress(null), 4000);
+      }
     }
   };
+
+  async function retryLastUpload() {
+    if (!lastFailedUpload) return;
+
+    const dt = new DataTransfer();
+    lastFailedUpload.files.forEach((file) => dt.items.add(file));
+    await handleImageUpload(dt.files, lastFailedUpload.type, {
+      caption: lastFailedUpload.caption,
+      isRetry: true,
+    });
+  }
 
   async function refreshPublicPages() {
     const res = await fetch('/api/revalidate?all=1', { method: 'POST' });
@@ -722,31 +744,26 @@ function AdminDashboardContent() {
   // Upload image for youth event (reuses youth upload api but for event target)
   async function uploadYouthEventImage(file: File) {
     setUploadingEventImage(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('target', 'event');  // special target, no photo table insert
+    setUploadProgress(null);
 
-      const res = await fetch('/api/admin/youth/upload-photo', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${ (await supabase.auth.getSession()).data.session?.access_token }`,
-        },
-        body: formData,
+    try {
+      const result = await uploadFileViaApi(supabase, file, {
+        bucket: 'youth-photos',
+        target: 'event',
+        onProgress: setUploadProgress,
       });
 
-      const result = await res.json();
-      if (!res.ok || !result.success) {
-        throw new Error(result.error || 'Upload failed');
-      }
-
-      setYouthEventForm(prev => ({ ...prev, image_url: result.url }));
-      toast.success("Image uploaded for event");
-    } catch (err: any) {
+      setYouthEventForm((prev) => ({ ...prev, image_url: result.url }));
+      setUploadProgress({ phase: 'done', percent: 100, message: 'Image ready for event' });
+      toast.success('Image uploaded for event');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
       console.error('Event image upload error:', err);
-      toast.error("Failed to upload image: " + (err.message || err));
+      setUploadProgress({ phase: 'error', percent: 0, message });
+      toast.error(`Failed to upload image: ${message}`);
     } finally {
       setUploadingEventImage(false);
+      window.setTimeout(() => setUploadProgress(null), 4000);
     }
   }
 
@@ -1566,18 +1583,27 @@ function AdminDashboardContent() {
             </div>
           </div>
 
+          <div className="mb-4">
+            <UploadProgressBanner
+              progress={uploadingBuilding ? uploadProgress : null}
+              onRetry={lastFailedUpload?.type === 'building' ? retryLastUpload : undefined}
+            />
+          </div>
+
           {/* BIG DRAG & DROP ZONE */}
           <div 
-            className="dropzone dropzone-large mb-6" 
-            onDragOver={handleDragOver} 
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('dragover'); handleImageUpload(e.dataTransfer.files, 'building'); }}
-            onClick={() => document.getElementById('building-upload')?.click()}
+            className={`dropzone dropzone-large mb-6 ${uploadingBuilding ? 'opacity-60 pointer-events-none' : ''}`}
+            onDragOver={uploadingBuilding ? undefined : handleDragOver} 
+            onDragLeave={uploadingBuilding ? undefined : handleDragLeave}
+            onDrop={(e) => { if (uploadingBuilding) return; e.preventDefault(); e.currentTarget.classList.remove('dragover'); handleImageUpload(e.dataTransfer.files, 'building'); }}
+            onClick={() => { if (!uploadingBuilding) document.getElementById('building-upload')?.click(); }}
           >
             <Upload className="w-10 h-10 text-[var(--color-gold-dark)] mb-4" />
-            <div className="font-semibold text-xl">Drag &amp; Drop New Construction Photos Here</div>
-            <div className="text-[var(--color-stone-light)] mt-1">or click to browse • JPG or PNG recommended</div>
-            <input id="building-upload" type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files, 'building')} />
+            <div className="font-semibold text-xl">
+              {uploadingBuilding ? 'Uploading…' : 'Drag & Drop New Construction Photos Here'}
+            </div>
+            <div className="text-[var(--color-stone-light)] mt-1">or click to browse • JPG, PNG, or MP4</div>
+            <input id="building-upload" type="file" accept="image/*,video/*" className="hidden" disabled={uploadingBuilding} onChange={(e) => handleImageUpload(e.target.files, 'building')} />
           </div>
 
           {/* Photo Grid */}
@@ -1797,34 +1823,45 @@ function AdminDashboardContent() {
               </div>
             )}
 
+            <div className="mb-4">
+              <UploadProgressBanner
+                progress={uploadingYouth ? uploadProgress : null}
+                onRetry={lastFailedUpload?.type === 'youth' ? retryLastUpload : undefined}
+              />
+            </div>
+
             {/* Drag & Drop Zone */}
             <div 
-              className="dropzone dropzone-large mb-6" 
-              onDragOver={handleDragOver} 
-              onDragLeave={handleDragLeave}
+              className={`dropzone dropzone-large mb-6 ${uploadingYouth ? 'opacity-60 pointer-events-none' : ''}`}
+              onDragOver={uploadingYouth ? undefined : handleDragOver} 
+              onDragLeave={uploadingYouth ? undefined : handleDragLeave}
               onDrop={(e) => { 
+                if (uploadingYouth) return;
                 e.preventDefault(); 
                 e.currentTarget.classList.remove('dragover'); 
                 handleImageUpload(e.dataTransfer.files, 'youth'); 
               }}
-              onClick={() => document.getElementById('youth-upload')?.click()}
+              onClick={() => { if (!uploadingYouth) document.getElementById('youth-upload')?.click(); }}
             >
               <Upload className="w-10 h-10 text-[var(--color-gold-dark)] mb-4" />
               <div className="font-semibold text-xl">
-                {selectedYouthAlbumId 
-                  ? `Add Photos to Selected Album` 
-                  : "Drag & Drop Youth Photos Here"}
+                {uploadingYouth
+                  ? 'Uploading…'
+                  : selectedYouthAlbumId 
+                    ? `Add Photos to Selected Album` 
+                    : "Drag & Drop Youth Photos Here"}
               </div>
               <div className="text-[var(--color-stone-light)] mt-1">
                 {selectedYouthAlbumId 
                   ? "Photos will be added to the selected album (no captions on upload)" 
-                  : "or click to browse • JPG or PNG recommended"}
+                  : "or click to browse • JPG, PNG, or MP4"}
               </div>
               <input 
                 id="youth-upload" 
                 type="file" 
-                accept="image/*" 
+                accept="image/*,video/*" 
                 multiple
+                disabled={uploadingYouth}
                 className="hidden" 
                 onChange={(e) => handleImageUpload(e.target.files, 'youth')} 
               />
@@ -2260,17 +2297,18 @@ function AdminDashboardContent() {
               <div>
                 <label className="text-sm font-medium">Event Image (optional)</label>
                 <div className="flex gap-3 items-center">
-                  <input 
+                  <input
                     type="file" 
-                    accept="image/*" 
+                    accept="image/*,video/*" 
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) uploadYouthEventImage(file);
+                      e.target.value = '';
                     }} 
                     disabled={uploadingEventImage}
                     className="text-sm"
                   />
-                  {uploadingEventImage && <span className="text-xs text-[var(--color-stone-light)]">Uploading...</span>}
+                  <UploadProgressBanner progress={uploadingEventImage ? uploadProgress : null} />
                 </div>
                 {youthEventForm.image_url && (
                   <div className="mt-2">

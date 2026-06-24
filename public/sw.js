@@ -9,6 +9,8 @@ const NEVER_CACHE = (url) => {
   return false;
 };
 
+// Uploads use POST/PUT to /api/* or cross-origin Supabase storage — never intercepted below.
+
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(Promise.resolve());
@@ -30,6 +32,8 @@ self.addEventListener('message', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+
+  // Never touch mutations (uploads, sign-in, deletes) or third-party storage APIs.
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
