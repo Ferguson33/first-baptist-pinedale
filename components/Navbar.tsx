@@ -2,13 +2,11 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Menu, X, User, LogOut, Shield, Users, BookOpen, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function Navbar() {
-  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, profile, isAdmin, isApprovedMember, signOut, signingOut } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -19,13 +17,9 @@ export function Navbar() {
     e.stopPropagation();
     if (signingOut) return;
 
-    const result = await signOut();
-    if (result.error) return;
-
     setShowUserMenu(false);
     setMobileOpen(false);
-    router.push('/');
-    router.refresh();
+    await signOut();
   };
 
   const navLinks = [

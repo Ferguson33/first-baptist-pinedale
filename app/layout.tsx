@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth-context";
 import { Layout } from "@/components/Layout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PwaProvider } from "@/components/PwaProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -75,12 +76,14 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body className="min-h-screen bg-[var(--color-warm-white)] antialiased">
         <AuthProvider>
-          <ErrorBoundary>
-            <Layout>
-              {children}
-            </Layout>
-          </ErrorBoundary>
-          <Toaster position="top-center" richColors closeButton />
+          <PwaProvider>
+            <ErrorBoundary>
+              <Layout>
+                {children}
+              </Layout>
+            </ErrorBoundary>
+            <Toaster position="top-center" richColors closeButton />
+          </PwaProvider>
         </AuthProvider>
       </body>
     </html>

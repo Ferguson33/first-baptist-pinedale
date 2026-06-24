@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { RefreshAppButton } from '@/components/RefreshAppButton';
+import { isStandalonePwa } from '@/lib/pwa';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -13,8 +15,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isPwa, setIsPwa] = useState(false);
   const { signIn, signUp, user, profile, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    setIsPwa(isStandalonePwa());
+  }, []);
 
   // Smart post-login redirect based on role.
   // Made non-blocking for pending users and safe on refresh (authLoading guards prevent premature redirects/crashes).
@@ -157,9 +164,17 @@ export default function LoginPage() {
           )}
         </div>
 
-        <div className="text-center mt-8 text-xs text-[var(--color-stone-light)]">
-          Need help logging in? Call the church office at (307) 367-4567.<br />
-          <Link href="/" className="underline hover:text-[var(--color-navy)]">Return to homepage</Link>
+        <div className="text-center mt-8 text-xs text-[var(--color-stone-light)] space-y-3">
+          {isPwa && (
+            <div>
+              <p className="mb-2">App acting stuck or showing the wrong login state?</p>
+              <RefreshAppButton label="Refresh App" variant="secondary" />
+            </div>
+          )}
+          <p>
+            Need help logging in? Call the church office at (307) 367-4567.<br />
+            <Link href="/" className="underline hover:text-[var(--color-navy)]">Return to homepage</Link>
+          </p>
         </div>
       </div>
     </div>
