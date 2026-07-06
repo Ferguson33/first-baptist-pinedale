@@ -142,6 +142,9 @@ function AdminDashboardContent() {
     live_video_id: "",
     live_stream_active: false,
     live_stream_public: false,
+    welcome_video_id: "",
+    pastor_york_video_id: "",
+    pastor_holmes_video_id: "",
   });
   const [savingSermonSettings, setSavingSermonSettings] = useState(false);
 
@@ -905,17 +908,39 @@ function AdminDashboardContent() {
         live_video_id: data.live_video_id || "",
         live_stream_active: data.live_stream_active || false,
         live_stream_public: data.live_stream_public || false,
+        welcome_video_id: data.welcome_video_id || "",
+        pastor_york_video_id: data.pastor_york_video_id || "",
+        pastor_holmes_video_id: data.pastor_holmes_video_id || "",
       });
     }
   }
 
+  function normalizedYouTubeId(urlOrId: string): string | null {
+    return extractYouTubeVideoId(urlOrId) || urlOrId?.trim() || null;
+  }
+
   function normalizedLiveVideoId(): string | null {
-    return extractYouTubeVideoId(sermonSettings.live_video_id) || sermonSettings.live_video_id?.trim() || null;
+    return normalizedYouTubeId(sermonSettings.live_video_id);
+  }
+
+  function strictYouTubeId(urlOrId: string): string | null {
+    const trimmed = urlOrId.trim();
+    if (!trimmed) return null;
+    return extractYouTubeVideoId(trimmed);
+  }
+
+  function normalizedHomepageVideoIds() {
+    return {
+      welcome: strictYouTubeId(sermonSettings.welcome_video_id),
+      york: strictYouTubeId(sermonSettings.pastor_york_video_id),
+      holmes: strictYouTubeId(sermonSettings.pastor_holmes_video_id),
+    };
   }
 
   async function saveSermonSettings(successMessage = 'Homepage content updated!') {
     setSavingSermonSettings(true);
     const liveVideoId = normalizedLiveVideoId();
+    const homepageVideos = normalizedHomepageVideoIds();
     const { error } = await supabase
       .from('sermon_settings')
       .update({
@@ -936,6 +961,9 @@ function AdminDashboardContent() {
         live_video_id: liveVideoId,
         live_stream_active: sermonSettings.live_stream_active && !!liveVideoId,
         live_stream_public: sermonSettings.live_stream_public && !!liveVideoId,
+        welcome_video_id: homepageVideos.welcome,
+        pastor_york_video_id: homepageVideos.york,
+        pastor_holmes_video_id: homepageVideos.holmes,
         updated_at: new Date().toISOString(),
       })
       .eq('id', 1);
@@ -946,9 +974,13 @@ function AdminDashboardContent() {
       console.error('Failed to save sermon settings:', error);
       toast.error("Couldn't save settings. Please try again, or contact the site administrator if this continues.");
     } else {
-      if (liveVideoId !== sermonSettings.live_video_id) {
-        setSermonSettings((prev) => ({ ...prev, live_video_id: liveVideoId || '' }));
-      }
+      setSermonSettings((prev) => ({
+        ...prev,
+        live_video_id: liveVideoId || '',
+        welcome_video_id: homepageVideos.welcome || '',
+        pastor_york_video_id: homepageVideos.york || '',
+        pastor_holmes_video_id: homepageVideos.holmes || '',
+      }));
       toast.success(successMessage);
       fetch('/api/revalidate?paths=/,/sermons,/youth-ministry', { method: 'POST' }).catch(() => {});
     }
@@ -967,6 +999,28 @@ function AdminDashboardContent() {
           : 'Live stream is on for members only on the Sermons page.'
         : 'Live stream is off.'
     );
+  }
+
+  async function saveHomepageVideos() {
+    const homepageVideos = normalizedHomepageVideoIds();
+    const invalidFields: string[] = [];
+
+    if (sermonSettings.welcome_video_id.trim() && !homepageVideos.welcome) {
+      invalidFields.push('Welcome video');
+    }
+    if (sermonSettings.pastor_york_video_id.trim() && !homepageVideos.york) {
+      invalidFields.push('Pastor York intro');
+    }
+    if (sermonSettings.pastor_holmes_video_id.trim() && !homepageVideos.holmes) {
+      invalidFields.push('Pastor Holmes intro');
+    }
+
+    if (invalidFields.length > 0) {
+      toast.error(`Could not read a valid YouTube link for: ${invalidFields.join(', ')}.`);
+      return;
+    }
+
+    await saveSermonSettings('Homepage videos updated!');
   }
 
   // Load and manage real archived sermons
@@ -1317,6 +1371,67 @@ function AdminDashboardContent() {
                 className="w-full md:w-auto px-8 py-3 bg-[var(--color-navy)] text-white rounded-2xl font-medium disabled:opacity-60"
               >
                 {savingSermonSettings ? "Saving..." : "Save All Homepage Content"}
+              </button>
+            </div>
+          </div>
+
+          {/* Homepage Videos */}
+          <div>
+            <div className="mb-4">
+              <div className="font-semibold text-2xl">Homepage Videos</div>
+              <div className="text-sm text-[var(--color-stone-light)]">
+                Paste YouTube links for the welcome Short and optional pastor intro videos. Leave a field blank to hide that section on the homepage.
+              </div>
+            </div>
+
+            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8 space-y-6">
+              <div>
+                <label className="block font-medium mb-2 text-sm">Welcome video (YouTube Short)</label>
+                <input
+                  type="text"
+                  value={sermonSettings.welcome_video_id}
+                  onChange={(e) => setSermonSettings({ ...sermonSettings, welcome_video_id: e.target.value })}
+                  className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm font-mono"
+                  placeholder="https://www.youtube.com/shorts/xxxx or video ID"
+                />
+                <p className="text-xs text-[var(--color-stone-light)] mt-1">
+                  Shown in the &quot;Welcome to First Baptist Church&quot; section on the homepage.
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block font-medium mb-2 text-sm">Pastor Ted &amp; Teresa York intro (optional)</label>
+                  <input
+                    type="text"
+                    value={sermonSettings.pastor_york_video_id}
+                    onChange={(e) => setSermonSettings({ ...sermonSettings, pastor_york_video_id: e.target.value })}
+                    className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm font-mono"
+                    placeholder="YouTube URL or video ID"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium mb-2 text-sm">Pastor Heath &amp; Tessa Holmes intro (optional)</label>
+                  <input
+                    type="text"
+                    value={sermonSettings.pastor_holmes_video_id}
+                    onChange={(e) => setSermonSettings({ ...sermonSettings, pastor_holmes_video_id: e.target.value })}
+                    className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm font-mono"
+                    placeholder="YouTube URL or video ID"
+                  />
+                </div>
+              </div>
+
+              <p className="text-xs text-[var(--color-stone-light)]">
+                Pastor intro videos appear in the &quot;Meet the Pastors&quot; section. Shorts and regular videos both work.
+              </p>
+
+              <button
+                onClick={saveHomepageVideos}
+                disabled={savingSermonSettings}
+                className="px-6 py-2.5 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium disabled:opacity-60"
+              >
+                {savingSermonSettings ? 'Saving...' : 'Save Homepage Videos'}
               </button>
             </div>
           </div>

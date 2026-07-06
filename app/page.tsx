@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { ArrowRight, Clock, MapPin, Users, Heart } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatLocalDate } from '@/lib/format-date';
+import { extractYouTubeVideoId } from '@/lib/youtube';
 
 // Note: Progress is now fetched via direct Supabase REST + cache:'no-store' for guaranteed fresh data.
 // The client is still used for other dynamic content (sermon teaser).
@@ -15,28 +16,10 @@ export default function Home() {
   const [progressLoading, setProgressLoading] = useState(true);
   const [progressError, setProgressError] = useState(false);
 
-  // ============================================
-  // MEET THE PASTORS - YouTube Video IDs
-  // Update these when the short intro videos are ready.
-  // If left as placeholder, the sections are gracefully hidden (no broken embeds).
-  // ============================================
-  const PASTOR_YORK_VIDEO_ID = "";      // e.g. "dQw4w9wg" - Ted & Teresa York
-  const PASTOR_HOLMES_VIDEO_ID = "";  // e.g. "dQw4w9wg" - Heath & Tessa Holmes
-
-  // Public welcome video — paste a YouTube video ID or full URL (unchanged long-term).
-  const WELCOME_VIDEO_ID = "https://www.youtube.com/shorts/Q6KqJyF_Teg";
-
-  function extractYouTubeId(urlOrId: string): string {
-    if (!urlOrId) return "";
-    const trimmed = urlOrId.trim();
-    if (!trimmed.includes("/") && !trimmed.includes(".")) return trimmed;
-    const match = trimmed.match(
-      /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
-    );
-    return match?.[1] ?? trimmed;
-  }
-
-  const welcomeVideoId = extractYouTubeId(WELCOME_VIDEO_ID);
+  // Homepage videos — managed in Admin → Sermons → Homepage Videos
+  const [welcomeVideoId, setWelcomeVideoId] = useState<string | null>(null);
+  const [pastorYorkVideoId, setPastorYorkVideoId] = useState<string | null>(null);
+  const [pastorHolmesVideoId, setPastorHolmesVideoId] = useState<string | null>(null);
 
   // Sermon teaser content from admin (including Youth Sunday School)
   const [sermonTeaser, setSermonTeaser] = useState({
@@ -98,11 +81,14 @@ export default function Home() {
     async function loadSermonTeaser() {
       const { data } = await supabase
         .from('sermon_settings')
-        .select('pastor_note, upcoming_title, upcoming_reference, upcoming_date, sunday_school_lesson, sunday_school_reference, youth_sunday_school_lesson, youth_sunday_school_reference, youth_sunday_school_date, youth_pastor_note, youth_google_doc_url')
+        .select('pastor_note, upcoming_title, upcoming_reference, upcoming_date, sunday_school_lesson, sunday_school_reference, youth_sunday_school_lesson, youth_sunday_school_reference, youth_sunday_school_date, youth_pastor_note, youth_google_doc_url, welcome_video_id, pastor_york_video_id, pastor_holmes_video_id')
         .eq('id', 1)
         .single();
 
       if (data) {
+        setWelcomeVideoId(extractYouTubeVideoId(data.welcome_video_id));
+        setPastorYorkVideoId(extractYouTubeVideoId(data.pastor_york_video_id));
+        setPastorHolmesVideoId(extractYouTubeVideoId(data.pastor_holmes_video_id));
         setSermonTeaser({
           pastor_note: data.pastor_note || "",
           upcoming_title: data.upcoming_title || "The Faith That Moves Mountains",
@@ -324,7 +310,7 @@ export default function Home() {
         )}
 
         {/* MEET THE PASTORS - Short intro videos (gracefully hidden if no video IDs configured yet) */}
-        {(PASTOR_YORK_VIDEO_ID || PASTOR_HOLMES_VIDEO_ID) && (
+        {(pastorYorkVideoId || pastorHolmesVideoId) && (
           <div className="max-w-6xl mx-auto mt-8">
             <div className="text-center mb-8">
               <div className="uppercase tracking-[3px] text-xs text-[var(--color-gold-dark)]">OUR PASTORAL TEAM</div>
@@ -336,11 +322,11 @@ export default function Home() {
 
             <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
               {/* Pastor Ted & Teresa York */}
-              {PASTOR_YORK_VIDEO_ID && (
+              {pastorYorkVideoId && (
                 <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm">
                   <div className="aspect-video bg-black">
                     <iframe
-                      src={`https://www.youtube.com/embed/${PASTOR_YORK_VIDEO_ID}`}
+                      src={`https://www.youtube.com/embed/${pastorYorkVideoId}?rel=0`}
                       title="Meet Pastor Ted &amp; Teresa York"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
@@ -357,11 +343,11 @@ export default function Home() {
               )}
 
               {/* Pastor Heath & Tessa Holmes */}
-              {PASTOR_HOLMES_VIDEO_ID && (
+              {pastorHolmesVideoId && (
                 <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm">
                   <div className="aspect-video bg-black">
                     <iframe
-                      src={`https://www.youtube.com/embed/${PASTOR_HOLMES_VIDEO_ID}`}
+                      src={`https://www.youtube.com/embed/${pastorHolmesVideoId}?rel=0`}
                       title="Meet Pastor Heath &amp; Tessa Holmes"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
