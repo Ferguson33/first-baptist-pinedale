@@ -24,7 +24,7 @@ export default function Home() {
   const PASTOR_HOLMES_VIDEO_ID = "";  // e.g. "dQw4w9wg" - Heath & Tessa Holmes
 
   // Public welcome video — paste a YouTube video ID or full URL (unchanged long-term).
-  const WELCOME_VIDEO_ID = "https://www.youtube.com/shorts/2LJgM0OIhhI";
+  const WELCOME_VIDEO_ID = "https://www.youtube.com/shorts/Q6KqJyF_Teg";
 
   function extractYouTubeId(urlOrId: string): string {
     if (!urlOrId) return "";
