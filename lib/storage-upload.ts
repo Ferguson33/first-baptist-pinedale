@@ -26,7 +26,8 @@ function delay(ms: number): Promise<void> {
 
 /**
  * Returns a validated access token, refreshing the session if needed.
- * Fixes first-attempt failures when getSession() returns a stale/null token.
+ * Fixes first-attempt failures when getSession() returns a stale/null token
+ * (common on cold loads, PWA resumes, and long-lived admin tabs).
  */
 export async function ensureAccessToken(supabase: SupabaseClient): Promise<string> {
   const {
@@ -42,16 +43,64 @@ export async function ensureAccessToken(supabase: SupabaseClient): Promise<strin
     data: { session },
   } = await supabase.auth.getSession();
 
-  if (session?.access_token) {
+  // Refresh when missing, or when the access token expires within 60s.
+  const expiresAtMs = (session?.expires_at ?? 0) * 1000;
+  const needsRefresh =
+    !session?.access_token || expiresAtMs < Date.now() + 60_000;
+
+  if (!needsRefresh && session?.access_token) {
     return session.access_token;
   }
 
   const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
   if (refreshError || !refreshed.session?.access_token) {
+    // If refresh failed but we still have a non-expired token, use it.
+    if (session?.access_token && expiresAtMs > Date.now()) {
+      return session.access_token;
+    }
     throw new Error('Could not refresh your session. Please sign in again.');
   }
 
   return refreshed.session.access_token;
+}
+
+/** True when a Supabase/PostgREST error looks like auth or RLS rejection. */
+export function isAuthOrRlsError(error: { message?: string; code?: string } | null | undefined): boolean {
+  if (!error) return false;
+  const msg = (error.message || '').toLowerCase();
+  const code = (error.code || '').toLowerCase();
+  return (
+    code === 'pgrst301' ||
+    code === '42501' || // insufficient_privilege
+    msg.includes('jwt') ||
+    msg.includes('row-level security') ||
+    msg.includes('permission denied') ||
+    msg.includes('not authorized') ||
+    msg.includes('unauthorized') ||
+    msg.includes('401') ||
+    msg.includes('403')
+  );
+}
+
+/**
+ * Run a Supabase write after ensuring a fresh session.
+ * On auth/RLS failure, force-refresh once and retry (fixes first-click admin saves).
+ */
+export async function withAdminSessionRetry<T extends { error: { message?: string; code?: string } | null }>(
+  supabase: SupabaseClient,
+  operation: () => PromiseLike<T>
+): Promise<T> {
+  await ensureAccessToken(supabase);
+
+  let result = await operation();
+
+  if (result.error && isAuthOrRlsError(result.error)) {
+    await supabase.auth.refreshSession();
+    await ensureAccessToken(supabase);
+    result = await operation();
+  }
+
+  return result;
 }
 
 export async function withUploadRetry<T>(

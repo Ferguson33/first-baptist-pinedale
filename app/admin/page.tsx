@@ -12,7 +12,7 @@ import { createClient } from '@/lib/supabase/client';
 import { SERMON_EMBED_MODE_LABELS, normalizeEmbedMode, type SermonEmbedMode } from '@/lib/sermon-display';
 import { formatAlbumDate, formatLocalDate, todayLocalDateString } from '@/lib/format-date';
 import { extractYouTubeVideoId, getYouTubeThumbnailUrl } from '@/lib/youtube';
-import { ensureAccessToken, uploadFileViaApi, type UploadProgress } from '@/lib/storage-upload';
+import { ensureAccessToken, uploadFileViaApi, withAdminSessionRetry, type UploadProgress } from '@/lib/storage-upload';
 import { UploadProgressBanner } from '@/components/UploadProgressBanner';
 
 // Types for admin
@@ -170,6 +170,9 @@ function AdminDashboardContent() {
     is_public: false,
     embed_mode: 'auto' as SermonEmbedMode,
   });
+  // Keep these with other sermon state (not late in the file) so save handlers always close over stable hooks.
+  const [deletingSermonId, setDeletingSermonId] = useState<string | null>(null);
+  const [savingSermon, setSavingSermon] = useState(false);
 
   async function fetchMembers() {
     setLoadingMembers(true);
@@ -826,30 +829,35 @@ function AdminDashboardContent() {
     }
     setSavingEvent(true);
 
-    const payload = {
-      title: eventForm.title.trim(),
-      date: eventForm.date,
-      time: eventForm.time || null,
-      description: eventForm.description || null,
-      location: eventForm.location || null,
-    };
+    try {
+      const payload = {
+        title: eventForm.title.trim(),
+        date: eventForm.date,
+        time: eventForm.time || null,
+        description: eventForm.description || null,
+        location: eventForm.location || null,
+      };
 
-    let error;
-    if (editingEvent) {
-      ({ error } = await supabase.from('events').update(payload).eq('id', editingEvent.id));
-    } else {
-      ({ error } = await supabase.from('events').insert(payload));
-    }
+      const { error } = await withAdminSessionRetry(supabase, async () => {
+        if (editingEvent) {
+          return supabase.from('events').update(payload).eq('id', editingEvent.id);
+        }
+        return supabase.from('events').insert(payload);
+      });
 
-    setSavingEvent(false);
-
-    if (error) {
-      toast.error("Failed to save event: " + error.message);
-    } else {
-      toast.success(editingEvent ? "Event updated!" : "Event added!");
-      closeEventForm();
-      fetchEvents();
-      fetch('/api/revalidate?path=/events', { method: 'POST' }).catch(() => {});
+      if (error) {
+        toast.error("Failed to save event: " + error.message);
+      } else {
+        toast.success(editingEvent ? "Event updated!" : "Event added!");
+        closeEventForm();
+        fetchEvents();
+        fetch('/api/revalidate?path=/events', { method: 'POST' }).catch(() => {});
+      }
+    } catch (err) {
+      console.error('saveGeneralEvent error:', err);
+      toast.error(err instanceof Error ? err.message : "Failed to save event. Please try again.");
+    } finally {
+      setSavingEvent(false);
     }
   }
 
@@ -939,50 +947,57 @@ function AdminDashboardContent() {
 
   async function saveSermonSettings(successMessage = 'Homepage content updated!') {
     setSavingSermonSettings(true);
-    const liveVideoId = normalizedLiveVideoId();
-    const homepageVideos = normalizedHomepageVideoIds();
-    const { error } = await supabase
-      .from('sermon_settings')
-      .update({
-        pastor_note: sermonSettings.pastor_note || null,
-        upcoming_title: sermonSettings.upcoming_title || null,
-        upcoming_reference: sermonSettings.upcoming_reference || null,
-        upcoming_date: sermonSettings.upcoming_date || null,
-        sunday_school_lesson: sermonSettings.sunday_school_lesson || null,
-        sunday_school_reference: sermonSettings.sunday_school_reference || null,
-        youth_sunday_school_lesson: sermonSettings.youth_sunday_school_lesson || null,
-        youth_sunday_school_reference: sermonSettings.youth_sunday_school_reference || null,
-        youth_sunday_school_date: sermonSettings.youth_sunday_school_date || null,
-        youth_pastor_note: sermonSettings.youth_pastor_note || null,
-        youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
-        events_google_doc_url: sermonSettings.events_google_doc_url || null,
-        prayer_bulletin_google_doc_url: sermonSettings.prayer_bulletin_google_doc_url || null,
-        nursery_schedule_google_doc_url: sermonSettings.nursery_schedule_google_doc_url || null,
-        live_video_id: liveVideoId,
-        live_stream_active: sermonSettings.live_stream_active && !!liveVideoId,
-        live_stream_public: sermonSettings.live_stream_public && !!liveVideoId,
-        welcome_video_id: homepageVideos.welcome,
-        pastor_york_video_id: homepageVideos.york,
-        pastor_holmes_video_id: homepageVideos.holmes,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', 1);
+    try {
+      const liveVideoId = normalizedLiveVideoId();
+      const homepageVideos = normalizedHomepageVideoIds();
+      const { error } = await withAdminSessionRetry(supabase, async () =>
+        supabase
+          .from('sermon_settings')
+          .update({
+            pastor_note: sermonSettings.pastor_note || null,
+            upcoming_title: sermonSettings.upcoming_title || null,
+            upcoming_reference: sermonSettings.upcoming_reference || null,
+            upcoming_date: sermonSettings.upcoming_date || null,
+            sunday_school_lesson: sermonSettings.sunday_school_lesson || null,
+            sunday_school_reference: sermonSettings.sunday_school_reference || null,
+            youth_sunday_school_lesson: sermonSettings.youth_sunday_school_lesson || null,
+            youth_sunday_school_reference: sermonSettings.youth_sunday_school_reference || null,
+            youth_sunday_school_date: sermonSettings.youth_sunday_school_date || null,
+            youth_pastor_note: sermonSettings.youth_pastor_note || null,
+            youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
+            events_google_doc_url: sermonSettings.events_google_doc_url || null,
+            prayer_bulletin_google_doc_url: sermonSettings.prayer_bulletin_google_doc_url || null,
+            nursery_schedule_google_doc_url: sermonSettings.nursery_schedule_google_doc_url || null,
+            live_video_id: liveVideoId,
+            live_stream_active: sermonSettings.live_stream_active && !!liveVideoId,
+            live_stream_public: sermonSettings.live_stream_public && !!liveVideoId,
+            welcome_video_id: homepageVideos.welcome,
+            pastor_york_video_id: homepageVideos.york,
+            pastor_holmes_video_id: homepageVideos.holmes,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', 1)
+      );
 
-    setSavingSermonSettings(false);
-
-    if (error) {
-      console.error('Failed to save sermon settings:', error);
-      toast.error("Couldn't save settings. Please try again, or contact the site administrator if this continues.");
-    } else {
-      setSermonSettings((prev) => ({
-        ...prev,
-        live_video_id: liveVideoId || '',
-        welcome_video_id: homepageVideos.welcome || '',
-        pastor_york_video_id: homepageVideos.york || '',
-        pastor_holmes_video_id: homepageVideos.holmes || '',
-      }));
-      toast.success(successMessage);
-      fetch('/api/revalidate?paths=/,/sermons,/youth-ministry', { method: 'POST' }).catch(() => {});
+      if (error) {
+        console.error('Failed to save sermon settings:', error);
+        toast.error("Couldn't save settings. Please try again, or contact the site administrator if this continues.");
+      } else {
+        setSermonSettings((prev) => ({
+          ...prev,
+          live_video_id: liveVideoId || '',
+          welcome_video_id: homepageVideos.welcome || '',
+          pastor_york_video_id: homepageVideos.york || '',
+          pastor_holmes_video_id: homepageVideos.holmes || '',
+        }));
+        toast.success(successMessage);
+        fetch('/api/revalidate?paths=/,/sermons,/youth-ministry', { method: 'POST' }).catch(() => {});
+      }
+    } catch (err) {
+      console.error('saveSermonSettings error:', err);
+      toast.error(err instanceof Error ? err.message : "Couldn't save settings. Please try again.");
+    } finally {
+      setSavingSermonSettings(false);
     }
   }
 
@@ -1073,36 +1088,39 @@ function AdminDashboardContent() {
   }
 
   async function saveRealSermon() {
-    if (!sermonForm.title || !sermonForm.video_url) {
+    if (!sermonForm.title?.trim() || !sermonForm.video_url?.trim()) {
       toast.error("Title and YouTube URL are required.");
+      return;
+    }
+
+    const videoId = extractYouTubeVideoId(sermonForm.video_url);
+    if (!videoId) {
+      toast.error("Could not read a valid YouTube link or 11-character video ID. Check the link and try again.");
       return;
     }
 
     setSavingSermon(true);
     try {
-      // Prefer a real YouTube thumbnail; keep any existing custom thumb on edit if video id is missing.
-      const videoId = extractYouTubeVideoId(sermonForm.video_url);
-      const thumbnail_url = videoId
-        ? getYouTubeThumbnailUrl(videoId, 'hq')
-        : (editingSermon?.thumbnail_url || '');
-
       const payload = {
-        title: sermonForm.title,
-        preacher: sermonForm.preacher,
-        date: sermonForm.date,
-        video_url: sermonForm.video_url,
-        thumbnail_url,
+        title: sermonForm.title.trim(),
+        preacher: (sermonForm.preacher || "Pastor Ted York").trim(),
+        date: sermonForm.date || todayLocalDateString(),
+        video_url: sermonForm.video_url.trim(),
+        // thumbnail_url is NOT NULL in the DB — always send a real YouTube thumb.
+        thumbnail_url: getYouTubeThumbnailUrl(videoId, 'hq'),
         description: sermonForm.description || "",
         is_public: sermonForm.is_public,
         embed_mode: sermonForm.embed_mode,
       };
 
-      let error;
-      if (editingSermon) {
-        ({ error } = await supabase.from('sermons').update(payload).eq('id', editingSermon.id));
-      } else {
-        ({ error } = await supabase.from('sermons').insert(payload));
-      }
+      // ensureAccessToken + one automatic retry: same class of first-attempt
+      // JWT/RLS failures we already fixed for photo uploads.
+      const { error } = await withAdminSessionRetry(supabase, async () => {
+        if (editingSermon) {
+          return supabase.from('sermons').update(payload).eq('id', editingSermon.id);
+        }
+        return supabase.from('sermons').insert(payload);
+      });
 
       if (error) {
         toast.error("Failed to save sermon: " + error.message);
@@ -1113,6 +1131,9 @@ function AdminDashboardContent() {
         // Bust public sermons (curated + live settings affect homepage too)
         fetch('/api/revalidate?paths=/sermons,/', { method: 'POST' }).catch(() => {});
       }
+    } catch (err) {
+      console.error('saveRealSermon error:', err);
+      toast.error(err instanceof Error ? err.message : "Failed to save sermon. Please try again.");
     } finally {
       setSavingSermon(false);
     }
@@ -1123,27 +1144,30 @@ function AdminDashboardContent() {
     openSermonForm();
   }
 
-  // Track which sermon is currently being deleted (for loading state)
-  const [deletingSermonId, setDeletingSermonId] = useState<string | null>(null);
-  const [savingSermon, setSavingSermon] = useState(false);
-
   async function deleteRealSermon(id: string, title: string) {
     if (!confirm(`Delete sermon "${title}"?\n\nThis cannot be undone.`)) return;
 
     setDeletingSermonId(id);
 
-    // Note: If you later store real thumbnails in Supabase Storage (instead of YouTube thumbnails),
-    // you would also delete the file here using supabase.storage.from('sermons').remove([...])
-    const { error } = await supabase.from('sermons').delete().eq('id', id);
+    try {
+      // Note: If you later store real thumbnails in Supabase Storage (instead of YouTube thumbnails),
+      // you would also delete the file here using supabase.storage.from('sermons').remove([...])
+      const { error } = await withAdminSessionRetry(supabase, async () =>
+        supabase.from('sermons').delete().eq('id', id)
+      );
 
-    if (error) {
-      toast.error("Failed to delete sermon: " + error.message);
-    } else {
-      toast.success("Sermon deleted");
-      fetchRealSermons();
+      if (error) {
+        toast.error("Failed to delete sermon: " + error.message);
+      } else {
+        toast.success("Sermon deleted");
+        fetchRealSermons();
+      }
+    } catch (err) {
+      console.error('deleteRealSermon error:', err);
+      toast.error(err instanceof Error ? err.message : "Failed to delete sermon. Please try again.");
+    } finally {
+      setDeletingSermonId(null);
     }
-
-    setDeletingSermonId(null);
   }
 
   async function deleteYouthPhoto(id: string, url: string) {
