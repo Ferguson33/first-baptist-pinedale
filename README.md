@@ -1,7 +1,7 @@
 # First Baptist Church — Pinedale, Wyoming
 **Website for 646 N Tyler Ave, Pinedale, WY 82941**
 
-A complete, modern, professional church website built with Next.js 15, Tailwind, and Supabase. Warm, welcoming design with earthy navy, gold, and Wyoming mountain accents.
+A complete, modern, professional church website built with Next.js 16, Tailwind, and Supabase. Warm, welcoming design with earthy navy, gold, and Wyoming mountain accents.
 
 ## Pastors
 - Lead: Ted & Teresa York

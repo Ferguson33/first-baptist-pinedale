@@ -131,7 +131,7 @@ export default function Home() {
     <div className="overflow-hidden">
       {/* HERO */}
       <div className="relative h-[92vh] min-h-[620px] flex items-center justify-center bg-[var(--color-navy-dark)]">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=2000&q=80')] bg-cover bg-center brightness-[1.25] opacity-90" />
+        <div className="absolute inset-0 bg-[url('/images/hero-mountain.jpg')] bg-cover bg-center brightness-[1.25] opacity-90" />
         <div className="absolute inset-0 bg-gradient-to-b from-[var(--color-navy-dark)]/15 via-[var(--color-navy-dark)]/10 to-[var(--color-navy-dark)]/25" />
         
         <div className="relative z-10 max-w-4xl mx-auto px-6 text-center text-white">

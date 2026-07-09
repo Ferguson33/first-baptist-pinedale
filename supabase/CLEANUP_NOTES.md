@@ -1,8 +1,12 @@
-# Supabase Cleanup Notes (May 2025)
+# Supabase Cleanup Notes (May 2025, updated July 2026)
+
+## Archived one-off / debug scripts
+One-time diagnostics, nuclear resets, and personal admin-promotion scripts live in `archive/`.
+They are **not** part of normal setup. Do not re-run them on production unless you know why.
 
 ## Prayer System Cleanup (latest)
 - Old `prayer_requests` table and `prayer_auto_approve` column are legacy from the removed Prayer Wall feature.
-- See `cleanup-old-prayer-system.sql` for optional removal.
+- See `archive/cleanup-old-prayer-system.sql` for optional removal.
 - `prayer-photos` storage bucket is no longer needed and can be deleted from the dashboard.
 
 
@@ -20,7 +24,7 @@
 If you want to remove the old unused tables from your actual Supabase database, run:
 
 ```sql
--- See: cleanup-old-tables.sql
+-- See: archive/cleanup-old-tables.sql
 ```
 
 **Warning:** Only run this if you are certain no one is still using the old data.

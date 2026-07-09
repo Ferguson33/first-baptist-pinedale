@@ -44,6 +44,17 @@ export function getYouTubeWatchUrl(videoId: string): string {
   return `https://www.youtube.com/watch?v=${videoId}`;
 }
 
+/** Standard YouTube thumbnail URL for a video ID (no external placeholder service). */
+export function getYouTubeThumbnailUrl(videoId: string, quality: 'hq' | 'mq' | 'sd' | 'max' = 'hq'): string {
+  const map = {
+    max: 'maxresdefault',
+    sd: 'sddefault',
+    hq: 'hqdefault',
+    mq: 'mqdefault',
+  } as const;
+  return `https://i.ytimg.com/vi/${videoId}/${map[quality]}.jpg`;
+}
+
 /** Direct watch URL for live broadcasts (works when site embedding is disabled). */
 export function getYouTubeLiveWatchUrl(videoId: string): string {
   return `https://www.youtube.com/live/${videoId}`;

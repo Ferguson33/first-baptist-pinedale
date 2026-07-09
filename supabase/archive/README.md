@@ -1,13 +1,17 @@
-# Archived SQL Files
+# Archived SQL scripts
 
-These files are kept for historical reference only.
+These files are **historical or one-off**. They are not needed for day-to-day site operation.
 
-They relate to older versions of the site that used dynamic database tables for the Member Directory (family-centric model and `directory_members` table).
+## Do not run on production unless you understand the impact
 
-**Current state (2025+):**
-- Member Directory is maintained in Google Docs
-- Prayer Bulletin is maintained in Google Docs
+| File | Why archived |
+|------|----------------|
+| `families-setup.sql`, `schema-updates.sql` | Old family/directory model (site uses Google Docs now) |
+| `cleanup-old-tables.sql`, `cleanup-old-prayer-system.sql` | Optional legacy drops after Prayer Wall removal |
+| `check-is-admin.sql`, `check-duplicate-is-admin.sql` | Diagnostics only |
+| `debug-allow-youth-insert.sql`, `diagnose-youth-rls.sql` | Temporary RLS debugging |
+| `youth-photos-nuclear-reset.sql`, `youth-photos-policies-reset.sql` | Aggressive policy resets (one-time recovery) |
+| `fix-events-rls-nuclear.sql` | Aggressive events RLS reset (one-time recovery) |
+| `force-admin-josh-ferguson-overwrite.sql` | One-time admin promotion for a specific user |
 
-You do **not** need to run any files in this folder.
-
-If you want to remove the old tables from your Supabase database, run `../cleanup-old-tables.sql` instead.
+For current setup, start from `../schema.sql` and the non-archived `fix-*.sql` / feature scripts only when needed.

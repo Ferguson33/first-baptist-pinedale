@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { SERMON_EMBED_MODE_LABELS, normalizeEmbedMode, type SermonEmbedMode } from '@/lib/sermon-display';
 import { formatAlbumDate, formatLocalDate, todayLocalDateString } from '@/lib/format-date';
-import { extractYouTubeVideoId } from '@/lib/youtube';
+import { extractYouTubeVideoId, getYouTubeThumbnailUrl } from '@/lib/youtube';
 import { ensureAccessToken, uploadFileViaApi, type UploadProgress } from '@/lib/storage-upload';
 import { UploadProgressBanner } from '@/components/UploadProgressBanner';
 
@@ -1080,12 +1080,18 @@ function AdminDashboardContent() {
 
     setSavingSermon(true);
     try {
+      // Prefer a real YouTube thumbnail; keep any existing custom thumb on edit if video id is missing.
+      const videoId = extractYouTubeVideoId(sermonForm.video_url);
+      const thumbnail_url = videoId
+        ? getYouTubeThumbnailUrl(videoId, 'hq')
+        : (editingSermon?.thumbnail_url || '');
+
       const payload = {
         title: sermonForm.title,
         preacher: sermonForm.preacher,
         date: sermonForm.date,
         video_url: sermonForm.video_url,
-        thumbnail_url: "https://picsum.photos/id/1015/600/340", // TODO: could derive from YouTube or upload
+        thumbnail_url,
         description: sermonForm.description || "",
         is_public: sermonForm.is_public,
         embed_mode: sermonForm.embed_mode,

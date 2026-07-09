@@ -13,18 +13,17 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    // Local /public images work without config. Remote patterns reserved for
+    // optional next/image usage (YouTube thumbs, Supabase Storage uploads).
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "images.unsplash.com",
+        hostname: "i.ytimg.com",
       },
       {
         protocol: "https",
-        hostname: "picsum.photos",
-      },
-      {
-        protocol: "https",
-        hostname: "plus.unsplash.com",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
       },
     ],
   },

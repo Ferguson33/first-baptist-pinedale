@@ -1,6 +1,5 @@
 "use client";
 
-import { Layout } from '@/components/Layout';
 import { Users } from 'lucide-react';
 
 export default function LeadershipPage() {
