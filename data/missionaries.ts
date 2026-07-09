@@ -96,7 +96,7 @@ export const missionaries: Missionary[] = [
     field: "Siberia & Alaska",
     country: "United States",
     org: "New",
-    // photo: "/images/Missionaries/posey.jpg"
+    photo: "/images/Missionaries/posey.jpg",
   },
   {
     name: "Elsa Ramirez",
