@@ -264,25 +264,19 @@ export default function SermonsPage() {
       )}
 
       {isApprovedMember && (
-        <>
-          <div>
-            <div className="mb-4">
-              <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Sermons</h2>
+        <div>
+          {loading ? (
+            <div className="text-center py-12 text-[var(--color-stone-light)]">Loading sermons...</div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-600">{error}</div>
+          ) : fullArchive.length > 0 ? (
+            renderSermonList(fullArchive, { liveStreamActive: memberLiveActive })
+          ) : (
+            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-10 text-center">
+              <p className="text-[var(--color-stone)]">No sermons posted yet. Check back soon.</p>
             </div>
-
-            {loading ? (
-              <div className="text-center py-12 text-[var(--color-stone-light)]">Loading sermons...</div>
-            ) : error ? (
-              <div className="text-center py-8 text-red-600">{error}</div>
-            ) : fullArchive.length > 0 ? (
-              renderSermonList(fullArchive, { liveStreamActive: memberLiveActive })
-            ) : (
-              <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-10 text-center">
-                <p className="text-[var(--color-stone)]">No sermons posted yet. Check back soon.</p>
-              </div>
-            )}
-          </div>
-        </>
+          )}
+        </div>
       )}
 
     </div>
