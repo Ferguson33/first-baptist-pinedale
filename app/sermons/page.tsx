@@ -5,7 +5,11 @@ import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { createClient } from '@/lib/supabase/client';
-import { shouldEmbedSermonOnSite } from '@/lib/sermon-display';
+import {
+  YOUTUBE_CHANNEL_URL,
+  getSermonSiteSlots,
+  shouldEmbedNewestSermon,
+} from '@/lib/sermon-display';
 import type { Sermon } from '@/lib/supabase';
 import { formatLocalDate } from '@/lib/format-date';
 import { extractYouTubeVideoId, getYouTubeEmbedUrl, getYouTubeWatchUrl } from '@/lib/youtube';
@@ -81,13 +85,18 @@ export default function SermonsPage() {
   const fullArchive = sermons;
   const memberLiveActive = liveStreamActive;
 
-  function renderEmbeddedSermon(sermon: Sermon) {
+  function renderEmbeddedSermon(sermon: Sermon, eyebrow?: string) {
     const embedUrl = getYouTubeEmbed(sermon.video_url);
 
     return (
       <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden">
         <div className="p-6 md:p-8 border-b">
           <div>
+            {eyebrow && (
+              <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)] mb-2">
+                {eyebrow}
+              </div>
+            )}
             <h3 className="text-2xl font-semibold text-[var(--color-navy)]">{sermon.title}</h3>
             <p className="text-sm text-[var(--color-stone-light)] mt-1">
               {sermon.preacher} • {formatSermonDate(sermon.date)}
@@ -117,13 +126,18 @@ export default function SermonsPage() {
     );
   }
 
-  function renderLinkedSermon(sermon: Sermon) {
+  function renderLinkedSermon(sermon: Sermon, eyebrow?: string) {
     const watchUrl = getYouTubeWatchLink(sermon.video_url);
 
     return (
       <div className="bg-white border border-[var(--color-gold)]/20 rounded-2xl p-5 md:p-6 hover:border-[var(--color-gold)]/50 transition">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="min-w-0">
+            {eyebrow && (
+              <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)] mb-2">
+                {eyebrow}
+              </div>
+            )}
             <h3 className="text-xl font-semibold text-[var(--color-navy)]">{sermon.title}</h3>
             <p className="text-sm text-[var(--color-stone-light)] mt-1">
               {sermon.preacher} • {formatSermonDate(sermon.date)}
@@ -150,25 +164,58 @@ export default function SermonsPage() {
     );
   }
 
+  function renderArchiveChannelLink() {
+    return (
+      <div className="bg-[var(--color-cream)] border border-[var(--color-gold)]/25 rounded-2xl p-6 md:p-8 text-center">
+        <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)] mb-2">
+          Older messages
+        </div>
+        <h3 className="text-xl font-semibold text-[var(--color-navy)]">
+          Archived sermons on YouTube
+        </h3>
+        <p className="mt-2 text-sm text-[var(--color-stone)] max-w-md mx-auto">
+          Browse the full collection of past messages on our church YouTube channel.
+        </p>
+        <a
+          href={YOUTUBE_CHANNEL_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[var(--color-navy)] text-white text-sm font-semibold hover:bg-[var(--color-navy-dark)] transition"
+        >
+          Open YouTube archive <ExternalLink className="w-4 h-4" />
+        </a>
+      </div>
+    );
+  }
+
+  /**
+   * Display model:
+   *  1. Newest sermon → embed
+   *  2. Previous sermon (“last week”) → YouTube link
+   *  3. Everything older → single channel archive link (not listed one-by-one)
+   */
   function renderSermonList(
     list: Sermon[],
     options: { liveStreamActive?: boolean } = {}
   ) {
     if (list.length === 0) return null;
 
+    const { newest, previous } = getSermonSiteSlots(list);
+    if (!newest) return null;
+
+    const embedNewest = shouldEmbedNewestSermon(newest, {
+      liveStreamActive: options.liveStreamActive,
+    });
+
     return (
       <div className="space-y-8">
-        {list.map((sermon) => {
-          const embed = shouldEmbedSermonOnSite(sermon, list, {
-            liveStreamActive: options.liveStreamActive,
-          });
+        {embedNewest
+          ? renderEmbeddedSermon(newest, 'Latest sermon')
+          : renderLinkedSermon(newest, 'Latest sermon')}
 
-          return (
-            <div key={sermon.id}>
-              {embed ? renderEmbeddedSermon(sermon) : renderLinkedSermon(sermon)}
-            </div>
-          );
-        })}
+        {previous && renderLinkedSermon(previous, "Last week's sermon")}
+
+        {renderArchiveChannelLink()}
       </div>
     );
   }
@@ -220,11 +267,11 @@ export default function SermonsPage() {
         <>
           <div>
             <div className="mb-4">
-              <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Sermon Archive</h2>
+              <h2 className="text-3xl font-semibold tracking-tight text-[var(--color-navy)]">Sermons</h2>
             </div>
 
             {loading ? (
-              <div className="text-center py-12 text-[var(--color-stone-light)]">Loading archive...</div>
+              <div className="text-center py-12 text-[var(--color-stone-light)]">Loading sermons...</div>
             ) : error ? (
               <div className="text-center py-8 text-red-600">{error}</div>
             ) : fullArchive.length > 0 ? (

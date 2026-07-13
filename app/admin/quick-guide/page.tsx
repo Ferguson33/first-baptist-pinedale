@@ -39,7 +39,7 @@ export default function PastorQuickGuide() {
             <li>Record or upload to YouTube first</li>
             <li>Admin → Sermons → &quot;Add Sermon&quot;</li>
             <li>Paste the YouTube link or video ID</li>
-            <li>Choose display: Automatic (newest embeds), Always embed, or YouTube link only</li>
+            <li>Newest sermon embeds on the site; previous week is a YouTube link; older messages open the channel archive</li>
           </ol>
 
           <div className="mt-6">

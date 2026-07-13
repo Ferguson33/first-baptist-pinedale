@@ -1527,7 +1527,9 @@ function AdminDashboardContent() {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <div className="font-semibold text-2xl">Archived Sermons</div>
-                <div className="text-sm text-[var(--color-stone-light)]">Add title, date, and YouTube link. Newest sermon embeds automatically.</div>
+                <div className="text-sm text-[var(--color-stone-light)]">
+                  Add title, date, and YouTube link. Newest embeds on the site; the previous week is a link; older messages go to the YouTube channel.
+                </div>
               </div>
               <div className="flex gap-3">
                 <button 
@@ -2411,7 +2413,7 @@ function AdminDashboardContent() {
           <div className="mt-10 text-xs space-y-1 text-[var(--color-stone-light)]">
             <div>• Update building progress and photos from the Building tab</div>
             <div>• Maintain the Prayer Bulletin and Nursery Schedule Google Docs</div>
-            <div>• Add sermons with YouTube links; choose Automatic, Always embed, or YouTube link</div>
+            <div>• Add sermons with YouTube links — newest embeds, previous week links, older ones via YouTube channel</div>
             <div>• Approve, deny, or remove members from the Members tab</div>
             <div>• Drag photos onto the drop zones — no special file names needed</div>
           </div>
