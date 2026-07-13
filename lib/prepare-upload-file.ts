@@ -9,9 +9,12 @@
 /** Stay under Vercel’s ~4.5 MB body limit (multipart overhead included). */
 export const MAX_API_UPLOAD_BYTES = 3.5 * 1024 * 1024;
 
-const MAX_DIMENSION = 2048;
-const INITIAL_QUALITY = 0.82;
-const MIN_QUALITY = 0.55;
+/** Aim lower so typical phone photos take the simple service-role API path. */
+const TARGET_UPLOAD_BYTES = 2 * 1024 * 1024;
+
+const MAX_DIMENSION = 1920;
+const INITIAL_QUALITY = 0.8;
+const MIN_QUALITY = 0.45;
 
 function isCompressibleImage(file: File): boolean {
   if (!file.type.startsWith('image/')) return false;
@@ -70,8 +73,21 @@ export async function compressImageForUpload(
         blob = await new Promise<Blob | null>((resolve) =>
           canvas.toBlob((b) => resolve(b), 'image/jpeg', quality)
         );
-        if (blob && blob.size <= MAX_API_UPLOAD_BYTES) break;
-        quality -= 0.08;
+        if (blob && blob.size <= TARGET_UPLOAD_BYTES) break;
+        quality -= 0.07;
+      }
+
+      // Last resort: shrink dimensions further if still oversized.
+      if (blob && blob.size > MAX_API_UPLOAD_BYTES) {
+        const scale = Math.sqrt(TARGET_UPLOAD_BYTES / blob.size);
+        const w2 = Math.max(640, Math.round(width * Math.min(1, scale)));
+        const h2 = Math.max(480, Math.round(height * Math.min(1, scale)));
+        canvas.width = w2;
+        canvas.height = h2;
+        ctx.drawImage(bitmap, 0, 0, w2, h2);
+        blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob((b) => resolve(b), 'image/jpeg', MIN_QUALITY)
+        );
       }
 
       if (!blob) return file;

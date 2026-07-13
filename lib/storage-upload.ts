@@ -209,6 +209,59 @@ export function postFormDataWithProgress(
 }
 
 /**
+ * Upload to a signed Storage URL WITHOUT the browser Supabase client's
+ * Authorization header. Sending the user JWT alongside the signed token can
+ * make Storage return 403 Forbidden (RLS checks the JWT instead of the token).
+ */
+async function putFileToSignedUrl(
+  signedUrl: string,
+  file: File,
+  contentType: string,
+  onProgress?: (percent: number) => void
+): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const formData = new FormData();
+    formData.append('cacheControl', '3600');
+    formData.append('', file, file.name);
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (!event.lengthComputable || !onProgress) return;
+      onProgress(Math.min(99, Math.round((event.loaded / event.total) * 100)));
+    });
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+        return;
+      }
+      const body = (xhr.responseText || '').slice(0, 200);
+      reject(
+        new Error(
+          `Storage rejected the file (${xhr.status})${body ? `: ${body}` : ''}. Try a smaller photo or sign out and back in.`
+        )
+      );
+    });
+
+    xhr.addEventListener('error', () => {
+      reject(new Error('Network error during direct storage upload. Please try again.'));
+    });
+
+    xhr.addEventListener('abort', () => {
+      reject(new Error('Upload cancelled or timed out.'));
+    });
+
+    // PUT + token query string (signedUrl already includes ?token=...)
+    // Do not set Authorization — that triggers Storage RLS with the user JWT.
+    xhr.open('PUT', signedUrl);
+    xhr.setRequestHeader('x-upsert', 'false');
+    // Content-Type is set by the browser for FormData (multipart boundary).
+    void contentType;
+    xhr.send(formData);
+  });
+}
+
+/**
  * For files that still exceed Vercel's body limit after compression (or videos),
  * upload straight to Supabase Storage with a signed URL, then finalize the DB row.
  */
@@ -248,22 +301,22 @@ async function uploadFileDirectToStorage(
   }
 
   const path = String(prepData.path);
-  const uploadToken = String(prepData.token);
+  const signedUrl = String(prepData.signedUrl || '');
   const contentType = String(prepData.contentType || file.type || 'application/octet-stream');
+
+  if (!signedUrl) {
+    throw new Error('Server did not return a signed upload URL. Please try again.');
+  }
 
   report({ phase: 'uploading', percent: 5, message: `Uploading ${file.name}…` });
 
-  // Prefer the signed-URL helper on the same browser client (uses the token, not RLS).
-  const { error: uploadError } = await supabase.storage
-    .from(options.bucket)
-    .uploadToSignedUrl(path, uploadToken, file, {
-      contentType,
-      upsert: false,
+  await putFileToSignedUrl(signedUrl, file, contentType, (percent) => {
+    report({
+      phase: 'uploading',
+      percent,
+      message: `Uploading ${file.name}… ${percent}%`,
     });
-
-  if (uploadError) {
-    throw new Error(uploadError.message || 'Direct storage upload failed');
-  }
+  });
 
   report({ phase: 'saving', percent: 90, message: 'Saving photo record…' });
 
