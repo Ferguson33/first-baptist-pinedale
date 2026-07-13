@@ -17,14 +17,25 @@ interface BuildingPhoto {
   caption: string | null;
 }
 
+/** How many photos to show in the grid at first / per "Load more" click. */
+const PHOTOS_PAGE_SIZE = 16;
+
 export default function BuildingProject() {
   const supabase = createClient();
   const [progress, setProgress] = useState<BuildingProgress | null>(null);
   const [photos, setPhotos] = useState<BuildingPhoto[]>([]);
+  const [visibleCount, setVisibleCount] = useState(PHOTOS_PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [progressError, setProgressError] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  const visiblePhotos = photos.slice(0, visibleCount);
+  const hasMorePhotos = visibleCount < photos.length;
+
+  const loadMorePhotos = () => {
+    setVisibleCount((prev) => Math.min(prev + PHOTOS_PAGE_SIZE, photos.length));
+  };
 
   const fetchBuildingData = async (isBackground = false) => {
     if (!isBackground) {
@@ -59,7 +70,7 @@ export default function BuildingProject() {
         setProgressError(true);
       }
 
-      // Photos can use client (or same fresh pattern if needed)
+      // Newest first — full list for lightbox; grid only shows `visibleCount` at a time
       const { data: photosData, error: photosError } = await supabase
         .from('building_photos')
         .select('id, url, caption')
@@ -69,6 +80,10 @@ export default function BuildingProject() {
         console.error('Error fetching building photos:', photosError);
       } else if (photosData) {
         setPhotos(photosData);
+        // Reset grid to first page on refresh so new photos appear at the top
+        if (!isBackground) {
+          setVisibleCount(PHOTOS_PAGE_SIZE);
+        }
       }
     } catch (error) {
       console.error('Error fetching building data:', error);
@@ -175,10 +190,18 @@ export default function BuildingProject() {
         </div>
       </div>
 
-      {/* Photo Gallery */}
+      {/* Photo Gallery — newest 16 first, Load more for the rest */}
       <div className="mt-16">
-        <div className="flex items-center justify-between mb-5">
-          <div className="font-semibold text-2xl tracking-tight">Construction Photo Journal</div>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+          <div>
+            <div className="font-semibold text-2xl tracking-tight">Construction Photo Journal</div>
+            {photos.length > 0 && (
+              <div className="text-sm text-[var(--color-stone-light)] mt-1">
+                Showing {visiblePhotos.length} of {photos.length} photos
+                {photos.length > PHOTOS_PAGE_SIZE ? ' · newest first' : ''}
+              </div>
+            )}
+          </div>
           <button 
             onClick={() => fetchBuildingData()}
             className="text-xs px-3 py-1 border border-[var(--color-gold)]/40 rounded hover:bg-[var(--color-cream)] transition"
@@ -189,8 +212,8 @@ export default function BuildingProject() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {loading && photos.length === 0 ? (
             <div className="col-span-full text-center py-12 text-[var(--color-stone-light)]">Loading photos...</div>
-          ) : photos.length > 0 ? (
-            photos.map((p) => (
+          ) : visiblePhotos.length > 0 ? (
+            visiblePhotos.map((p) => (
               <div 
                 key={p.id} 
                 className="group overflow-hidden rounded-2xl border aspect-[4/3] relative cursor-pointer bg-[var(--color-cream)]"
@@ -203,6 +226,8 @@ export default function BuildingProject() {
                 <img 
                   src={p.url} 
                   alt={p.caption || "Construction photo"} 
+                  loading="lazy"
+                  decoding="async"
                   className="absolute inset-0 w-full h-full object-contain p-1 group-hover:scale-[1.02] transition-transform duration-500" 
                 />
                 {p.caption && (
@@ -218,6 +243,21 @@ export default function BuildingProject() {
             </div>
           )}
         </div>
+
+        {hasMorePhotos && (
+          <div className="mt-8 flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={loadMorePhotos}
+              className="px-8 py-3 rounded-full bg-[var(--color-navy)] text-white text-sm font-semibold hover:bg-[var(--color-navy-dark)] transition shadow-sm"
+            >
+              Load more photos
+            </button>
+            <div className="text-xs text-[var(--color-stone-light)]">
+              {photos.length - visibleCount} older photo{photos.length - visibleCount === 1 ? '' : 's'} remaining
+            </div>
+          </div>
+        )}
       </div>
 
 
@@ -269,6 +309,9 @@ export default function BuildingProject() {
               <img 
                 src={photos[currentIndex].url} 
                 alt={photos[currentIndex].caption || "Construction photo"} 
+                // Eager load the open lightbox image so arrows feel snappy
+                loading="eager"
+                decoding="async"
                 className="max-w-full max-h-[70vh] object-contain bg-[var(--color-cream)] shadow-2xl" 
               />
 
