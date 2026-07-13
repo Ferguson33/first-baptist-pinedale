@@ -1748,6 +1748,7 @@ function AdminDashboardContent() {
               {uploadingBuilding ? 'Uploading…' : 'Drag & Drop New Construction Photos Here'}
             </div>
             <div className="text-[var(--color-stone-light)] mt-1">or click to browse • JPG, PNG, or MP4</div>
+            <div className="text-xs text-[var(--color-stone-light)] mt-2">Large phone photos are optimized automatically before upload</div>
             <input id="building-upload" type="file" accept="image/*,video/*" className="hidden" disabled={uploadingBuilding} onChange={(e) => handleImageUpload(e.target.files, 'building')} />
           </div>
 
@@ -2001,6 +2002,7 @@ function AdminDashboardContent() {
                   ? "Photos will be added to the selected album (no captions on upload)" 
                   : "or click to browse • JPG, PNG, or MP4"}
               </div>
+              <div className="text-xs text-[var(--color-stone-light)] mt-2">Large phone photos are optimized automatically before upload</div>
               <input 
                 id="youth-upload" 
                 type="file" 

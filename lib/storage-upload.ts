@@ -1,4 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  formatFileSize,
+  MAX_API_UPLOAD_BYTES,
+  prepareFileForUpload,
+} from '@/lib/prepare-upload-file';
 
 export type UploadProgress = {
   phase: 'preparing' | 'uploading' | 'saving' | 'done' | 'error';
@@ -18,6 +23,22 @@ const LARGE_FILE_TIMEOUT_MS = 600_000;
 function uploadTimeoutMs(file: File): number {
   const isLargeOrVideo = file.size > 20 * 1024 * 1024 || file.type.startsWith('video/');
   return isLargeOrVideo ? LARGE_FILE_TIMEOUT_MS : DEFAULT_TIMEOUT_MS;
+}
+
+function payloadTooLargeMessage(status: number, serverMessage?: string): string | null {
+  const lower = (serverMessage || '').toLowerCase();
+  if (
+    status === 413 ||
+    lower.includes('payload too large') ||
+    lower.includes('entity too large') ||
+    lower.includes('request entity too large') ||
+    lower.includes('body exceeded') ||
+    lower.includes('functional_payload_too_large') ||
+    lower.includes('function_payload_too_large')
+  ) {
+    return 'This file is too large for a normal upload. Try a smaller photo, or refresh and try again — photos are now optimized automatically.';
+  }
+  return null;
 }
 
 function delay(ms: number): Promise<void> {
@@ -187,6 +208,98 @@ export function postFormDataWithProgress(
   });
 }
 
+/**
+ * For files that still exceed Vercel's body limit after compression (or videos),
+ * upload straight to Supabase Storage with a signed URL, then finalize the DB row.
+ */
+async function uploadFileDirectToStorage(
+  supabase: SupabaseClient,
+  file: File,
+  options: ApiUploadOptions,
+  report: (progress: UploadProgress) => void
+): Promise<StorageUploadResult> {
+  const token = await ensureAccessToken(supabase);
+
+  report({
+    phase: 'preparing',
+    percent: 2,
+    message: `Preparing direct upload (${formatFileSize(file.size)})…`,
+  });
+
+  const prepRes = await fetch('/api/admin/storage/prepare-upload', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      bucket: options.bucket,
+      contentType: file.type || 'application/octet-stream',
+      fileName: file.name,
+    }),
+  });
+
+  const prepData = (await prepRes.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!prepRes.ok || !prepData.success) {
+    throw new Error(
+      (typeof prepData.error === 'string' && prepData.error) ||
+        `Could not prepare upload (${prepRes.status})`
+    );
+  }
+
+  const path = String(prepData.path);
+  const uploadToken = String(prepData.token);
+  const contentType = String(prepData.contentType || file.type || 'application/octet-stream');
+
+  report({ phase: 'uploading', percent: 5, message: `Uploading ${file.name}…` });
+
+  // Prefer the signed-URL helper on the same browser client (uses the token, not RLS).
+  const { error: uploadError } = await supabase.storage
+    .from(options.bucket)
+    .uploadToSignedUrl(path, uploadToken, file, {
+      contentType,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error(uploadError.message || 'Direct storage upload failed');
+  }
+
+  report({ phase: 'saving', percent: 90, message: 'Saving photo record…' });
+
+  const finalizeToken = await ensureAccessToken(supabase);
+  const finalizeRes = await fetch('/api/admin/storage/finalize-upload', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${finalizeToken}`,
+    },
+    body: JSON.stringify({
+      bucket: options.bucket,
+      path,
+      caption: options.caption ?? null,
+      albumId: options.albumId ?? null,
+      target: options.target ?? 'album',
+    }),
+  });
+
+  const finalizeData = (await finalizeRes.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!finalizeRes.ok || !finalizeData.success) {
+    throw new Error(
+      (typeof finalizeData.error === 'string' && finalizeData.error) ||
+        `Could not save photo record (${finalizeRes.status})`
+    );
+  }
+
+  report({ phase: 'done', percent: 100, message: 'Upload complete' });
+
+  return {
+    url: String(finalizeData.url),
+    id: finalizeData.id ? String(finalizeData.id) : undefined,
+    path: String(finalizeData.path || path),
+  };
+}
+
 export async function uploadFileViaApi(
   supabase: SupabaseClient,
   file: File,
@@ -196,35 +309,56 @@ export async function uploadFileViaApi(
 
   report({ phase: 'preparing', percent: 0, message: 'Preparing upload…' });
 
+  // Compress phone-sized photos before any network hop.
+  const prepared = await prepareFileForUpload(file, (message) => {
+    report({ phase: 'preparing', percent: 3, message });
+  });
+
+  // Still too large for the Next/Vercel API route → direct-to-Storage path.
+  if (prepared.size > MAX_API_UPLOAD_BYTES) {
+    return withUploadRetry(
+      () => uploadFileDirectToStorage(supabase, prepared, options, report),
+      { supabase, retries: 1 }
+    );
+  }
+
   return withUploadRetry(
     async () => {
       const token = await ensureAccessToken(supabase);
 
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', prepared);
       formData.append('bucket', options.bucket);
       if (options.albumId) formData.append('album_id', options.albumId);
       if (options.caption) formData.append('caption', options.caption);
       if (options.target) formData.append('target', options.target);
 
-      report({ phase: 'uploading', percent: 5, message: `Uploading ${file.name}…` });
+      report({
+        phase: 'uploading',
+        percent: 5,
+        message: `Uploading ${prepared.name} (${formatFileSize(prepared.size)})…`,
+      });
 
       const response = await postFormDataWithProgress('/api/admin/storage/upload', formData, token, {
-        timeoutMs: uploadTimeoutMs(file),
+        timeoutMs: uploadTimeoutMs(prepared),
         onProgress: (percent) => {
           report({
             phase: 'uploading',
             percent,
-            message: `Uploading ${file.name}… ${percent}%`,
+            message: `Uploading ${prepared.name}… ${percent}%`,
           });
         },
       });
 
       if (!response.ok || !response.data.success) {
-        const message =
-          (typeof response.data.error === 'string' && response.data.error) ||
-          `Upload failed (${response.status})`;
-        throw new Error(message);
+        const serverMessage =
+          typeof response.data.error === 'string' ? response.data.error : undefined;
+        const sizeHint = payloadTooLargeMessage(response.status, serverMessage);
+        if (sizeHint || response.status === 413) {
+          // Fallback: direct-to-storage if the API still rejects the body.
+          return uploadFileDirectToStorage(supabase, prepared, options, report);
+        }
+        throw new Error(serverMessage || `Upload failed (${response.status})`);
       }
 
       report({ phase: 'done', percent: 100, message: 'Upload complete' });
