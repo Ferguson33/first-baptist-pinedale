@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth-context";
@@ -85,6 +86,8 @@ export default function RootLayout({
             <Toaster position="top-center" richColors closeButton />
           </PwaProvider>
         </AuthProvider>
+        {/* Privacy-friendly page views — viewed in the Vercel project dashboard, not on the public site */}
+        <Analytics />
       </body>
     </html>
   );
