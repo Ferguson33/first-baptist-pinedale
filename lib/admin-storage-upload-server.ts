@@ -153,13 +153,16 @@ export async function authorizeAdminUpload(
     return {
       ok: false,
       error:
-        'Admin access required. Sign out and sign back in. If this continues, confirm your profile role is set to admin in Supabase (Table Editor → profiles).',
+        'Admin access required. Sign out and sign back in. If this continues, confirm your profile role is set to admin in Supabase (Table Editor → profiles → your row → role must be exactly: admin).',
       status: 403,
     };
   }
 
   return { ok: true, supabaseAdmin, userEmail: user.email || 'admin' };
 }
+
+/** Re-export name for non-upload callers (push, etc.). */
+export const authorizeAdmin = authorizeAdminUpload;
 
 export async function processAdminStorageUpload(
   supabaseAdmin: SupabaseClient,
