@@ -22,7 +22,7 @@ export function AdminPushToggle() {
   const [isPwa, setIsPwa] = useState(false);
   const [statusLine, setStatusLine] = useState('Checking…');
 
-  async function refreshStatus() {
+  async function refreshStatus(opts?: { keepEnabledOnError?: boolean }) {
     setSupported(pushSupported());
     setIsPwa(isStandalonePwa());
 
@@ -32,20 +32,44 @@ export function AdminPushToggle() {
       return;
     }
 
+    const browserSub = await getExistingPushSubscription().catch(() => null);
+
     try {
       const token = await ensureAccessToken(supabase);
       const status = await serverHasPushSubscription(token);
-      setEnabled(status.hasSubscription);
-      setStatusLine(status.detail || (status.hasSubscription ? 'On' : 'Off'));
-    } catch {
-      // Fall back to browser-only check
-      const sub = await getExistingPushSubscription().catch(() => null);
-      setEnabled(false);
-      setStatusLine(
-        sub
-          ? 'Browser is subscribed, but not saved on the server yet — tap Enable again.'
-          : 'Off — tap Enable on this device'
-      );
+
+      if (status.hasSubscription) {
+        setEnabled(true);
+        setStatusLine(status.detail || 'This device is registered.');
+        return;
+      }
+
+      // Server has no row for this device
+      if (browserSub) {
+        setEnabled(false);
+        setStatusLine(
+          'This browser has permission, but the device is not saved on the server yet. Tap Enable to save it.'
+        );
+      } else {
+        setEnabled(false);
+        setStatusLine(status.detail || 'Off — tap Enable on this device');
+      }
+    } catch (err) {
+      console.warn('[AdminPushToggle] status check:', err);
+      // Do not bounce a successful Enable back to Off because of a flaky status call
+      if (opts?.keepEnabledOnError) {
+        setStatusLine('Registered on this device. (Could not re-check server; try Send test.)');
+        return;
+      }
+      if (browserSub) {
+        setEnabled(false);
+        setStatusLine(
+          'Could not verify with the server. Tap Enable to re-save this device, then Send test.'
+        );
+      } else {
+        setEnabled(false);
+        setStatusLine('Off — tap Enable on this device');
+      }
     }
   }
 
@@ -59,12 +83,16 @@ export function AdminPushToggle() {
     try {
       const token = await ensureAccessToken(supabase);
       await enableAdminMembershipPush(token);
+      // Optimistically keep the enabled UI; don't let a status glitch hide Test
       setEnabled(true);
+      setStatusLine('This device is registered. You can send a test notification.');
       toast.success('This device is registered for membership alerts.');
-      await refreshStatus();
+      await refreshStatus({ keepEnabledOnError: true });
     } catch (err) {
       console.error(err);
+      setEnabled(false);
       toast.error(err instanceof Error ? err.message : 'Could not enable notifications.');
+      await refreshStatus();
     } finally {
       setBusy(false);
     }
@@ -76,8 +104,8 @@ export function AdminPushToggle() {
       const token = await ensureAccessToken(supabase);
       await disableAdminMembershipPush(token);
       setEnabled(false);
+      setStatusLine('Off on this device');
       toast.success('Membership request alerts turned off on this device.');
-      await refreshStatus();
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : 'Could not disable notifications.');
@@ -91,11 +119,18 @@ export function AdminPushToggle() {
     try {
       const token = await ensureAccessToken(supabase);
 
-      // Always re-save this device first so "On" in the browser alone is not enough
+      // Ensure this device is saved before sending
       try {
         await enableAdminMembershipPush(token);
+        setEnabled(true);
       } catch (e) {
         console.warn('Re-save before test:', e);
+        toast.error(
+          e instanceof Error
+            ? `Could not re-save this device: ${e.message}`
+            : 'Could not re-save this device before testing.'
+        );
+        return;
       }
 
       const res = await fetch('/api/push/notify-membership', {
@@ -115,18 +150,12 @@ export function AdminPushToggle() {
         toast.success(
           data.hint || `Test sent to ${data.sent} device(s). Check notifications on this phone.`
         );
+        setStatusLine(`Last test: sent to ${data.sent} device(s).`);
       } else {
-        const parts = [
-          data.skipped,
-          data.hint,
-          data.errors?.[0],
-          data.subscriptionCount === 0
-            ? 'No devices in the database.'
-            : undefined,
-        ].filter(Boolean);
-        toast.error(parts.join(' ') || 'No devices received the test.');
+        const msg = [data.skipped, data.errors?.[0], data.hint].filter(Boolean).join(' ');
+        toast.error(msg || 'No devices received the test.');
+        setStatusLine(msg || 'Test did not reach any device.');
       }
-      await refreshStatus();
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : 'Test notification failed.');
@@ -176,37 +205,32 @@ export function AdminPushToggle() {
               <Loader2 className="w-4 h-4 animate-spin" /> Working…
             </span>
           ) : enabled ? (
-            'Re-enable / re-save this device'
+            'Re-save this device'
           ) : (
             'Enable on this device'
           )}
         </button>
+        <button
+          type="button"
+          onClick={handleTest}
+          disabled={busy}
+          className="admin-big-button px-5 py-2.5 rounded-full border border-[var(--color-navy)] text-[var(--color-navy)] text-sm font-semibold disabled:opacity-60"
+        >
+          Send test notification
+        </button>
         {enabled && (
-          <>
-            <button
-              type="button"
-              onClick={handleTest}
-              disabled={busy}
-              className="admin-big-button px-5 py-2.5 rounded-full border border-[var(--color-navy)] text-[var(--color-navy)] text-sm font-semibold disabled:opacity-60"
-            >
-              Send test notification
-            </button>
-            <button
-              type="button"
-              onClick={handleDisable}
-              disabled={busy}
-              className="admin-big-button px-5 py-2.5 rounded-full border border-red-200 text-red-700 text-sm font-semibold disabled:opacity-60"
-            >
-              Turn off
-            </button>
-          </>
+          <button
+            type="button"
+            onClick={handleDisable}
+            disabled={busy}
+            className="admin-big-button px-5 py-2.5 rounded-full border border-red-200 text-red-700 text-sm font-semibold disabled:opacity-60"
+          >
+            Turn off
+          </button>
         )}
       </div>
       <p className="text-xs text-[var(--color-stone-light)] mt-3">
         <strong>Status:</strong> {statusLine}
-      </p>
-      <p className="text-xs text-[var(--color-stone-light)] mt-1">
-        If test fails, tap <strong>Re-enable / re-save this device</strong> first, then <strong>Send test</strong>.
       </p>
     </div>
   );
