@@ -58,6 +58,39 @@ export function AdminPushToggle() {
     }
   }
 
+  async function handleTest() {
+    setBusy(true);
+    try {
+      const token = await ensureAccessToken(supabase);
+      const res = await fetch('/api/push/notify-membership', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ test: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Test failed');
+      }
+      if (data.sent > 0) {
+        toast.success(data.hint || `Test sent to ${data.sent} device(s). Check your phone.`);
+      } else {
+        toast.error(
+          data.hint ||
+            data.skipped ||
+            'No devices received the test. Re-enable alerts and confirm VAPID keys + SQL setup.'
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : 'Test notification failed.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!supported) {
     return (
       <div className="admin-section bg-white p-6 rounded-3xl border border-[var(--color-gold)]/20">
@@ -87,39 +120,51 @@ export function AdminPushToggle() {
           </span>
         )}
       </p>
-      {enabled ? (
-        <button
-          type="button"
-          onClick={handleDisable}
-          disabled={busy}
-          className="admin-big-button px-5 py-2.5 rounded-full border border-[var(--color-navy)] text-[var(--color-navy)] text-sm font-semibold disabled:opacity-60"
-        >
-          {busy ? (
-            <span className="inline-flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" /> Working…
-            </span>
-          ) : (
-            'Turn off on this device'
-          )}
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={handleEnable}
-          disabled={busy}
-          className="admin-big-button px-5 py-2.5 rounded-full bg-[var(--color-navy)] text-white text-sm font-semibold disabled:opacity-60"
-        >
-          {busy ? (
-            <span className="inline-flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" /> Working…
-            </span>
-          ) : (
-            'Enable on this device'
-          )}
-        </button>
-      )}
+      <div className="flex flex-wrap gap-2">
+        {enabled ? (
+          <>
+            <button
+              type="button"
+              onClick={handleTest}
+              disabled={busy}
+              className="admin-big-button px-5 py-2.5 rounded-full bg-[var(--color-navy)] text-white text-sm font-semibold disabled:opacity-60"
+            >
+              {busy ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Working…
+                </span>
+              ) : (
+                'Send test notification'
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleDisable}
+              disabled={busy}
+              className="admin-big-button px-5 py-2.5 rounded-full border border-[var(--color-navy)] text-[var(--color-navy)] text-sm font-semibold disabled:opacity-60"
+            >
+              Turn off on this device
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={handleEnable}
+            disabled={busy}
+            className="admin-big-button px-5 py-2.5 rounded-full bg-[var(--color-navy)] text-white text-sm font-semibold disabled:opacity-60"
+          >
+            {busy ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Working…
+              </span>
+            ) : (
+              'Enable on this device'
+            )}
+          </button>
+        )}
+      </div>
       <p className="text-xs text-[var(--color-stone-light)] mt-3">
-        Status: {enabled ? 'On for this browser/device' : 'Off'}
+        Status: {enabled ? 'On for this browser/device' : 'Off'}. Use <strong>Send test</strong> first to confirm this phone receives pushes.
       </p>
     </div>
   );

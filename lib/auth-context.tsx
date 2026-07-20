@@ -285,17 +285,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Notify admins who opted into membership push (non-blocking).
+        // Use signup session when present; always pass userId so email-confirm
+        // signups (no session yet) still alert admins.
         try {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
-          const token = session?.access_token;
-          if (token) {
-            fetch('/api/push/notify-membership', {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${token}` },
-            }).catch(() => {});
-          }
+          const token =
+            data.session?.access_token ||
+            (await supabase.auth.getSession()).data.session?.access_token ||
+            null;
+
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+          };
+          if (token) headers.Authorization = `Bearer ${token}`;
+
+          fetch('/api/push/notify-membership', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              userId: data.user.id,
+              fullName,
+              email,
+            }),
+          }).catch((e) => console.log('Membership push notify note:', e));
         } catch {
           /* ignore push failures at signup */
         }
