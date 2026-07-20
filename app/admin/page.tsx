@@ -14,6 +14,7 @@ import { formatAlbumDate, formatLocalDate, todayLocalDateString } from '@/lib/fo
 import { extractYouTubeVideoId, getYouTubeThumbnailUrl } from '@/lib/youtube';
 import { ensureAccessToken, uploadFileViaApi, withAdminSessionRetry, type UploadProgress } from '@/lib/storage-upload';
 import { UploadProgressBanner } from '@/components/UploadProgressBanner';
+import { AdminPushToggle } from '@/components/AdminPushToggle';
 
 // Types for admin
 type AdminTab = 'overview' | 'sermons' | 'building' | 'youth' | 'members' | 'events' | 'guide';
@@ -1269,6 +1270,7 @@ function AdminDashboardContent() {
       {/* OVERVIEW */}
       {activeTab === 'overview' && (
         <div className="grid md:grid-cols-2 gap-6">
+          <AdminPushToggle />
           <div className="admin-section bg-white p-8 rounded-3xl">
             <div className="font-semibold mb-4 flex items-center gap-2 text-lg"><TrendingUp className="text-[var(--color-gold-dark)]" /> Quick Stats</div>
             <div className="space-y-4 text-sm">

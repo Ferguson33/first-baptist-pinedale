@@ -283,6 +283,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (insertError) {
           console.log('Profile insert note (signup):', insertError.message);
         }
+
+        // Notify admins who opted into membership push (non-blocking).
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          const token = session?.access_token;
+          if (token) {
+            fetch('/api/push/notify-membership', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+            }).catch(() => {});
+          }
+        } catch {
+          /* ignore push failures at signup */
+        }
       } catch (insertErr) {
         console.log('Profile insert error during signup (non-fatal):', insertErr);
       }
