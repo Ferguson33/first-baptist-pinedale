@@ -10,6 +10,7 @@ import {
   enableAdminMembershipPush,
   getExistingPushSubscription,
   pushSupported,
+  serverHasPushSubscription,
 } from '@/lib/push-client';
 import { isStandalonePwa } from '@/lib/pwa';
 
@@ -19,13 +20,38 @@ export function AdminPushToggle() {
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [isPwa, setIsPwa] = useState(false);
+  const [statusLine, setStatusLine] = useState('Checking…');
 
-  useEffect(() => {
+  async function refreshStatus() {
     setSupported(pushSupported());
     setIsPwa(isStandalonePwa());
-    getExistingPushSubscription()
-      .then((sub) => setEnabled(!!sub))
-      .catch(() => setEnabled(false));
+
+    if (!pushSupported()) {
+      setEnabled(false);
+      setStatusLine('Not supported in this browser');
+      return;
+    }
+
+    try {
+      const token = await ensureAccessToken(supabase);
+      const status = await serverHasPushSubscription(token);
+      setEnabled(status.hasSubscription);
+      setStatusLine(status.detail || (status.hasSubscription ? 'On' : 'Off'));
+    } catch {
+      // Fall back to browser-only check
+      const sub = await getExistingPushSubscription().catch(() => null);
+      setEnabled(false);
+      setStatusLine(
+        sub
+          ? 'Browser is subscribed, but not saved on the server yet — tap Enable again.'
+          : 'Off — tap Enable on this device'
+      );
+    }
+  }
+
+  useEffect(() => {
+    refreshStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleEnable() {
@@ -34,7 +60,8 @@ export function AdminPushToggle() {
       const token = await ensureAccessToken(supabase);
       await enableAdminMembershipPush(token);
       setEnabled(true);
-      toast.success('Membership request alerts are on for this device.');
+      toast.success('This device is registered for membership alerts.');
+      await refreshStatus();
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : 'Could not enable notifications.');
@@ -50,6 +77,7 @@ export function AdminPushToggle() {
       await disableAdminMembershipPush(token);
       setEnabled(false);
       toast.success('Membership request alerts turned off on this device.');
+      await refreshStatus();
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : 'Could not disable notifications.');
@@ -62,6 +90,14 @@ export function AdminPushToggle() {
     setBusy(true);
     try {
       const token = await ensureAccessToken(supabase);
+
+      // Always re-save this device first so "On" in the browser alone is not enough
+      try {
+        await enableAdminMembershipPush(token);
+      } catch (e) {
+        console.warn('Re-save before test:', e);
+      }
+
       const res = await fetch('/api/push/notify-membership', {
         method: 'POST',
         headers: {
@@ -74,15 +110,23 @@ export function AdminPushToggle() {
       if (!res.ok) {
         throw new Error(data.error || 'Test failed');
       }
+
       if (data.sent > 0) {
-        toast.success(data.hint || `Test sent to ${data.sent} device(s). Check your phone.`);
-      } else {
-        toast.error(
-          data.hint ||
-            data.skipped ||
-            'No devices received the test. Re-enable alerts and confirm VAPID keys + SQL setup.'
+        toast.success(
+          data.hint || `Test sent to ${data.sent} device(s). Check notifications on this phone.`
         );
+      } else {
+        const parts = [
+          data.skipped,
+          data.hint,
+          data.errors?.[0],
+          data.subscriptionCount === 0
+            ? 'No devices in the database.'
+            : undefined,
+        ].filter(Boolean);
+        toast.error(parts.join(' ') || 'No devices received the test.');
       }
+      await refreshStatus();
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : 'Test notification failed.');
@@ -121,50 +165,48 @@ export function AdminPushToggle() {
         )}
       </p>
       <div className="flex flex-wrap gap-2">
-        {enabled ? (
+        <button
+          type="button"
+          onClick={handleEnable}
+          disabled={busy}
+          className="admin-big-button px-5 py-2.5 rounded-full bg-[var(--color-navy)] text-white text-sm font-semibold disabled:opacity-60"
+        >
+          {busy ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Working…
+            </span>
+          ) : enabled ? (
+            'Re-enable / re-save this device'
+          ) : (
+            'Enable on this device'
+          )}
+        </button>
+        {enabled && (
           <>
             <button
               type="button"
               onClick={handleTest}
               disabled={busy}
-              className="admin-big-button px-5 py-2.5 rounded-full bg-[var(--color-navy)] text-white text-sm font-semibold disabled:opacity-60"
+              className="admin-big-button px-5 py-2.5 rounded-full border border-[var(--color-navy)] text-[var(--color-navy)] text-sm font-semibold disabled:opacity-60"
             >
-              {busy ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Working…
-                </span>
-              ) : (
-                'Send test notification'
-              )}
+              Send test notification
             </button>
             <button
               type="button"
               onClick={handleDisable}
               disabled={busy}
-              className="admin-big-button px-5 py-2.5 rounded-full border border-[var(--color-navy)] text-[var(--color-navy)] text-sm font-semibold disabled:opacity-60"
+              className="admin-big-button px-5 py-2.5 rounded-full border border-red-200 text-red-700 text-sm font-semibold disabled:opacity-60"
             >
-              Turn off on this device
+              Turn off
             </button>
           </>
-        ) : (
-          <button
-            type="button"
-            onClick={handleEnable}
-            disabled={busy}
-            className="admin-big-button px-5 py-2.5 rounded-full bg-[var(--color-navy)] text-white text-sm font-semibold disabled:opacity-60"
-          >
-            {busy ? (
-              <span className="inline-flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Working…
-              </span>
-            ) : (
-              'Enable on this device'
-            )}
-          </button>
         )}
       </div>
       <p className="text-xs text-[var(--color-stone-light)] mt-3">
-        Status: {enabled ? 'On for this browser/device' : 'Off'}. Use <strong>Send test</strong> first to confirm this phone receives pushes.
+        <strong>Status:</strong> {statusLine}
+      </p>
+      <p className="text-xs text-[var(--color-stone-light)] mt-1">
+        If test fails, tap <strong>Re-enable / re-save this device</strong> first, then <strong>Send test</strong>.
       </p>
     </div>
   );
