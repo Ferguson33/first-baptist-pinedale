@@ -71,7 +71,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true });
+    // Confirm the row is readable (catches silent schema / RLS issues early)
+    const { data: saved, error: readErr } = await auth.supabaseAdmin
+      .from('push_subscriptions')
+      .select('id, user_id')
+      .eq('endpoint', endpoint)
+      .maybeSingle();
+
+    if (readErr) {
+      console.error('[push subscribe] verify read failed:', readErr);
+      return NextResponse.json(
+        {
+          error: `Saved but could not verify: ${readErr.message}. Check Supabase table push_subscriptions.`,
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!saved) {
+      console.error('[push subscribe] upsert returned ok but row not found for endpoint');
+      return NextResponse.json(
+        {
+          error:
+            'Device did not save correctly. In Supabase → SQL Editor, re-run push-subscriptions-admin.sql, then try Enable again.',
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      id: saved.id,
+      userId: saved.user_id,
+    });
   } catch (err) {
     console.error('[push subscribe]', err);
     const message = err instanceof Error ? err.message : 'Subscribe failed';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bell, BellOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
@@ -14,6 +14,25 @@ import {
 } from '@/lib/push-client';
 import { isStandalonePwa } from '@/lib/pwa';
 
+const STICKY_KEY = 'fbc_admin_push_sticky';
+
+function readStickyEnabled(): boolean {
+  try {
+    return sessionStorage.getItem(STICKY_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeStickyEnabled(on: boolean) {
+  try {
+    if (on) sessionStorage.setItem(STICKY_KEY, '1');
+    else sessionStorage.removeItem(STICKY_KEY);
+  } catch {
+    /* private mode / blocked storage */
+  }
+}
+
 export function AdminPushToggle() {
   const supabase = createClient();
   const [supported, setSupported] = useState(false);
@@ -21,17 +40,22 @@ export function AdminPushToggle() {
   const [busy, setBusy] = useState(false);
   const [isPwa, setIsPwa] = useState(false);
   const [statusLine, setStatusLine] = useState('Checking…');
+  // Survives status races after a successful Enable in this page session
+  const stickyEnabledRef = useRef(false);
 
-  async function refreshStatus(opts?: { keepEnabledOnError?: boolean }) {
+  async function refreshStatus(opts?: { stickyEnabled?: boolean }) {
     setSupported(pushSupported());
     setIsPwa(isStandalonePwa());
 
     if (!pushSupported()) {
       setEnabled(false);
+      stickyEnabledRef.current = false;
+      writeStickyEnabled(false);
       setStatusLine('Not supported in this browser');
       return;
     }
 
+    const sticky = opts?.stickyEnabled || stickyEnabledRef.current || readStickyEnabled();
     const browserSub = await getExistingPushSubscription().catch(() => null);
 
     try {
@@ -39,8 +63,24 @@ export function AdminPushToggle() {
       const status = await serverHasPushSubscription(token);
 
       if (status.hasSubscription) {
+        stickyEnabledRef.current = true;
+        writeStickyEnabled(true);
         setEnabled(true);
         setStatusLine(status.detail || 'This device is registered.');
+        return;
+      }
+
+      // After a successful Enable, never bounce the UI back to "Enable on this device"
+      // just because the status endpoint lags or cannot see the row yet.
+      if (sticky) {
+        stickyEnabledRef.current = true;
+        writeStickyEnabled(true);
+        setEnabled(true);
+        setStatusLine(
+          status.detail
+            ? `${status.detail} You can still Send test — if it fails, tap Re-save this device.`
+            : 'Registered on this device. You can send a test notification.'
+        );
         return;
       }
 
@@ -57,7 +97,10 @@ export function AdminPushToggle() {
     } catch (err) {
       console.warn('[AdminPushToggle] status check:', err);
       // Do not bounce a successful Enable back to Off because of a flaky status call
-      if (opts?.keepEnabledOnError) {
+      if (sticky) {
+        stickyEnabledRef.current = true;
+        writeStickyEnabled(true);
+        setEnabled(true);
         setStatusLine('Registered on this device. (Could not re-check server; try Send test.)');
         return;
       }
@@ -74,6 +117,10 @@ export function AdminPushToggle() {
   }
 
   useEffect(() => {
+    if (readStickyEnabled()) {
+      stickyEnabledRef.current = true;
+      setEnabled(true);
+    }
     refreshStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -83,13 +130,17 @@ export function AdminPushToggle() {
     try {
       const token = await ensureAccessToken(supabase);
       await enableAdminMembershipPush(token);
-      // Optimistically keep the enabled UI; don't let a status glitch hide Test
+      // Stick the enabled UI — status re-check must not hide Test / Re-save
+      stickyEnabledRef.current = true;
+      writeStickyEnabled(true);
       setEnabled(true);
       setStatusLine('This device is registered. You can send a test notification.');
       toast.success('This device is registered for membership alerts.');
-      await refreshStatus({ keepEnabledOnError: true });
+      await refreshStatus({ stickyEnabled: true });
     } catch (err) {
       console.error(err);
+      stickyEnabledRef.current = false;
+      writeStickyEnabled(false);
       setEnabled(false);
       toast.error(err instanceof Error ? err.message : 'Could not enable notifications.');
       await refreshStatus();
@@ -103,6 +154,8 @@ export function AdminPushToggle() {
     try {
       const token = await ensureAccessToken(supabase);
       await disableAdminMembershipPush(token);
+      stickyEnabledRef.current = false;
+      writeStickyEnabled(false);
       setEnabled(false);
       setStatusLine('Off on this device');
       toast.success('Membership request alerts turned off on this device.');
@@ -122,6 +175,8 @@ export function AdminPushToggle() {
       // Ensure this device is saved before sending
       try {
         await enableAdminMembershipPush(token);
+        stickyEnabledRef.current = true;
+        writeStickyEnabled(true);
         setEnabled(true);
       } catch (e) {
         console.warn('Re-save before test:', e);
