@@ -102,6 +102,7 @@ export async function authorizeAdminUpload(
   // Prefer service-role lookup (bypasses RLS). Fall back to the caller's JWT
   // reading their own profile if the service-role query fails for any reason.
   let role: string | null = null;
+  let profileLookupError: string | null = null;
 
   const { data: adminProfile, error: adminProfileError } = await supabaseAdmin
     .from('profiles')
@@ -110,6 +111,7 @@ export async function authorizeAdminUpload(
     .maybeSingle();
 
   if (adminProfileError) {
+    profileLookupError = adminProfileError.message;
     console.error('[authorizeAdminUpload] service-role profile error:', {
       userId: user.id,
       email: user.email,
@@ -137,6 +139,7 @@ export async function authorizeAdminUpload(
       .maybeSingle();
 
     if (ownError) {
+      profileLookupError = ownError.message;
       console.error('[authorizeAdminUpload] user-scoped profile error:', ownError.message);
     } else if (ownProfile?.role) {
       role = String(ownProfile.role);
@@ -149,7 +152,22 @@ export async function authorizeAdminUpload(
       userId: user.id,
       email: user.email,
       role,
+      profileLookupError,
     });
+
+    // Surface the real DB permission error so it's fixable (e.g. missing GRANT on profiles)
+    const permissionish =
+      profileLookupError &&
+      /permission denied|42501|row-level security/i.test(profileLookupError);
+
+    if (permissionish) {
+      return {
+        ok: false,
+        error: `Permission denied for table profiles. In Supabase → SQL Editor, run supabase/fix-profiles-grants-for-push.sql (grants SELECT on profiles to authenticated + service_role), then try again. Detail: ${profileLookupError}`,
+        status: 500,
+      };
+    }
+
     return {
       ok: false,
       error:
