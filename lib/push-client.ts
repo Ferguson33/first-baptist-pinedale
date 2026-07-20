@@ -54,6 +54,7 @@ export async function enableAdminMembershipPush(accessToken: string): Promise<vo
   // Always resubscribe so we use the current VAPID public key and re-save to the database
   // (a prior failed "Enable" can leave a browser subscription without a DB row).
   const existing = await reg.pushManager.getSubscription();
+  const previousEndpoint = existing?.endpoint || '';
   if (existing) {
     try {
       await existing.unsubscribe();
@@ -81,6 +82,10 @@ export async function enableAdminMembershipPush(accessToken: string): Promise<vo
     body: JSON.stringify({
       endpoint: json.endpoint,
       keys: json.keys,
+      // Drop the browser's previous endpoint so Re-save does not stack devices
+      previousEndpoint: previousEndpoint || undefined,
+      // Keep only this device for this admin (avoids "sent to 11 devices" after re-testing)
+      replaceOtherDevices: true,
     }),
   });
 

@@ -37,6 +37,8 @@ export async function POST(request: NextRequest) {
     const endpoint = String(body?.endpoint || '');
     const p256dh = String(body?.keys?.p256dh || '');
     const pauth = String(body?.keys?.auth || '');
+    const previousEndpoint = String(body?.previousEndpoint || '').trim();
+    const replaceOtherDevices = body?.replaceOtherDevices !== false;
 
     if (!endpoint || !p256dh || !pauth) {
       return NextResponse.json({ error: 'Invalid subscription' }, { status: 400 });
@@ -99,10 +101,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Remove the browser's previous endpoint (new endpoint after re-subscribe)
+    if (previousEndpoint && previousEndpoint !== endpoint) {
+      await auth.supabaseAdmin
+        .from('push_subscriptions')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('endpoint', previousEndpoint);
+    }
+
+    // Default: one active registration per admin account so Re-save / test
+    // does not stack 10+ endpoints for the same phone.
+    let removedOthers = 0;
+    if (replaceOtherDevices) {
+      const { data: removed, error: delErr } = await auth.supabaseAdmin
+        .from('push_subscriptions')
+        .delete()
+        .eq('user_id', user.id)
+        .neq('endpoint', endpoint)
+        .select('id');
+
+      if (delErr) {
+        console.warn('[push subscribe] could not prune other devices:', delErr.message);
+      } else {
+        removedOthers = removed?.length || 0;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       id: saved.id,
       userId: saved.user_id,
+      removedOthers,
     });
   } catch (err) {
     console.error('[push subscribe]', err);
