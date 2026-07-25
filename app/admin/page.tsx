@@ -338,10 +338,20 @@ function AdminDashboardContent() {
 
     if (type === 'youth') {
       const albumId = selectedYouthAlbumId;
+      if (!albumId) {
+        toast.error(
+          'Select an album first (or create one), then upload. Photos need an album so they show on the Youth page.'
+        );
+        return;
+      }
+
       setUploadingYouth(true);
       setLastFailedUpload(null);
 
       try {
+        // Warm the session before multi-file uploads (avoids first-file auth failures).
+        await ensureAccessToken(supabase, { forceRefresh: true });
+
         for (const file of fileArray) {
           const result = await uploadFileViaApi(supabase, file, {
             bucket: 'youth-photos',
@@ -364,9 +374,10 @@ function AdminDashboardContent() {
         }
 
         setUploadProgress({ phase: 'done', percent: 100, message: 'All uploads complete' });
-        toast.success(fileArray.length > 1 ? 'Photos uploaded!' : 'Photo uploaded!');
+        toast.success(fileArray.length > 1 ? 'Photos uploaded to album!' : 'Photo uploaded to album!');
         await fetchYouthPhotos();
         resetFileInput('youth-upload');
+        fetch('/api/revalidate?path=/youth-ministry', { method: 'POST' }).catch(() => {});
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         console.error('Youth upload error:', error);
@@ -598,7 +609,9 @@ function AdminDashboardContent() {
     if (!confirm(`Delete album "${title}" and all its photos? This cannot be undone.`)) return;
 
     try {
-      const { error } = await supabase.from('youth_albums').delete().eq('id', id);
+      const { error } = await withAdminSessionRetry(supabase, async () =>
+        supabase.from('youth_albums').delete().eq('id', id)
+      );
 
       if (error) throw error;
 
@@ -655,12 +668,12 @@ function AdminDashboardContent() {
     try {
       const payload = { ...youthEventForm };
 
-      let error;
-      if (editingYouthEvent) {
-        ({ error } = await supabase.from('youth_events').update(payload).eq('id', editingYouthEvent.id));
-      } else {
-        ({ error } = await supabase.from('youth_events').insert(payload));
-      }
+      const { error } = await withAdminSessionRetry(supabase, async () => {
+        if (editingYouthEvent) {
+          return supabase.from('youth_events').update(payload).eq('id', editingYouthEvent.id);
+        }
+        return supabase.from('youth_events').insert(payload);
+      });
 
       if (error) {
         console.error('Youth event save error:', error);
@@ -674,7 +687,7 @@ function AdminDashboardContent() {
       }
     } catch (err: any) {
       console.error('Unexpected error saving youth event:', err);
-      toast.error("Failed to save youth event. Please try again.");
+      toast.error(err?.message || "Failed to save youth event. Please try again.");
     } finally {
       setSavingYouthEvent(false);
     }
@@ -683,13 +696,15 @@ function AdminDashboardContent() {
   async function deleteYouthEvent(id: string, title: string) {
     if (!confirm(`Delete event "${title}"?`)) return;
 
-    const { error } = await supabase.from('youth_events').delete().eq('id', id);
-
-    if (error) {
-      toast.error("Failed to delete event: " + error.message);
-    } else {
+    try {
+      const { error } = await withAdminSessionRetry(supabase, async () =>
+        supabase.from('youth_events').delete().eq('id', id)
+      );
+      if (error) throw error;
       toast.success("Event deleted");
       fetchYouthEvents();
+    } catch (err: any) {
+      toast.error("Failed to delete event: " + (err?.message || "Unknown error"));
     }
   }
 
@@ -722,21 +737,34 @@ function AdminDashboardContent() {
       date: albumForm.date || null,
     };
 
-    let error;
-    if (editingAlbum) {
-      ({ error } = await supabase.from('youth_albums').update(payload).eq('id', editingAlbum.id));
-    } else {
-      ({ error } = await supabase.from('youth_albums').insert(payload));
-    }
-
-    setSavingAlbum(false);
-
-    if (error) {
-      toast.error("Failed to save album: " + error.message);
-    } else {
-      toast.success(editingAlbum ? "Album updated!" : "Album created!");
-      closeAlbumForm();
-      fetchYouthAlbums();
+    try {
+      if (editingAlbum) {
+        const { error } = await withAdminSessionRetry(supabase, async () =>
+          supabase.from('youth_albums').update(payload).eq('id', editingAlbum.id)
+        );
+        if (error) throw error;
+        toast.success("Album updated!");
+        closeAlbumForm();
+        await fetchYouthAlbums();
+      } else {
+        const { data, error } = await withAdminSessionRetry(supabase, async () =>
+          supabase.from('youth_albums').insert(payload).select('id, title, date').single()
+        );
+        if (error) throw error;
+        toast.success("Album created! It's selected below — add photos now.");
+        closeAlbumForm();
+        await fetchYouthAlbums();
+        // Auto-select so the next photo upload goes into this album (first try).
+        if (data?.id) {
+          setSelectedYouthAlbumId(data.id);
+        }
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : (err as { message?: string })?.message || 'Unknown error';
+      console.error('saveAlbum error:', err);
+      toast.error("Failed to save album: " + message);
+    } finally {
+      setSavingAlbum(false);
     }
   }
 
@@ -955,52 +983,66 @@ function AdminDashboardContent() {
   }
 
   async function saveSermonSettings(successMessage = 'Homepage content updated!') {
+    if (savingSermonSettings) return;
     setSavingSermonSettings(true);
     try {
       const liveVideoId = normalizedLiveVideoId();
       const homepageVideos = normalizedHomepageVideoIds();
       const youthVideos = normalizedYouthVideoIds();
-      const { error } = await withAdminSessionRetry(supabase, async () =>
+      const updatePayload = {
+        pastor_note: sermonSettings.pastor_note || null,
+        upcoming_title: sermonSettings.upcoming_title || null,
+        upcoming_reference: sermonSettings.upcoming_reference || null,
+        upcoming_date: sermonSettings.upcoming_date || null,
+        sunday_school_lesson: sermonSettings.sunday_school_lesson || null,
+        sunday_school_reference: sermonSettings.sunday_school_reference || null,
+        youth_sunday_school_lesson: sermonSettings.youth_sunday_school_lesson || null,
+        youth_sunday_school_reference: sermonSettings.youth_sunday_school_reference || null,
+        youth_sunday_school_date: sermonSettings.youth_sunday_school_date || null,
+        youth_pastor_note: sermonSettings.youth_pastor_note || null,
+        youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
+        youth_activity_video_id: youthVideos.activity,
+        events_google_doc_url: sermonSettings.events_google_doc_url || null,
+        prayer_bulletin_google_doc_url: sermonSettings.prayer_bulletin_google_doc_url || null,
+        nursery_schedule_google_doc_url: sermonSettings.nursery_schedule_google_doc_url || null,
+        live_video_id: liveVideoId,
+        live_stream_active: sermonSettings.live_stream_active && !!liveVideoId,
+        live_stream_public: sermonSettings.live_stream_public && !!liveVideoId,
+        welcome_video_id: homepageVideos.welcome,
+        pastor_york_video_id: homepageVideos.york,
+        pastor_holmes_video_id: homepageVideos.holmes,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: savedRows, error } = await withAdminSessionRetry(supabase, async () =>
         supabase
           .from('sermon_settings')
-          .update({
-            pastor_note: sermonSettings.pastor_note || null,
-            upcoming_title: sermonSettings.upcoming_title || null,
-            upcoming_reference: sermonSettings.upcoming_reference || null,
-            upcoming_date: sermonSettings.upcoming_date || null,
-            sunday_school_lesson: sermonSettings.sunday_school_lesson || null,
-            sunday_school_reference: sermonSettings.sunday_school_reference || null,
-            youth_sunday_school_lesson: sermonSettings.youth_sunday_school_lesson || null,
-            youth_sunday_school_reference: sermonSettings.youth_sunday_school_reference || null,
-            youth_sunday_school_date: sermonSettings.youth_sunday_school_date || null,
-            youth_pastor_note: sermonSettings.youth_pastor_note || null,
-            youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
-            youth_activity_video_id: youthVideos.activity,
-            events_google_doc_url: sermonSettings.events_google_doc_url || null,
-            prayer_bulletin_google_doc_url: sermonSettings.prayer_bulletin_google_doc_url || null,
-            nursery_schedule_google_doc_url: sermonSettings.nursery_schedule_google_doc_url || null,
-            live_video_id: liveVideoId,
-            live_stream_active: sermonSettings.live_stream_active && !!liveVideoId,
-            live_stream_public: sermonSettings.live_stream_public && !!liveVideoId,
-            welcome_video_id: homepageVideos.welcome,
-            pastor_york_video_id: homepageVideos.york,
-            pastor_holmes_video_id: homepageVideos.holmes,
-            updated_at: new Date().toISOString(),
-          })
+          .update(updatePayload)
           .eq('id', 1)
+          .select(
+            'live_video_id, welcome_video_id, pastor_york_video_id, pastor_holmes_video_id, youth_activity_video_id'
+          )
       );
 
       if (error) {
         console.error('Failed to save sermon settings:', error);
-        toast.error("Couldn't save settings. Please try again, or contact the site administrator if this continues.");
+        toast.error(
+          error.message?.includes('youth_activity_video_id')
+            ? "Couldn't save — run the youth video SQL in Supabase, then try again."
+            : `Couldn't save settings: ${error.message || 'Please try again.'}`
+        );
+      } else if (!savedRows || savedRows.length === 0) {
+        console.error('sermon_settings update matched 0 rows');
+        toast.error("Save didn't apply (no settings row found). Refresh the page and try again.");
       } else {
+        const saved = savedRows[0];
         setSermonSettings((prev) => ({
           ...prev,
-          live_video_id: liveVideoId || '',
-          welcome_video_id: homepageVideos.welcome || '',
-          pastor_york_video_id: homepageVideos.york || '',
-          pastor_holmes_video_id: homepageVideos.holmes || '',
-          youth_activity_video_id: youthVideos.activity || '',
+          live_video_id: saved.live_video_id || '',
+          welcome_video_id: saved.welcome_video_id || '',
+          pastor_york_video_id: saved.pastor_york_video_id || '',
+          pastor_holmes_video_id: saved.pastor_holmes_video_id || '',
+          youth_activity_video_id: saved.youth_activity_video_id || '',
         }));
         toast.success(successMessage);
         fetch('/api/revalidate?paths=/,/sermons,/youth-ministry', { method: 'POST' }).catch(() => {});
@@ -1950,7 +1992,9 @@ function AdminDashboardContent() {
             <div className="flex justify-between mb-6">
               <div>
                 <div className="font-semibold text-2xl">Youth Ministry Photos (Albums)</div>
-                <div className="text-sm text-[var(--color-stone-light)]">Create albums, then select one and drag photos into it.</div>
+                <div className="text-sm text-[var(--color-stone-light)]">
+                  Create an album (it auto-selects), then drag photos in. An album must be selected before upload.
+                </div>
               </div>
               <div className="flex gap-3">
                 <button 

@@ -50,24 +50,36 @@ function delay(ms: number): Promise<void> {
  * Fixes first-attempt failures when getSession() returns a stale/null token
  * (common on cold loads, PWA resumes, and long-lived admin tabs).
  */
-export async function ensureAccessToken(supabase: SupabaseClient): Promise<string> {
+export async function ensureAccessToken(
+  supabase: SupabaseClient,
+  options: { forceRefresh?: boolean } = {}
+): Promise<string> {
+  // Prefer validating the user first so we fail clearly when signed out.
   const {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    throw new Error('Your session expired. Please sign in again.');
+    // One recovery attempt: refresh then re-check (stale tab / PWA resume).
+    const { data: recovered, error: recoverError } = await supabase.auth.refreshSession();
+    if (recoverError || !recovered.session?.user || !recovered.session.access_token) {
+      throw new Error('Your session expired. Please sign in again.');
+    }
+    return recovered.session.access_token;
   }
 
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // Refresh when missing, or when the access token expires within 60s.
+  // Refresh when missing, forced, or when the access token expires within 5 minutes
+  // (admin tabs often sit open long enough that a 60s window still fails on first click).
   const expiresAtMs = (session?.expires_at ?? 0) * 1000;
   const needsRefresh =
-    !session?.access_token || expiresAtMs < Date.now() + 60_000;
+    options.forceRefresh ||
+    !session?.access_token ||
+    expiresAtMs < Date.now() + 5 * 60_000;
 
   if (!needsRefresh && session?.access_token) {
     return session.access_token;
@@ -93,11 +105,15 @@ export function isAuthOrRlsError(error: { message?: string; code?: string } | nu
   return (
     code === 'pgrst301' ||
     code === '42501' || // insufficient_privilege
+    code === '401' ||
+    code === '403' ||
     msg.includes('jwt') ||
     msg.includes('row-level security') ||
     msg.includes('permission denied') ||
     msg.includes('not authorized') ||
     msg.includes('unauthorized') ||
+    msg.includes('session') ||
+    msg.includes('expired') ||
     msg.includes('401') ||
     msg.includes('403')
   );
@@ -105,19 +121,19 @@ export function isAuthOrRlsError(error: { message?: string; code?: string } | nu
 
 /**
  * Run a Supabase write after ensuring a fresh session.
- * On auth/RLS failure, force-refresh once and retry (fixes first-click admin saves).
+ * Force-refreshes the session before the first attempt and retries once on
+ * auth/RLS failure (fixes first-click admin saves on long-lived tabs).
  */
 export async function withAdminSessionRetry<T extends { error: { message?: string; code?: string } | null }>(
   supabase: SupabaseClient,
   operation: () => PromiseLike<T>
 ): Promise<T> {
-  await ensureAccessToken(supabase);
+  await ensureAccessToken(supabase, { forceRefresh: true });
 
   let result = await operation();
 
   if (result.error && isAuthOrRlsError(result.error)) {
-    await supabase.auth.refreshSession();
-    await ensureAccessToken(supabase);
+    await ensureAccessToken(supabase, { forceRefresh: true });
     result = await operation();
   }
 
