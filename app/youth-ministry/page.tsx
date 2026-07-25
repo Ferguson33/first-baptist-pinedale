@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { formatAlbumDate, formatLocalDate } from '@/lib/format-date';
+import { extractYouTubeVideoId } from '@/lib/youtube';
 
 interface YouthAlbum {
   id: string;
@@ -36,6 +37,7 @@ export default function YouthMinistry() {
     youth_sunday_school_reference: "",
     youth_sunday_school_date: "",
     youth_google_doc_url: "",
+    youth_activity_video_id: "",
   });
 
   // Events
@@ -63,7 +65,9 @@ export default function YouthMinistry() {
     try {
       const { data, error } = await supabase
         .from('sermon_settings')
-        .select('youth_pastor_note, youth_sunday_school_lesson, youth_sunday_school_reference, youth_sunday_school_date, youth_google_doc_url')
+        .select(
+          'youth_pastor_note, youth_sunday_school_lesson, youth_sunday_school_reference, youth_sunday_school_date, youth_google_doc_url, youth_activity_video_id'
+        )
         .eq('id', 1)
         .single();
 
@@ -79,6 +83,7 @@ export default function YouthMinistry() {
         youth_sunday_school_reference: d.youth_sunday_school_reference || "",
         youth_sunday_school_date: d.youth_sunday_school_date || "",
         youth_google_doc_url: d.youth_google_doc_url || "",
+        youth_activity_video_id: d.youth_activity_video_id || "",
       });
     } catch (err: any) {
       console.error('Error fetching youth content:', err);
@@ -219,6 +224,8 @@ export default function YouthMinistry() {
     await fetchAlbumsAndPhotos();
   };
 
+  const activityVideoId = extractYouTubeVideoId(youthContent.youth_activity_video_id);
+
   // Initial skeleton while first load
   if (initialLoading) {
     return (
@@ -241,6 +248,32 @@ export default function YouthMinistry() {
           Real faith for real life in the high country.
         </p>
       </div>
+
+      {/* Youth activity video (public) */}
+      {activityVideoId && (
+        <div className="mb-14">
+          <div className="text-center mb-6">
+            <div className="uppercase text-xs tracking-[2px] text-[var(--color-gold-dark)]">YOUTH ACTIVITIES</div>
+            <h2 className="text-3xl font-semibold tracking-tight mt-2 text-[var(--color-navy)]">
+              See What We&apos;re Up To
+            </h2>
+            <p className="mt-2 text-[var(--color-stone)] max-w-lg mx-auto">
+              A recent look at youth ministry life and activities at First Baptist.
+            </p>
+          </div>
+          <div className="max-w-3xl mx-auto bg-white border border-[var(--color-gold)]/20 rounded-3xl overflow-hidden shadow-sm">
+            <div className="aspect-video bg-black">
+              <iframe
+                src={`https://www.youtube.com/embed/${activityVideoId}?rel=0`}
+                title="Youth ministry activity video"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Youth Pastor Note */}
       {youthContent.youth_pastor_note && (

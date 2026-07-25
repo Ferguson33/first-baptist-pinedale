@@ -146,6 +146,7 @@ function AdminDashboardContent() {
     welcome_video_id: "",
     pastor_york_video_id: "",
     pastor_holmes_video_id: "",
+    youth_activity_video_id: "",
   });
   const [savingSermonSettings, setSavingSermonSettings] = useState(false);
 
@@ -920,6 +921,7 @@ function AdminDashboardContent() {
         welcome_video_id: data.welcome_video_id || "",
         pastor_york_video_id: data.pastor_york_video_id || "",
         pastor_holmes_video_id: data.pastor_holmes_video_id || "",
+        youth_activity_video_id: data.youth_activity_video_id || "",
       });
     }
   }
@@ -946,11 +948,18 @@ function AdminDashboardContent() {
     };
   }
 
+  function normalizedYouthVideoIds() {
+    return {
+      activity: strictYouTubeId(sermonSettings.youth_activity_video_id),
+    };
+  }
+
   async function saveSermonSettings(successMessage = 'Homepage content updated!') {
     setSavingSermonSettings(true);
     try {
       const liveVideoId = normalizedLiveVideoId();
       const homepageVideos = normalizedHomepageVideoIds();
+      const youthVideos = normalizedYouthVideoIds();
       const { error } = await withAdminSessionRetry(supabase, async () =>
         supabase
           .from('sermon_settings')
@@ -966,6 +975,7 @@ function AdminDashboardContent() {
             youth_sunday_school_date: sermonSettings.youth_sunday_school_date || null,
             youth_pastor_note: sermonSettings.youth_pastor_note || null,
             youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
+            youth_activity_video_id: youthVideos.activity,
             events_google_doc_url: sermonSettings.events_google_doc_url || null,
             prayer_bulletin_google_doc_url: sermonSettings.prayer_bulletin_google_doc_url || null,
             nursery_schedule_google_doc_url: sermonSettings.nursery_schedule_google_doc_url || null,
@@ -990,6 +1000,7 @@ function AdminDashboardContent() {
           welcome_video_id: homepageVideos.welcome || '',
           pastor_york_video_id: homepageVideos.york || '',
           pastor_holmes_video_id: homepageVideos.holmes || '',
+          youth_activity_video_id: youthVideos.activity || '',
         }));
         toast.success(successMessage);
         fetch('/api/revalidate?paths=/,/sermons,/youth-ministry', { method: 'POST' }).catch(() => {});
@@ -1037,6 +1048,15 @@ function AdminDashboardContent() {
     }
 
     await saveSermonSettings('Homepage videos updated!');
+  }
+
+  async function saveYouthPageVideos() {
+    const youthVideos = normalizedYouthVideoIds();
+    if (sermonSettings.youth_activity_video_id.trim() && !youthVideos.activity) {
+      toast.error('Could not read a valid YouTube link for the youth activity video.');
+      return;
+    }
+    await saveSermonSettings('Youth page videos updated!');
   }
 
   // Load and manage real archived sermons
@@ -1464,6 +1484,40 @@ function AdminDashboardContent() {
                 className="px-6 py-2.5 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium disabled:opacity-60"
               >
                 {savingSermonSettings ? 'Saving...' : 'Save Homepage Videos'}
+              </button>
+            </div>
+          </div>
+
+          {/* Youth Page Videos */}
+          <div>
+            <div className="mb-4">
+              <div className="font-semibold text-2xl">Youth Page Videos</div>
+              <div className="text-sm text-[var(--color-stone-light)]">
+                Paste a YouTube link for a youth activity video. It shows publicly on the Youth Ministry page until you clear the field or replace it.
+              </div>
+            </div>
+
+            <div className="bg-white border border-[var(--color-gold)]/20 rounded-3xl p-8 space-y-6">
+              <div>
+                <label className="block font-medium mb-2 text-sm">Youth activity video (YouTube)</label>
+                <input
+                  type="text"
+                  value={sermonSettings.youth_activity_video_id}
+                  onChange={(e) => setSermonSettings({ ...sermonSettings, youth_activity_video_id: e.target.value })}
+                  className="w-full border border-[var(--color-gold)]/30 rounded-2xl px-4 py-3 text-sm font-mono"
+                  placeholder="https://youtu.be/xxxx or https://www.youtube.com/watch?v=xxxx"
+                />
+                <p className="text-xs text-[var(--color-stone-light)] mt-1">
+                  Public for everyone who visits the Youth page. Leave blank to hide the video section.
+                </p>
+              </div>
+
+              <button
+                onClick={saveYouthPageVideos}
+                disabled={savingSermonSettings}
+                className="px-6 py-2.5 bg-[var(--color-navy)] text-white rounded-2xl text-sm font-medium disabled:opacity-60"
+              >
+                {savingSermonSettings ? 'Saving...' : 'Save Youth Page Videos'}
               </button>
             </div>
           </div>

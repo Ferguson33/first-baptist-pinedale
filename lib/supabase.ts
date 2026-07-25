@@ -47,12 +47,16 @@ export type SermonSettings = {
   youth_sunday_school_date?: string | null;
   youth_pastor_note?: string | null;
   youth_google_doc_url?: string | null;
+  youth_activity_video_id?: string | null;
   events_google_doc_url?: string | null;
   prayer_bulletin_google_doc_url?: string | null;
   nursery_schedule_google_doc_url?: string | null;
   live_video_id?: string | null;
   live_stream_active?: boolean;
   live_stream_public?: boolean;
+  welcome_video_id?: string | null;
+  pastor_york_video_id?: string | null;
+  pastor_holmes_video_id?: string | null;
   updated_at?: string;
 };
 
