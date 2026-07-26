@@ -1167,67 +1167,71 @@ function AdminDashboardContent() {
     }
 
     setSavingSermon(true);
+    // Hard client abort so the button can never spin forever
+    const controller = new AbortController();
+    const abortTimer = window.setTimeout(() => controller.abort(), 20_000);
+
     try {
-      const basePayload = {
-        title: sermonForm.title.trim(),
-        preacher: (sermonForm.preacher || "Pastor Ted York").trim(),
-        date: sermonForm.date || todayLocalDateString(),
-        // Store a clean watch URL so display helpers always parse
-        video_url: `https://www.youtube.com/watch?v=${videoId}`,
-        // thumbnail_url is NOT NULL in the DB — always send a real YouTube thumb.
-        thumbnail_url: getYouTubeThumbnailUrl(videoId, 'hq'),
-        description: sermonForm.description || "",
-        is_public: sermonForm.is_public,
-        embed_mode: sermonForm.embed_mode,
-      };
-
-      const runSave = (payload: Record<string, unknown>) =>
-        withAdminSessionRetry(supabase, async () => {
-          if (editingSermon) {
-            return supabase.from('sermons').update(payload).eq('id', editingSermon.id).select('id');
-          }
-          return supabase.from('sermons').insert(payload).select('id');
-        });
-
-      let { data, error } = await runSave(basePayload);
-
-      // If embed_mode column was never added in Supabase, retry without it
-      if (
-        error &&
-        /embed_mode|schema cache|column/i.test(error.message || '')
-      ) {
-        console.warn('Retrying sermon save without embed_mode:', error.message);
-        const { embed_mode: _drop, ...withoutEmbed } = basePayload;
-        ({ data, error } = await runSave(withoutEmbed));
-        if (!error) {
-          toast.message(
-            'Sermon saved. (Optional: run add-sermon-embed-mode.sql in Supabase for display mode.)'
-          );
+      // Prefer the existing session token; only refresh if missing (avoid hanging refresh loops)
+      let token: string | null = null;
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        token = session?.access_token || null;
+        if (!token) {
+          token = await ensureAccessToken(supabase);
         }
+      } catch (authErr) {
+        console.error('saveRealSermon auth:', authErr);
+        throw new Error(
+          authErr instanceof Error
+            ? authErr.message
+            : 'Could not get your login session. Sign out and sign back in.'
+        );
       }
 
-      if (error) {
-        console.error('saveRealSermon error:', error);
-        const msg = error.message || 'Unknown error';
-        if (/row-level security|permission denied|42501/i.test(msg)) {
-          toast.error(
-            'Permission denied saving sermon. Sign out and back in, and confirm your profile role is admin.'
-          );
-        } else {
-          toast.error('Failed to save sermon: ' + msg);
-        }
-      } else if (!data || data.length === 0) {
-        toast.error("Save didn't confirm. Refresh the page and check whether the sermon appears in the list.");
-      } else {
-        toast.success(editingSermon ? 'Sermon updated!' : 'Sermon added!');
-        closeSermonForm();
-        await fetchRealSermons();
-        fetch('/api/revalidate?paths=/sermons,/', { method: 'POST' }).catch(() => {});
+      if (!token) {
+        throw new Error('Please sign out and sign back in, then try again.');
       }
+
+      const res = await fetch('/api/admin/sermons', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          id: editingSermon?.id || undefined,
+          title: sermonForm.title.trim(),
+          preacher: (sermonForm.preacher || 'Pastor Ted York').trim(),
+          date: sermonForm.date || todayLocalDateString(),
+          video_url: sermonForm.video_url.trim(),
+          description: sermonForm.description || '',
+          is_public: sermonForm.is_public,
+          embed_mode: sermonForm.embed_mode,
+        }),
+        signal: controller.signal,
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || `Save failed (${res.status})`);
+      }
+
+      toast.success(editingSermon ? 'Sermon updated!' : 'Sermon added!');
+      closeSermonForm();
+      await fetchRealSermons();
+      fetch('/api/revalidate?paths=/sermons,/', { method: 'POST' }).catch(() => {});
     } catch (err) {
       console.error('saveRealSermon error:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to save sermon. Please try again.');
+      if (err instanceof Error && err.name === 'AbortError') {
+        toast.error('Save timed out after 20 seconds. Sign out, sign back in, and try once more.');
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Failed to save sermon. Please try again.');
+      }
     } finally {
+      window.clearTimeout(abortTimer);
       setSavingSermon(false);
     }
   }
