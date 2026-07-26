@@ -1151,6 +1151,8 @@ function AdminDashboardContent() {
   }
 
   async function saveRealSermon() {
+    if (savingSermon) return;
+
     if (!sermonForm.title?.trim() || !sermonForm.video_url?.trim()) {
       toast.error("Title and YouTube URL are required.");
       return;
@@ -1158,17 +1160,20 @@ function AdminDashboardContent() {
 
     const videoId = extractYouTubeVideoId(sermonForm.video_url);
     if (!videoId) {
-      toast.error("Could not read a valid YouTube link or 11-character video ID. Check the link and try again.");
+      toast.error(
+        "Could not read a valid YouTube link or 11-character video ID. Paste the full YouTube URL (or just the ID) and try again."
+      );
       return;
     }
 
     setSavingSermon(true);
     try {
-      const payload = {
+      const basePayload = {
         title: sermonForm.title.trim(),
         preacher: (sermonForm.preacher || "Pastor Ted York").trim(),
         date: sermonForm.date || todayLocalDateString(),
-        video_url: sermonForm.video_url.trim(),
+        // Store a clean watch URL so display helpers always parse
+        video_url: `https://www.youtube.com/watch?v=${videoId}`,
         // thumbnail_url is NOT NULL in the DB — always send a real YouTube thumb.
         thumbnail_url: getYouTubeThumbnailUrl(videoId, 'hq'),
         description: sermonForm.description || "",
@@ -1176,27 +1181,52 @@ function AdminDashboardContent() {
         embed_mode: sermonForm.embed_mode,
       };
 
-      // ensureAccessToken + one automatic retry: same class of first-attempt
-      // JWT/RLS failures we already fixed for photo uploads.
-      const { error } = await withAdminSessionRetry(supabase, async () => {
-        if (editingSermon) {
-          return supabase.from('sermons').update(payload).eq('id', editingSermon.id);
+      const runSave = (payload: Record<string, unknown>) =>
+        withAdminSessionRetry(supabase, async () => {
+          if (editingSermon) {
+            return supabase.from('sermons').update(payload).eq('id', editingSermon.id).select('id');
+          }
+          return supabase.from('sermons').insert(payload).select('id');
+        });
+
+      let { data, error } = await runSave(basePayload);
+
+      // If embed_mode column was never added in Supabase, retry without it
+      if (
+        error &&
+        /embed_mode|schema cache|column/i.test(error.message || '')
+      ) {
+        console.warn('Retrying sermon save without embed_mode:', error.message);
+        const { embed_mode: _drop, ...withoutEmbed } = basePayload;
+        ({ data, error } = await runSave(withoutEmbed));
+        if (!error) {
+          toast.message(
+            'Sermon saved. (Optional: run add-sermon-embed-mode.sql in Supabase for display mode.)'
+          );
         }
-        return supabase.from('sermons').insert(payload);
-      });
+      }
 
       if (error) {
-        toast.error("Failed to save sermon: " + error.message);
+        console.error('saveRealSermon error:', error);
+        const msg = error.message || 'Unknown error';
+        if (/row-level security|permission denied|42501/i.test(msg)) {
+          toast.error(
+            'Permission denied saving sermon. Sign out and back in, and confirm your profile role is admin.'
+          );
+        } else {
+          toast.error('Failed to save sermon: ' + msg);
+        }
+      } else if (!data || data.length === 0) {
+        toast.error("Save didn't confirm. Refresh the page and check whether the sermon appears in the list.");
       } else {
-        toast.success(editingSermon ? "Sermon updated!" : "Sermon added!");
+        toast.success(editingSermon ? 'Sermon updated!' : 'Sermon added!');
         closeSermonForm();
-        fetchRealSermons();
-        // Bust public sermons (curated + live settings affect homepage too)
+        await fetchRealSermons();
         fetch('/api/revalidate?paths=/sermons,/', { method: 'POST' }).catch(() => {});
       }
     } catch (err) {
       console.error('saveRealSermon error:', err);
-      toast.error(err instanceof Error ? err.message : "Failed to save sermon. Please try again.");
+      toast.error(err instanceof Error ? err.message : 'Failed to save sermon. Please try again.');
     } finally {
       setSavingSermon(false);
     }
@@ -1700,9 +1730,14 @@ function AdminDashboardContent() {
                       disabled={savingSermon}
                       className="px-6 py-2 bg-[var(--color-navy)] text-white rounded-full text-sm font-semibold disabled:opacity-60"
                     >
-                      {savingSermon ? "Saving..." : "Save Sermon"}
+                      {savingSermon ? "Saving… (up to ~20s)" : "Save Sermon"}
                     </button>
                   </div>
+                  {savingSermon && (
+                    <p className="text-xs text-[var(--color-stone-light)] mt-3 text-right">
+                      No file upload — only saving the YouTube link. If this stays stuck, sign out/in and try again.
+                    </p>
+                  )}
                 </div>
               </div>
             )}

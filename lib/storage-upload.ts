@@ -45,53 +45,72 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${label} timed out. Check your connection and try again.`));
+    }, ms);
+    Promise.resolve(promise).then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
 /**
  * Returns a validated access token, refreshing the session if needed.
  * Fixes first-attempt failures when getSession() returns a stale/null token
  * (common on cold loads, PWA resumes, and long-lived admin tabs).
+ *
+ * Never force-refreshes by default on every call — a hanging refreshSession()
+ * was freezing admin "Save" buttons. Force only when explicitly requested
+ * (e.g. after an auth/RLS failure retry).
  */
 export async function ensureAccessToken(
   supabase: SupabaseClient,
   options: { forceRefresh?: boolean } = {}
 ): Promise<string> {
-  // Prefer validating the user first so we fail clearly when signed out.
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const AUTH_MS = 12_000;
 
-  if (userError || !user) {
-    // One recovery attempt: refresh then re-check (stale tab / PWA resume).
-    const { data: recovered, error: recoverError } = await supabase.auth.refreshSession();
-    if (recoverError || !recovered.session?.user || !recovered.session.access_token) {
-      throw new Error('Your session expired. Please sign in again.');
+  const {
+    data: { session: existing },
+  } = await withTimeout(supabase.auth.getSession(), AUTH_MS, 'Session check');
+
+  const expiresAtMs = (existing?.expires_at ?? 0) * 1000;
+  const nearlyExpired = !existing?.access_token || expiresAtMs < Date.now() + 5 * 60_000;
+
+  if (!options.forceRefresh && existing?.access_token && !nearlyExpired) {
+    // Fast path: still validate user without forcing a network refresh.
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await withTimeout(supabase.auth.getUser(), AUTH_MS, 'Auth check');
+      if (!userError && user && existing.access_token) {
+        return existing.access_token;
+      }
+    } catch {
+      // Fall through to refresh
     }
-    return recovered.session.access_token;
   }
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const { data: refreshed, error: refreshError } = await withTimeout(
+    supabase.auth.refreshSession(),
+    AUTH_MS,
+    'Session refresh'
+  );
 
-  // Refresh when missing, forced, or when the access token expires within 5 minutes
-  // (admin tabs often sit open long enough that a 60s window still fails on first click).
-  const expiresAtMs = (session?.expires_at ?? 0) * 1000;
-  const needsRefresh =
-    options.forceRefresh ||
-    !session?.access_token ||
-    expiresAtMs < Date.now() + 5 * 60_000;
-
-  if (!needsRefresh && session?.access_token) {
-    return session.access_token;
-  }
-
-  const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
   if (refreshError || !refreshed.session?.access_token) {
-    // If refresh failed but we still have a non-expired token, use it.
-    if (session?.access_token && expiresAtMs > Date.now()) {
-      return session.access_token;
+    if (existing?.access_token && expiresAtMs > Date.now()) {
+      return existing.access_token;
     }
-    throw new Error('Could not refresh your session. Please sign in again.');
+    throw new Error('Your session expired. Please sign out and sign back in, then try again.');
   }
 
   return refreshed.session.access_token;
@@ -121,20 +140,20 @@ export function isAuthOrRlsError(error: { message?: string; code?: string } | nu
 
 /**
  * Run a Supabase write after ensuring a fresh session.
- * Force-refreshes the session before the first attempt and retries once on
- * auth/RLS failure (fixes first-click admin saves on long-lived tabs).
+ * On auth/RLS failure, force-refresh once and retry (fixes first-click admin saves).
+ * Does not force-refresh on every call (that could hang on flaky networks).
  */
 export async function withAdminSessionRetry<T extends { error: { message?: string; code?: string } | null }>(
   supabase: SupabaseClient,
   operation: () => PromiseLike<T>
 ): Promise<T> {
-  await ensureAccessToken(supabase, { forceRefresh: true });
+  await ensureAccessToken(supabase);
 
-  let result = await operation();
+  let result = await withTimeout(Promise.resolve(operation()), 25_000, 'Save');
 
   if (result.error && isAuthOrRlsError(result.error)) {
     await ensureAccessToken(supabase, { forceRefresh: true });
-    result = await operation();
+    result = await withTimeout(Promise.resolve(operation()), 25_000, 'Save retry');
   }
 
   return result;
