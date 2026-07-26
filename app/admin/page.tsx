@@ -506,6 +506,10 @@ function AdminDashboardContent() {
     if (activeTab === 'sermons' && isMounted) {
       loadSermonSettings();
       fetchRealSermons();
+      // Warm auth so the first "Save Sermon" doesn't fail on a stale JWT
+      ensureAccessToken(supabase, { forceRefresh: true }).catch((err) => {
+        console.warn('[admin] session warm on sermons tab:', err);
+      });
     }
   }, [activeTab, isMounted]);
 
@@ -1143,11 +1147,36 @@ function AdminDashboardContent() {
       });
     }
     setShowSermonForm(true);
+    // Refresh JWT while the form is open so Save works on the first click
+    ensureAccessToken(supabase, { forceRefresh: true }).catch((err) => {
+      console.warn('[admin] session warm on open sermon form:', err);
+    });
   }
 
   function closeSermonForm() {
     setShowSermonForm(false);
     setEditingSermon(null);
+  }
+
+  function isRetryableSermonSaveError(status: number, message: string): boolean {
+    if (status === 401 || status === 403 || status === 408 || status === 429) return true;
+    if (status >= 500) return true;
+    return /permission denied|unauthorized|session|expired|jwt|timeout|42501|row-level security/i.test(
+      message || ''
+    );
+  }
+
+  async function getSermonSaveToken(forceRefresh: boolean): Promise<string> {
+    // Always prefer a force-refresh before save when requested — this is what
+    // makes the *first* click succeed after a long idle period.
+    try {
+      return await ensureAccessToken(supabase, { forceRefresh });
+    } catch (err) {
+      if (!forceRefresh) {
+        return ensureAccessToken(supabase, { forceRefresh: true });
+      }
+      throw err;
+    }
   }
 
   async function saveRealSermon() {
@@ -1167,54 +1196,54 @@ function AdminDashboardContent() {
     }
 
     setSavingSermon(true);
-    // Hard client abort so the button can never spin forever
-    const controller = new AbortController();
-    const abortTimer = window.setTimeout(() => controller.abort(), 20_000);
 
-    try {
-      // Prefer the existing session token; only refresh if missing (avoid hanging refresh loops)
-      let token: string | null = null;
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        token = session?.access_token || null;
-        if (!token) {
-          token = await ensureAccessToken(supabase);
-        }
-      } catch (authErr) {
-        console.error('saveRealSermon auth:', authErr);
-        throw new Error(
-          authErr instanceof Error
-            ? authErr.message
-            : 'Could not get your login session. Sign out and sign back in.'
-        );
-      }
+    const body = {
+      id: editingSermon?.id || undefined,
+      title: sermonForm.title.trim(),
+      preacher: (sermonForm.preacher || 'Pastor Ted York').trim(),
+      date: sermonForm.date || todayLocalDateString(),
+      video_url: sermonForm.video_url.trim(),
+      description: sermonForm.description || '',
+      is_public: sermonForm.is_public,
+      embed_mode: sermonForm.embed_mode,
+    };
 
-      if (!token) {
-        throw new Error('Please sign out and sign back in, then try again.');
-      }
-
+    const postOnce = async (token: string, signal: AbortSignal) => {
       const res = await fetch('/api/admin/sermons', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          id: editingSermon?.id || undefined,
-          title: sermonForm.title.trim(),
-          preacher: (sermonForm.preacher || 'Pastor Ted York').trim(),
-          date: sermonForm.date || todayLocalDateString(),
-          video_url: sermonForm.video_url.trim(),
-          description: sermonForm.description || '',
-          is_public: sermonForm.is_public,
-          embed_mode: sermonForm.embed_mode,
-        }),
-        signal: controller.signal,
+        body: JSON.stringify(body),
+        signal,
       });
-
       const data = await res.json().catch(() => ({}));
+      return { res, data };
+    };
+
+    try {
+      // Attempt 1: fresh token first (not a stale cached JWT)
+      let token = await getSermonSaveToken(true);
+      let controller = new AbortController();
+      let abortTimer = window.setTimeout(() => controller.abort(), 18_000);
+
+      let { res, data } = await postOnce(token, controller.signal);
+      window.clearTimeout(abortTimer);
+
+      // Silent automatic retry — this is the "second try" users were doing by hand
+      if (!res.ok) {
+        const errMsg = String(data.error || `Save failed (${res.status})`);
+        if (isRetryableSermonSaveError(res.status, errMsg)) {
+          console.warn('[admin] sermon save first attempt failed, retrying once:', res.status, errMsg);
+          token = await getSermonSaveToken(true);
+          controller = new AbortController();
+          abortTimer = window.setTimeout(() => controller.abort(), 18_000);
+          ({ res, data } = await postOnce(token, controller.signal));
+          window.clearTimeout(abortTimer);
+        }
+      }
+
       if (!res.ok) {
         throw new Error(data.error || `Save failed (${res.status})`);
       }
@@ -1226,12 +1255,11 @@ function AdminDashboardContent() {
     } catch (err) {
       console.error('saveRealSermon error:', err);
       if (err instanceof Error && err.name === 'AbortError') {
-        toast.error('Save timed out after 20 seconds. Sign out, sign back in, and try once more.');
+        toast.error('Save timed out. Sign out, sign back in, and try once more.');
       } else {
         toast.error(err instanceof Error ? err.message : 'Failed to save sermon. Please try again.');
       }
     } finally {
-      window.clearTimeout(abortTimer);
       setSavingSermon(false);
     }
   }

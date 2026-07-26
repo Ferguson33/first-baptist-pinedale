@@ -12,9 +12,20 @@ export const maxDuration = 30;
  */
 export async function POST(request: NextRequest) {
   try {
-    const auth = await authorizeAdminUpload(request.headers.get('authorization'));
+    // One automatic re-auth is unnecessary here — client already retries with a
+    // fresh token. Keep the server path fast and deterministic.
+    const authHeader = request.headers.get('authorization');
+    const auth = await authorizeAdminUpload(authHeader);
     if (!auth.ok) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status });
+      // Normalize auth failures so the client knows to retry with a refreshed JWT
+      const status = auth.status === 401 || auth.status === 403 ? auth.status : auth.status;
+      return NextResponse.json(
+        {
+          error: auth.error,
+          retryable: status === 401 || status === 403 || /permission denied|session|expired/i.test(auth.error),
+        },
+        { status }
+      );
     }
 
     const body = await request.json().catch(() => null);
