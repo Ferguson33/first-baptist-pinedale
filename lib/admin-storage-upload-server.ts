@@ -163,7 +163,7 @@ export async function authorizeAdminUpload(
     if (permissionish) {
       return {
         ok: false,
-        error: `Permission denied for table profiles. In Supabase → SQL Editor, run supabase/fix-profiles-grants-for-push.sql (grants SELECT on profiles to authenticated + service_role), then try again. Detail: ${profileLookupError}`,
+        error: `Permission denied for table profiles. In Supabase → SQL Editor, run supabase/fix-sermons-and-profiles-grants.sql (grants on profiles + sermons for authenticated and service_role), then try again. Detail: ${profileLookupError}`,
         status: 500,
       };
     }

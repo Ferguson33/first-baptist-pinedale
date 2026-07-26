@@ -88,7 +88,17 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error('[admin/sermons] update', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        const msg = error.message || 'Update failed';
+        if (/permission denied|42501/i.test(msg)) {
+          return NextResponse.json(
+            {
+              error:
+                'Permission denied for table sermons. In Supabase → SQL Editor, run the file supabase/fix-sermons-and-profiles-grants.sql, then try again.',
+            },
+            { status: 500 }
+          );
+        }
+        return NextResponse.json({ error: msg }, { status: 500 });
       }
       if (!data) {
         return NextResponse.json({ error: 'Sermon not found to update.' }, { status: 404 });
@@ -113,7 +123,17 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('[admin/sermons] insert', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      const msg = error.message || 'Insert failed';
+      if (/permission denied|42501/i.test(msg)) {
+        return NextResponse.json(
+          {
+            error:
+              'Permission denied for table sermons. In Supabase → SQL Editor, run the file supabase/fix-sermons-and-profiles-grants.sql, then try again.',
+          },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json({ error: msg }, { status: 500 });
     }
     if (!data) {
       return NextResponse.json(
