@@ -64,56 +64,89 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Pro
 }
 
 /**
- * Returns a validated access token, refreshing the session if needed.
- * Fixes first-attempt failures when getSession() returns a stale/null token
- * (common on cold loads, PWA resumes, and long-lived admin tabs).
+ * Returns an access token for Authorization: Bearer on admin API routes.
  *
- * Never force-refreshes by default on every call — a hanging refreshSession()
- * was freezing admin "Save" buttons. Force only when explicitly requested
- * (e.g. after an auth/RLS failure retry).
+ * Critical: do NOT force-refresh on every save. refreshSession() often hangs
+ * on long-lived admin tabs / PWAs and surfaces as "Session refresh timed out".
+ *
+ * Strategy:
+ *  1) Use local session token if it still has >60s of life
+ *  2) Only call refreshSession when expired, nearly expired, or forceRefresh
+ *  3) If refresh fails/times out, fall back to the existing token if still valid
  */
 export async function ensureAccessToken(
   supabase: SupabaseClient,
   options: { forceRefresh?: boolean } = {}
 ): Promise<string> {
-  const AUTH_MS = 12_000;
+  const AUTH_MS = 8_000;
+  const now = Date.now();
 
-  const {
-    data: { session: existing },
-  } = await withTimeout(supabase.auth.getSession(), AUTH_MS, 'Session check');
+  let existingToken: string | null = null;
+  let expiresAtMs = 0;
 
-  const expiresAtMs = (existing?.expires_at ?? 0) * 1000;
-  const nearlyExpired = !existing?.access_token || expiresAtMs < Date.now() + 5 * 60_000;
+  try {
+    const {
+      data: { session: existing },
+    } = await withTimeout(supabase.auth.getSession(), AUTH_MS, 'Session check');
+    existingToken = existing?.access_token ?? null;
+    expiresAtMs = (existing?.expires_at ?? 0) * 1000;
+  } catch (err) {
+    console.warn('[ensureAccessToken] getSession failed/timed out:', err);
+  }
 
-  if (!options.forceRefresh && existing?.access_token && !nearlyExpired) {
-    // Fast path: still validate user without forcing a network refresh.
+  const msLeft = expiresAtMs - now;
+  const stillValid = !!(existingToken && msLeft > 60_000);
+  const nearlyExpired = !existingToken || msLeft < 5 * 60_000;
+
+  // Fast path — most admin saves should hit this and never touch the network.
+  if (!options.forceRefresh && stillValid && !nearlyExpired) {
+    return existingToken!;
+  }
+
+  // Also prefer a still-valid token when forceRefresh was requested but we have
+  // plenty of life left — avoids blocking on a hung refresh for no gain.
+  if (options.forceRefresh && stillValid && msLeft > 10 * 60_000) {
+    // Soft background refresh; do not await a hang
+    void supabase.auth.refreshSession().catch(() => {});
+    return existingToken!;
+  }
+
+  // Need a refresh (expired / nearly expired / forced with short remaining life)
+  if (options.forceRefresh || nearlyExpired || !stillValid) {
     try {
-      const {
-        data: { user },
-        error: userError,
-      } = await withTimeout(supabase.auth.getUser(), AUTH_MS, 'Auth check');
-      if (!userError && user && existing.access_token) {
-        return existing.access_token;
+      const { data: refreshed, error: refreshError } = await withTimeout(
+        supabase.auth.refreshSession(),
+        AUTH_MS,
+        'Session refresh'
+      );
+      if (!refreshError && refreshed.session?.access_token) {
+        return refreshed.session.access_token;
       }
-    } catch {
-      // Fall through to refresh
+      console.warn('[ensureAccessToken] refreshSession error:', refreshError?.message);
+    } catch (err) {
+      // Common on flaky networks — fall back to existing token below.
+      console.warn('[ensureAccessToken] refreshSession failed/timed out:', err);
     }
   }
 
-  const { data: refreshed, error: refreshError } = await withTimeout(
-    supabase.auth.refreshSession(),
-    AUTH_MS,
-    'Session refresh'
-  );
-
-  if (refreshError || !refreshed.session?.access_token) {
-    if (existing?.access_token && expiresAtMs > Date.now()) {
-      return existing.access_token;
-    }
-    throw new Error('Your session expired. Please sign out and sign back in, then try again.');
+  // Fallback: any not-yet-expired token (even <60s left)
+  if (existingToken && expiresAtMs > now) {
+    return existingToken;
   }
 
-  return refreshed.session.access_token;
+  // Last ditch re-read from storage
+  try {
+    const {
+      data: { session },
+    } = await withTimeout(supabase.auth.getSession(), 4_000, 'Session check');
+    if (session?.access_token && (session.expires_at ?? 0) * 1000 > Date.now()) {
+      return session.access_token;
+    }
+  } catch {
+    // ignore
+  }
+
+  throw new Error('Your session expired. Please sign out and sign back in, then try again.');
 }
 
 /** True when a Supabase/PostgREST error looks like auth or RLS rejection. */

@@ -494,8 +494,8 @@ function AdminDashboardContent() {
     if (activeTab === 'sermons' && isMounted) {
       loadSermonSettings();
       fetchRealSermons();
-      // Warm auth so the first "Save Sermon" doesn't fail on a stale JWT
-      ensureAccessToken(supabase, { forceRefresh: true }).catch((err) => {
+      // Soft warm — do not force-refresh (that hung admin saves)
+      ensureAccessToken(supabase).catch((err) => {
         console.warn('[admin] session warm on sermons tab:', err);
       });
     }
@@ -1150,8 +1150,8 @@ function AdminDashboardContent() {
       });
     }
     setShowSermonForm(true);
-    // Refresh JWT while the form is open so Save works on the first click
-    ensureAccessToken(supabase, { forceRefresh: true }).catch((err) => {
+    // Soft warm while form is open (no force-refresh)
+    ensureAccessToken(supabase).catch((err) => {
       console.warn('[admin] session warm on open sermon form:', err);
     });
   }

@@ -34,82 +34,19 @@ function isRetryable(status: number, message: string): boolean {
   );
 }
 
+/**
+ * Get a token without forcing refresh by default.
+ * Force refresh only on retry after 401/403.
+ */
 async function getToken(supabase: SupabaseClient, forceRefresh: boolean): Promise<string> {
-  try {
-    return await ensureAccessToken(supabase, { forceRefresh });
-  } catch (err) {
-    if (!forceRefresh) {
-      return ensureAccessToken(supabase, { forceRefresh: true });
-    }
-    throw err;
-  }
+  return ensureAccessToken(supabase, { forceRefresh });
 }
 
-/**
- * Admin DB write via service-role API (avoids client RLS/session hangs).
- * Fresh JWT + one silent retry + 18s abort per attempt.
- */
-export async function adminMutate<T = unknown>(
-  supabase: SupabaseClient,
-  body: AdminMutateRequest
-): Promise<AdminMutateResult<T>> {
-  const postOnce = async (token: string, signal: AbortSignal) => {
-    const res = await fetch('/api/admin/mutate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-      signal,
-    });
-    const data = await res.json().catch(() => ({}));
-    return { res, data };
-  };
-
-  let token = await getToken(supabase, true);
-  let controller = new AbortController();
-  let timer = window.setTimeout(() => controller.abort(), 18_000);
-
-  try {
-    let { res, data } = await postOnce(token, controller.signal);
-    window.clearTimeout(timer);
-
-    if (!res.ok) {
-      const errMsg = String(data.error || `Request failed (${res.status})`);
-      if (isRetryable(res.status, errMsg) || data.retryable) {
-        console.warn('[adminMutate] first attempt failed, retrying:', res.status, errMsg);
-        token = await getToken(supabase, true);
-        controller = new AbortController();
-        timer = window.setTimeout(() => controller.abort(), 18_000);
-        ({ res, data } = await postOnce(token, controller.signal));
-        window.clearTimeout(timer);
-      }
-    }
-
-    if (!res.ok) {
-      throw new Error(data.error || `Request failed (${res.status})`);
-    }
-
-    return { ok: true, data: (data.row ?? data.data ?? null) as T | null };
-  } catch (err) {
-    window.clearTimeout(timer);
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('Save timed out. Sign out, sign back in, and try once more.');
-    }
-    throw err;
-  }
-}
-
-/**
- * Admin POST to a dedicated API path with the same token/retry/timeout pattern.
- * Used by sermons + sermon-settings (and any future dedicated routes).
- */
-export async function adminApiPost<T = unknown>(
+async function postWithAuth(
   supabase: SupabaseClient,
   path: string,
   body: unknown
-): Promise<T> {
+): Promise<{ res: Response; data: Record<string, unknown> }> {
   const postOnce = async (token: string, signal: AbortSignal) => {
     const res = await fetch(path, {
       method: 'POST',
@@ -120,40 +57,68 @@ export async function adminApiPost<T = unknown>(
       body: JSON.stringify(body),
       signal,
     });
-    const data = await res.json().catch(() => ({}));
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
     return { res, data };
   };
 
-  let token = await getToken(supabase, true);
+  // Attempt 1: use existing session token (no force-refresh — that was hanging saves)
+  let token = await getToken(supabase, false);
   let controller = new AbortController();
-  let timer = window.setTimeout(() => controller.abort(), 18_000);
+  let timer = window.setTimeout(() => controller.abort(), 20_000);
 
   try {
     let { res, data } = await postOnce(token, controller.signal);
     window.clearTimeout(timer);
 
+    // Only force-refresh + retry on auth failures
     if (!res.ok) {
       const errMsg = String(data.error || `Request failed (${res.status})`);
-      if (isRetryable(res.status, errMsg) || data.retryable) {
-        console.warn('[adminApiPost] first attempt failed, retrying:', path, res.status, errMsg);
-        token = await getToken(supabase, true);
+      const authFail = res.status === 401 || res.status === 403;
+      if (authFail || isRetryable(res.status, errMsg) || data.retryable) {
+        console.warn('[adminApi] first attempt failed, retrying:', path, res.status, errMsg);
+        token = await getToken(supabase, authFail /* force refresh only on auth */);
         controller = new AbortController();
-        timer = window.setTimeout(() => controller.abort(), 18_000);
+        timer = window.setTimeout(() => controller.abort(), 20_000);
         ({ res, data } = await postOnce(token, controller.signal));
         window.clearTimeout(timer);
       }
     }
 
     if (!res.ok) {
-      throw new Error(data.error || `Request failed (${res.status})`);
+      throw new Error(String(data.error || `Request failed (${res.status})`));
     }
 
-    return data as T;
+    return { res, data };
   } catch (err) {
     window.clearTimeout(timer);
     if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('Save timed out. Sign out, sign back in, and try once more.');
+      throw new Error(
+        'Save timed out contacting the server. Check your connection, refresh the page, and try again.'
+      );
     }
     throw err;
   }
+}
+
+/**
+ * Admin DB write via service-role API (avoids client RLS/session hangs).
+ */
+export async function adminMutate<T = unknown>(
+  supabase: SupabaseClient,
+  body: AdminMutateRequest
+): Promise<AdminMutateResult<T>> {
+  const { data } = await postWithAuth(supabase, '/api/admin/mutate', body);
+  return { ok: true, data: (data.row ?? data.data ?? null) as T | null };
+}
+
+/**
+ * Admin POST to a dedicated API path (sermons, sermon-settings, members, etc.).
+ */
+export async function adminApiPost<T = unknown>(
+  supabase: SupabaseClient,
+  path: string,
+  body: unknown
+): Promise<T> {
+  const { data } = await postWithAuth(supabase, path, body);
+  return data as T;
 }

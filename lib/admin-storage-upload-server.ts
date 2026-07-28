@@ -24,6 +24,7 @@ export type AdminUploadProcessFailure = {
   ok: false;
   error: string;
   status: number;
+  retryable?: boolean;
 };
 
 export type AdminUploadAuth = {
@@ -53,6 +54,24 @@ function createServiceRoleClient(): SupabaseClient | null {
   });
 }
 
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${label} timed out`));
+    }, ms);
+    Promise.resolve(promise).then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
 export async function authorizeAdminUpload(
   authHeader: string | null
 ): Promise<AdminUploadAuth | AdminUploadProcessFailure> {
@@ -75,17 +94,26 @@ export async function authorizeAdminUpload(
     },
   });
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabaseUser.auth.getUser(jwt);
-
-  if (userError || !user) {
-    console.error('[authorizeAdminUpload] getUser failed:', userError?.message);
+  let user: { id: string; email?: string | null } | null = null;
+  try {
+    const result = await withTimeout(supabaseUser.auth.getUser(jwt), 8_000, 'Auth getUser');
+    if (result.error || !result.data.user) {
+      console.error('[authorizeAdminUpload] getUser failed:', result.error?.message);
+      return {
+        ok: false,
+        error: 'Unauthorized — your session expired. Please sign out and sign back in.',
+        status: 401,
+      };
+    }
+    user = result.data.user;
+  } catch (err) {
+    console.error('[authorizeAdminUpload] getUser timed out/failed:', err);
     return {
       ok: false,
-      error: 'Unauthorized — your session expired. Please sign out and sign back in.',
-      status: 401,
+      error:
+        'Auth check timed out. Please try again in a moment. If it keeps happening, sign out and sign back in.',
+      status: 503,
+      retryable: true,
     };
   }
 
@@ -94,7 +122,8 @@ export async function authorizeAdminUpload(
     console.error('[authorizeAdminUpload] SUPABASE_SERVICE_ROLE_KEY is not set');
     return {
       ok: false,
-      error: 'Server misconfiguration (missing SUPABASE_SERVICE_ROLE_KEY on the host).',
+      error:
+        'Server misconfiguration (missing SUPABASE_SERVICE_ROLE_KEY on the host). Add it in Vercel → Settings → Environment Variables, then redeploy.',
       status: 500,
     };
   }
@@ -104,14 +133,23 @@ export async function authorizeAdminUpload(
   let role: string | null = null;
   let profileLookupError: string | null = null;
 
-  const { data: adminProfile, error: adminProfileError } = await supabaseAdmin
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle();
+  let adminProfile: { role?: string } | null = null;
+  let adminProfileError: { message?: string; code?: string } | null = null;
+  try {
+    const result = await withTimeout(
+      supabaseAdmin.from('profiles').select('role').eq('id', user.id).maybeSingle(),
+      8_000,
+      'Admin profile lookup'
+    );
+    adminProfile = result.data;
+    adminProfileError = result.error;
+  } catch (err) {
+    profileLookupError = err instanceof Error ? err.message : 'profile lookup timed out';
+    console.error('[authorizeAdminUpload] profile lookup timed out:', err);
+  }
 
   if (adminProfileError) {
-    profileLookupError = adminProfileError.message;
+    profileLookupError = adminProfileError.message ?? 'profile lookup failed';
     console.error('[authorizeAdminUpload] service-role profile error:', {
       userId: user.id,
       email: user.email,
