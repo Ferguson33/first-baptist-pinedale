@@ -11,8 +11,9 @@ import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { SERMON_EMBED_MODE_LABELS, normalizeEmbedMode, type SermonEmbedMode } from '@/lib/sermon-display';
 import { formatAlbumDate, formatLocalDate, todayLocalDateString } from '@/lib/format-date';
-import { extractYouTubeVideoId, getYouTubeThumbnailUrl } from '@/lib/youtube';
-import { ensureAccessToken, uploadFileViaApi, withAdminSessionRetry, type UploadProgress } from '@/lib/storage-upload';
+import { extractYouTubeVideoId } from '@/lib/youtube';
+import { ensureAccessToken, uploadFileViaApi, type UploadProgress } from '@/lib/storage-upload';
+import { adminApiPost, adminMutate } from '@/lib/admin-mutate-client';
 import { UploadProgressBanner } from '@/components/UploadProgressBanner';
 import { AdminPushToggle } from '@/components/AdminPushToggle';
 
@@ -193,16 +194,18 @@ function AdminDashboardContent() {
   }
 
   async function approveRealMember(userId: string) {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role: 'approved' })
-      .eq('id', userId);
-
-    if (error) {
-      toast.error("Failed to approve member");
-    } else {
-      toast.success("Member approved!");
+    try {
+      await adminMutate(supabase, {
+        table: 'profiles',
+        op: 'update',
+        id: userId,
+        data: { role: 'approved' },
+      });
+      toast.success('Member approved!');
       fetchMembers();
+    } catch (err) {
+      console.error('approveRealMember error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to approve member');
     }
   }
 
@@ -219,24 +222,7 @@ function AdminDashboardContent() {
 
     setMemberActionId(userId);
     try {
-      const accessToken = await ensureAccessToken(supabase);
-
-      const res = await fetch('/api/admin/members/delete', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ userId }),
-      });
-
-      const result = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        toast.error(result.error || `Failed to ${verb} member`);
-        return;
-      }
-
+      await adminApiPost(supabase, '/api/admin/members/delete', { userId });
       toast.success(
         action === 'deny'
           ? `${memberName} was denied and removed from the member list.`
@@ -246,7 +232,7 @@ function AdminDashboardContent() {
       fetchMembers();
     } catch (err) {
       console.error('removeMemberAccount error:', err);
-      toast.error(`Failed to ${verb} member`);
+      toast.error(err instanceof Error ? err.message : `Failed to ${verb} member`);
     } finally {
       setMemberActionId(null);
     }
@@ -422,26 +408,28 @@ function AdminDashboardContent() {
     const newFunds = parseInt(funds);
     const newGoal = parseInt(total);
 
-    const { error } = await supabase
-      .from('building_progress')
-      .update({
-        physical_percent: newPhysical,
-        funds_raised: newFunds,
-        funds_goal: newGoal,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', 1);
-
-    if (error) {
-      console.error("Supabase update error:", error);
-      toast.error("Failed to update progress: " + (error.message || "Permission denied. Check RLS policies."));
-    } else {
+    try {
+      await adminMutate(supabase, {
+        table: 'building_progress',
+        op: 'update',
+        id: 1,
+        data: {
+          physical_percent: newPhysical,
+          funds_raised: newFunds,
+          funds_goal: newGoal,
+          updated_at: new Date().toISOString(),
+        },
+      });
       setProgress({
         physical_percent: newPhysical,
         funds_raised: newFunds,
         funds_goal: newGoal,
       });
-      toast.success("Progress updated! Changes are now live on the public Building Project page.");
+      toast.success('Progress updated! Changes are now live on the public Building Project page.');
+      fetch('/api/revalidate?path=/building-project', { method: 'POST' }).catch(() => {});
+    } catch (err) {
+      console.error('updateProgress error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to update progress');
     }
   };
 
@@ -613,14 +601,9 @@ function AdminDashboardContent() {
     if (!confirm(`Delete album "${title}" and all its photos? This cannot be undone.`)) return;
 
     try {
-      const { error } = await withAdminSessionRetry(supabase, async () =>
-        supabase.from('youth_albums').delete().eq('id', id)
-      );
-
-      if (error) throw error;
-
-      toast.success("Album deleted");
-      setYouthAlbums(prev => prev.filter((a: any) => a.id !== id));
+      await adminMutate(supabase, { table: 'youth_albums', op: 'delete', id });
+      toast.success('Album deleted');
+      setYouthAlbums((prev) => prev.filter((a: any) => a.id !== id));
 
       if (selectedYouthAlbumId === id) {
         setSelectedYouthAlbumId(null);
@@ -629,7 +612,7 @@ function AdminDashboardContent() {
       fetchYouthPhotos();
     } catch (error: any) {
       console.error(error);
-      toast.error("Failed to delete album: " + (error.message || "Unknown error"));
+      toast.error('Failed to delete album: ' + (error.message || 'Unknown error'));
     }
   }
 
@@ -671,27 +654,27 @@ function AdminDashboardContent() {
     setSavingYouthEvent(true);
     try {
       const payload = { ...youthEventForm };
-
-      const { error } = await withAdminSessionRetry(supabase, async () => {
-        if (editingYouthEvent) {
-          return supabase.from('youth_events').update(payload).eq('id', editingYouthEvent.id);
-        }
-        return supabase.from('youth_events').insert(payload);
-      });
-
-      if (error) {
-        console.error('Youth event save error:', error);
-        toast.error("Failed to save event: " + (error.message || "Unknown error"));
+      if (editingYouthEvent) {
+        await adminMutate(supabase, {
+          table: 'youth_events',
+          op: 'update',
+          id: editingYouthEvent.id,
+          data: payload,
+        });
       } else {
-        toast.success(editingYouthEvent ? "Event updated!" : "Event added!");
-        closeYouthEventForm();
-        fetchYouthEvents();
-        // Remote update for public youth page
-        fetch('/api/revalidate?path=/youth-ministry', { method: 'POST' }).catch(() => {});
+        await adminMutate(supabase, {
+          table: 'youth_events',
+          op: 'insert',
+          data: payload,
+        });
       }
+      toast.success(editingYouthEvent ? 'Event updated!' : 'Event added!');
+      closeYouthEventForm();
+      fetchYouthEvents();
+      fetch('/api/revalidate?path=/youth-ministry', { method: 'POST' }).catch(() => {});
     } catch (err: any) {
       console.error('Unexpected error saving youth event:', err);
-      toast.error(err?.message || "Failed to save youth event. Please try again.");
+      toast.error(err?.message || 'Failed to save youth event. Please try again.');
     } finally {
       setSavingYouthEvent(false);
     }
@@ -701,14 +684,12 @@ function AdminDashboardContent() {
     if (!confirm(`Delete event "${title}"?`)) return;
 
     try {
-      const { error } = await withAdminSessionRetry(supabase, async () =>
-        supabase.from('youth_events').delete().eq('id', id)
-      );
-      if (error) throw error;
-      toast.success("Event deleted");
+      await adminMutate(supabase, { table: 'youth_events', op: 'delete', id });
+      toast.success('Event deleted');
       fetchYouthEvents();
+      fetch('/api/revalidate?path=/youth-ministry', { method: 'POST' }).catch(() => {});
     } catch (err: any) {
-      toast.error("Failed to delete event: " + (err?.message || "Unknown error"));
+      toast.error('Failed to delete event: ' + (err?.message || 'Unknown error'));
     }
   }
 
@@ -743,18 +724,25 @@ function AdminDashboardContent() {
 
     try {
       if (editingAlbum) {
-        const { error } = await withAdminSessionRetry(supabase, async () =>
-          supabase.from('youth_albums').update(payload).eq('id', editingAlbum.id)
-        );
-        if (error) throw error;
-        toast.success("Album updated!");
+        await adminMutate(supabase, {
+          table: 'youth_albums',
+          op: 'update',
+          id: editingAlbum.id,
+          data: payload,
+        });
+        toast.success('Album updated!');
         closeAlbumForm();
         await fetchYouthAlbums();
       } else {
-        const { data, error } = await withAdminSessionRetry(supabase, async () =>
-          supabase.from('youth_albums').insert(payload).select('id, title, date').single()
+        const { data } = await adminMutate<{ id: string; title: string; date: string | null }>(
+          supabase,
+          {
+            table: 'youth_albums',
+            op: 'insert',
+            data: payload,
+            select: 'id, title, date',
+          }
         );
-        if (error) throw error;
         toast.success("Album created! It's selected below — add photos now.");
         closeAlbumForm();
         await fetchYouthAlbums();
@@ -766,7 +754,7 @@ function AdminDashboardContent() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : (err as { message?: string })?.message || 'Unknown error';
       console.error('saveAlbum error:', err);
-      toast.error("Failed to save album: " + message);
+      toast.error('Failed to save album: ' + message);
     } finally {
       setSavingAlbum(false);
     }
@@ -872,24 +860,27 @@ function AdminDashboardContent() {
         location: eventForm.location || null,
       };
 
-      const { error } = await withAdminSessionRetry(supabase, async () => {
-        if (editingEvent) {
-          return supabase.from('events').update(payload).eq('id', editingEvent.id);
-        }
-        return supabase.from('events').insert(payload);
-      });
-
-      if (error) {
-        toast.error("Failed to save event: " + error.message);
+      if (editingEvent) {
+        await adminMutate(supabase, {
+          table: 'events',
+          op: 'update',
+          id: editingEvent.id,
+          data: payload,
+        });
       } else {
-        toast.success(editingEvent ? "Event updated!" : "Event added!");
-        closeEventForm();
-        fetchEvents();
-        fetch('/api/revalidate?path=/events', { method: 'POST' }).catch(() => {});
+        await adminMutate(supabase, {
+          table: 'events',
+          op: 'insert',
+          data: payload,
+        });
       }
+      toast.success(editingEvent ? 'Event updated!' : 'Event added!');
+      closeEventForm();
+      fetchEvents();
+      fetch('/api/revalidate?path=/events', { method: 'POST' }).catch(() => {});
     } catch (err) {
       console.error('saveGeneralEvent error:', err);
-      toast.error(err instanceof Error ? err.message : "Failed to save event. Please try again.");
+      toast.error(err instanceof Error ? err.message : 'Failed to save event. Please try again.');
     } finally {
       setSavingEvent(false);
     }
@@ -903,21 +894,13 @@ function AdminDashboardContent() {
     try {
       if (!confirm(`Delete event "${title}"?`)) return;
 
-      const { error } = await supabase.from('events').delete().eq('id', id);
-
-      if (error) {
-        console.error('Failed to delete event:', error);
-        toast.error("Failed to delete event");
-      } else {
-        toast.success("Event deleted");
-        fetchEvents();
-
-        // Trigger public page refresh (non-blocking)
-        fetch('/api/revalidate?path=/events', { method: 'POST' }).catch(() => {});
-      }
+      await adminMutate(supabase, { table: 'events', op: 'delete', id });
+      toast.success('Event deleted');
+      fetchEvents();
+      fetch('/api/revalidate?path=/events', { method: 'POST' }).catch(() => {});
     } catch (err: any) {
       console.error('Unexpected error in deleteEvent:', err);
-      toast.error("Failed to delete event");
+      toast.error(err instanceof Error ? err.message : 'Failed to delete event');
     }
   }
 
@@ -989,68 +972,88 @@ function AdminDashboardContent() {
   async function saveSermonSettings(successMessage = 'Homepage content updated!') {
     if (savingSermonSettings) return;
     setSavingSermonSettings(true);
-    try {
-      const liveVideoId = normalizedLiveVideoId();
-      const homepageVideos = normalizedHomepageVideoIds();
-      const youthVideos = normalizedYouthVideoIds();
-      const updatePayload = {
-        pastor_note: sermonSettings.pastor_note || null,
-        upcoming_title: sermonSettings.upcoming_title || null,
-        upcoming_reference: sermonSettings.upcoming_reference || null,
-        upcoming_date: sermonSettings.upcoming_date || null,
-        sunday_school_lesson: sermonSettings.sunday_school_lesson || null,
-        sunday_school_reference: sermonSettings.sunday_school_reference || null,
-        youth_sunday_school_lesson: sermonSettings.youth_sunday_school_lesson || null,
-        youth_sunday_school_reference: sermonSettings.youth_sunday_school_reference || null,
-        youth_sunday_school_date: sermonSettings.youth_sunday_school_date || null,
-        youth_pastor_note: sermonSettings.youth_pastor_note || null,
-        youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
-        youth_activity_video_id: youthVideos.activity,
-        events_google_doc_url: sermonSettings.events_google_doc_url || null,
-        prayer_bulletin_google_doc_url: sermonSettings.prayer_bulletin_google_doc_url || null,
-        nursery_schedule_google_doc_url: sermonSettings.nursery_schedule_google_doc_url || null,
-        live_video_id: liveVideoId,
-        live_stream_active: sermonSettings.live_stream_active && !!liveVideoId,
-        live_stream_public: sermonSettings.live_stream_public && !!liveVideoId,
-        welcome_video_id: homepageVideos.welcome,
-        pastor_york_video_id: homepageVideos.york,
-        pastor_holmes_video_id: homepageVideos.holmes,
-        updated_at: new Date().toISOString(),
-      };
 
-      const { data: savedRows, error } = await withAdminSessionRetry(supabase, async () =>
-        supabase
-          .from('sermon_settings')
-          .update(updatePayload)
-          .eq('id', 1)
-          .select(
-            'live_video_id, welcome_video_id, pastor_york_video_id, pastor_holmes_video_id, youth_activity_video_id'
-          )
+    const liveVideoId = normalizedLiveVideoId();
+    const homepageVideos = normalizedHomepageVideoIds();
+    const youthVideos = normalizedYouthVideoIds();
+    // Server path (service role) — avoids client RLS/session hangs.
+    const body = {
+      pastor_note: sermonSettings.pastor_note || null,
+      upcoming_title: sermonSettings.upcoming_title || null,
+      upcoming_reference: sermonSettings.upcoming_reference || null,
+      upcoming_date: sermonSettings.upcoming_date || null,
+      sunday_school_lesson: sermonSettings.sunday_school_lesson || null,
+      sunday_school_reference: sermonSettings.sunday_school_reference || null,
+      youth_sunday_school_lesson: sermonSettings.youth_sunday_school_lesson || null,
+      youth_sunday_school_reference: sermonSettings.youth_sunday_school_reference || null,
+      youth_sunday_school_date: sermonSettings.youth_sunday_school_date || null,
+      youth_pastor_note: sermonSettings.youth_pastor_note || null,
+      youth_google_doc_url: sermonSettings.youth_google_doc_url || null,
+      youth_activity_video_id: youthVideos.activity,
+      events_google_doc_url: sermonSettings.events_google_doc_url || null,
+      prayer_bulletin_google_doc_url: sermonSettings.prayer_bulletin_google_doc_url || null,
+      nursery_schedule_google_doc_url: sermonSettings.nursery_schedule_google_doc_url || null,
+      live_video_id: liveVideoId,
+      live_stream_active: sermonSettings.live_stream_active && !!liveVideoId,
+      live_stream_public: sermonSettings.live_stream_public && !!liveVideoId,
+      welcome_video_id: homepageVideos.welcome,
+      pastor_york_video_id: homepageVideos.york,
+      pastor_holmes_video_id: homepageVideos.holmes,
+    };
+
+    try {
+      const data = await adminApiPost<{ settings?: Record<string, unknown> }>(
+        supabase,
+        '/api/admin/sermon-settings',
+        body
       );
 
-      if (error) {
-        console.error('Failed to save sermon settings:', error);
-        toast.error(
-          error.message?.includes('youth_activity_video_id')
-            ? "Couldn't save — run the youth video SQL in Supabase, then try again."
-            : `Couldn't save settings: ${error.message || 'Please try again.'}`
-        );
-      } else if (!savedRows || savedRows.length === 0) {
-        console.error('sermon_settings update matched 0 rows');
-        toast.error("Save didn't apply (no settings row found). Refresh the page and try again.");
-      } else {
-        const saved = savedRows[0];
-        setSermonSettings((prev) => ({
-          ...prev,
-          live_video_id: saved.live_video_id || '',
-          welcome_video_id: saved.welcome_video_id || '',
-          pastor_york_video_id: saved.pastor_york_video_id || '',
-          pastor_holmes_video_id: saved.pastor_holmes_video_id || '',
-          youth_activity_video_id: saved.youth_activity_video_id || '',
-        }));
-        toast.success(successMessage);
-        fetch('/api/revalidate?paths=/,/sermons,/youth-ministry', { method: 'POST' }).catch(() => {});
-      }
+      const saved = data.settings || {};
+      setSermonSettings((prev) => ({
+        ...prev,
+        ...(saved.pastor_note !== undefined ? { pastor_note: (saved.pastor_note as string) || '' } : {}),
+        ...(saved.upcoming_title !== undefined
+          ? { upcoming_title: (saved.upcoming_title as string) || '' }
+          : {}),
+        ...(saved.upcoming_reference !== undefined
+          ? { upcoming_reference: (saved.upcoming_reference as string) || '' }
+          : {}),
+        ...(saved.upcoming_date !== undefined
+          ? { upcoming_date: (saved.upcoming_date as string) || '' }
+          : {}),
+        ...(saved.sunday_school_lesson !== undefined
+          ? { sunday_school_lesson: (saved.sunday_school_lesson as string) || '' }
+          : {}),
+        ...(saved.sunday_school_reference !== undefined
+          ? { sunday_school_reference: (saved.sunday_school_reference as string) || '' }
+          : {}),
+        ...(saved.live_video_id !== undefined
+          ? { live_video_id: (saved.live_video_id as string) || '' }
+          : {}),
+        ...(typeof saved.live_stream_active === 'boolean'
+          ? { live_stream_active: saved.live_stream_active }
+          : {}),
+        ...(typeof saved.live_stream_public === 'boolean'
+          ? { live_stream_public: saved.live_stream_public }
+          : {}),
+        ...(saved.welcome_video_id !== undefined
+          ? { welcome_video_id: (saved.welcome_video_id as string) || '' }
+          : {}),
+        ...(saved.pastor_york_video_id !== undefined
+          ? { pastor_york_video_id: (saved.pastor_york_video_id as string) || '' }
+          : {}),
+        ...(saved.pastor_holmes_video_id !== undefined
+          ? { pastor_holmes_video_id: (saved.pastor_holmes_video_id as string) || '' }
+          : {}),
+        ...(saved.youth_activity_video_id !== undefined
+          ? { youth_activity_video_id: (saved.youth_activity_video_id as string) || '' }
+          : {}),
+      }));
+      toast.success(successMessage);
+      fetch(
+        '/api/revalidate?paths=/,/sermons,/youth-ministry,/events,/prayer-bulletin,/nursery-schedule',
+        { method: 'POST' }
+      ).catch(() => {});
     } catch (err) {
       console.error('saveSermonSettings error:', err);
       toast.error(err instanceof Error ? err.message : "Couldn't save settings. Please try again.");
@@ -1158,27 +1161,6 @@ function AdminDashboardContent() {
     setEditingSermon(null);
   }
 
-  function isRetryableSermonSaveError(status: number, message: string): boolean {
-    if (status === 401 || status === 403 || status === 408 || status === 429) return true;
-    if (status >= 500) return true;
-    return /permission denied|unauthorized|session|expired|jwt|timeout|42501|row-level security/i.test(
-      message || ''
-    );
-  }
-
-  async function getSermonSaveToken(forceRefresh: boolean): Promise<string> {
-    // Always prefer a force-refresh before save when requested — this is what
-    // makes the *first* click succeed after a long idle period.
-    try {
-      return await ensureAccessToken(supabase, { forceRefresh });
-    } catch (err) {
-      if (!forceRefresh) {
-        return ensureAccessToken(supabase, { forceRefresh: true });
-      }
-      throw err;
-    }
-  }
-
   async function saveRealSermon() {
     if (savingSermon) return;
 
@@ -1208,57 +1190,15 @@ function AdminDashboardContent() {
       embed_mode: sermonForm.embed_mode,
     };
 
-    const postOnce = async (token: string, signal: AbortSignal) => {
-      const res = await fetch('/api/admin/sermons', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-        signal,
-      });
-      const data = await res.json().catch(() => ({}));
-      return { res, data };
-    };
-
     try {
-      // Attempt 1: fresh token first (not a stale cached JWT)
-      let token = await getSermonSaveToken(true);
-      let controller = new AbortController();
-      let abortTimer = window.setTimeout(() => controller.abort(), 18_000);
-
-      let { res, data } = await postOnce(token, controller.signal);
-      window.clearTimeout(abortTimer);
-
-      // Silent automatic retry — this is the "second try" users were doing by hand
-      if (!res.ok) {
-        const errMsg = String(data.error || `Save failed (${res.status})`);
-        if (isRetryableSermonSaveError(res.status, errMsg)) {
-          console.warn('[admin] sermon save first attempt failed, retrying once:', res.status, errMsg);
-          token = await getSermonSaveToken(true);
-          controller = new AbortController();
-          abortTimer = window.setTimeout(() => controller.abort(), 18_000);
-          ({ res, data } = await postOnce(token, controller.signal));
-          window.clearTimeout(abortTimer);
-        }
-      }
-
-      if (!res.ok) {
-        throw new Error(data.error || `Save failed (${res.status})`);
-      }
-
+      await adminApiPost(supabase, '/api/admin/sermons', body);
       toast.success(editingSermon ? 'Sermon updated!' : 'Sermon added!');
       closeSermonForm();
       await fetchRealSermons();
       fetch('/api/revalidate?paths=/sermons,/', { method: 'POST' }).catch(() => {});
     } catch (err) {
       console.error('saveRealSermon error:', err);
-      if (err instanceof Error && err.name === 'AbortError') {
-        toast.error('Save timed out. Sign out, sign back in, and try once more.');
-      } else {
-        toast.error(err instanceof Error ? err.message : 'Failed to save sermon. Please try again.');
-      }
+      toast.error(err instanceof Error ? err.message : 'Failed to save sermon. Please try again.');
     } finally {
       setSavingSermon(false);
     }
@@ -1275,89 +1215,90 @@ function AdminDashboardContent() {
     setDeletingSermonId(id);
 
     try {
-      // Note: If you later store real thumbnails in Supabase Storage (instead of YouTube thumbnails),
-      // you would also delete the file here using supabase.storage.from('sermons').remove([...])
-      const { error } = await withAdminSessionRetry(supabase, async () =>
-        supabase.from('sermons').delete().eq('id', id)
-      );
-
-      if (error) {
-        toast.error("Failed to delete sermon: " + error.message);
-      } else {
-        toast.success("Sermon deleted");
-        fetchRealSermons();
-      }
+      await adminMutate(supabase, { table: 'sermons', op: 'delete', id });
+      toast.success('Sermon deleted');
+      fetchRealSermons();
+      fetch('/api/revalidate?paths=/sermons,/', { method: 'POST' }).catch(() => {});
     } catch (err) {
       console.error('deleteRealSermon error:', err);
-      toast.error(err instanceof Error ? err.message : "Failed to delete sermon. Please try again.");
+      toast.error(err instanceof Error ? err.message : 'Failed to delete sermon. Please try again.');
     } finally {
       setDeletingSermonId(null);
     }
   }
 
   async function deleteYouthPhoto(id: string, url: string) {
-    if (!confirm("Delete this youth photo?")) return;
+    if (!confirm('Delete this youth photo?')) return;
 
     try {
-      // Delete from storage (path is "youth/filename")
+      const storagePaths: string[] = [];
       const path = url.split('/youth-photos/')[1];
       if (path) {
-        await supabase.storage.from('youth-photos').remove([`youth/${path.split('/').pop()}`]);
+        storagePaths.push(`youth/${path.split('/').pop()}`);
       }
 
-      // Delete from database
-      const { error } = await supabase.from('youth_photos').delete().eq('id', id);
-      if (error) throw error;
+      await adminMutate(supabase, {
+        table: 'youth_photos',
+        op: 'delete',
+        id,
+        storage: storagePaths.length
+          ? { bucket: 'youth-photos', paths: storagePaths }
+          : undefined,
+      });
 
-      setYouthPhotos(prev => prev.filter(p => p.id !== id));
-      toast.success("Youth photo deleted");
+      setYouthPhotos((prev) => prev.filter((p) => p.id !== id));
+      toast.success('Youth photo deleted');
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete youth photo");
+      toast.error(error instanceof Error ? error.message : 'Failed to delete youth photo');
     }
   }
 
   async function saveProgressNote() {
-    const { error } = await supabase
-      .from('building_progress')
-      .update({ 
-        physical_note: progressNote || null,
-        updated_at: new Date().toISOString() 
-      })
-      .eq('id', 1);
-
-    if (error) {
-      console.error("Failed to save progress note:", error);
-      toast.error("Failed to save note: " + (error.message || "Permission denied"));
-    } else {
-      toast.success("Progress note saved.");
-      // Also update local progress state
-      setProgress(prev => ({ ...prev, physical_note: progressNote || null }));
-      // Remote cache bust so public sees it immediately
+    try {
+      await adminMutate(supabase, {
+        table: 'building_progress',
+        op: 'update',
+        id: 1,
+        data: {
+          physical_note: progressNote || null,
+          updated_at: new Date().toISOString(),
+        },
+      });
+      toast.success('Progress note saved.');
+      setProgress((prev) => ({ ...prev, physical_note: progressNote || null }));
       fetch('/api/revalidate?path=/building-project', { method: 'POST' }).catch(() => {});
       fetch('/api/revalidate?path=/', { method: 'POST' }).catch(() => {});
+    } catch (err) {
+      console.error('Failed to save progress note:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to save note');
     }
   }
 
   async function deleteBuildingPhoto(id: string, url: string) {
-    if (!confirm("Delete this photo?")) return;
+    if (!confirm('Delete this photo?')) return;
 
     try {
-      // Delete from storage
+      const storagePaths: string[] = [];
       const path = url.split('/building-photos/')[1];
       if (path) {
-        await supabase.storage.from('building-photos').remove([`building/${path.split('/').pop()}`]);
+        storagePaths.push(`building/${path.split('/').pop()}`);
       }
 
-      // Delete from database
-      const { error } = await supabase.from('building_photos').delete().eq('id', id);
-      if (error) throw error;
+      await adminMutate(supabase, {
+        table: 'building_photos',
+        op: 'delete',
+        id,
+        storage: storagePaths.length
+          ? { bucket: 'building-photos', paths: storagePaths }
+          : undefined,
+      });
 
-      setBuildingPhotos(prev => prev.filter(p => p.id !== id));
-      toast.success("Photo deleted");
+      setBuildingPhotos((prev) => prev.filter((p) => p.id !== id));
+      toast.success('Photo deleted');
     } catch (error) {
       console.error(error);
-      toast.error("Failed to delete photo");
+      toast.error(error instanceof Error ? error.message : 'Failed to delete photo');
     }
   }
 
