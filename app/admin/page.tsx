@@ -195,12 +195,9 @@ function AdminDashboardContent() {
 
   async function approveRealMember(userId: string) {
     try {
-      await adminMutate(supabase, {
-        table: 'profiles',
-        op: 'update',
-        id: userId,
-        data: { role: 'approved' },
-      });
+      // Dedicated approve API (service role) — avoids profile role-change triggers
+      // that block "not this user" when admins approve someone else.
+      await adminApiPost(supabase, '/api/admin/members/approve', { userId });
       toast.success('Member approved!');
       fetchMembers();
     } catch (err) {
