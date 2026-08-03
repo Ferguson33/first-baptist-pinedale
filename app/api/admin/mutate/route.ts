@@ -193,34 +193,52 @@ export async function POST(request: NextRequest) {
         data.updated_at = new Date().toISOString();
       }
 
-      let query = admin.from(table).update(data).eq('id', matchId);
-      if (select) {
-        const { data: row, error } = await query.select(select).maybeSingle();
-        if (error) {
-          console.error('[admin/mutate] update', table, error);
-          return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-        if (!row && table === 'building_progress') {
-          // Upsert singleton if missing
-          const { data: upserted, error: upsertError } = await admin
-            .from('building_progress')
-            .upsert({ id: 1, ...data }, { onConflict: 'id' })
-            .select(select)
-            .maybeSingle();
-          if (upsertError) {
-            return NextResponse.json({ error: upsertError.message }, { status: 500 });
-          }
-          return NextResponse.json({ success: true, row: upserted });
-        }
-        return NextResponse.json({ success: true, row });
-      }
+      // Always return the updated row so silent 0-row updates (e.g. bad id) fail loudly
+      const selectCols =
+        select ||
+        (table === 'profiles'
+          ? 'id, email, full_name, role'
+          : table === 'building_progress'
+            ? 'id, physical_percent, funds_raised, funds_goal, physical_note'
+            : 'id');
 
-      const { error } = await query;
+      const { data: row, error } = await admin
+        .from(table)
+        .update(data)
+        .eq('id', matchId)
+        .select(selectCols)
+        .maybeSingle();
+
       if (error) {
         console.error('[admin/mutate] update', table, error);
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
-      return NextResponse.json({ success: true });
+
+      if (!row && table === 'building_progress') {
+        const { data: upserted, error: upsertError } = await admin
+          .from('building_progress')
+          .upsert({ id: 1, ...data }, { onConflict: 'id' })
+          .select(selectCols)
+          .maybeSingle();
+        if (upsertError) {
+          return NextResponse.json({ error: upsertError.message }, { status: 500 });
+        }
+        return NextResponse.json({ success: true, row: upserted });
+      }
+
+      if (!row) {
+        return NextResponse.json(
+          {
+            error:
+              table === 'profiles'
+                ? 'Member profile not found — refresh the Members list and try again.'
+                : 'Update matched no rows.',
+          },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({ success: true, row });
     }
 
     return NextResponse.json({ error: 'Unsupported operation.' }, { status: 400 });
