@@ -6,8 +6,7 @@ export const maxDuration = 30;
 
 /**
  * Approve a pending member (profiles.role → approved).
- * Uses service role after admin JWT check so DB triggers that only
- * allow "self" role changes do not block pastoral approval.
+ * Prefers admin_approve_member RPC; falls back to direct service-role update.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -54,7 +53,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, profile: existing, already: true });
     }
 
-    // Prefer RPC if present (SECURITY DEFINER + is_admin); fall back to direct update
+    // 1) Preferred: SECURITY DEFINER RPC
     const { data: rpcRow, error: rpcError } = await admin.rpc('admin_approve_member', {
       target_id: userId,
     });
@@ -64,10 +63,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, profile });
     }
 
-    if (rpcError && !/function|does not exist|schema cache/i.test(rpcError.message || '')) {
-      console.error('[admin/members/approve] rpc', rpcError);
-    }
-
+    // 2) Fallback: direct service-role update
     const { data: updated, error: updateError } = await admin
       .from('profiles')
       .update({ role: 'approved' })
@@ -75,30 +71,29 @@ export async function POST(request: NextRequest) {
       .select('id, email, full_name, role')
       .maybeSingle();
 
-    if (updateError) {
-      console.error('[admin/members/approve] update', updateError);
-      const msg = updateError.message || 'Failed to approve member';
-      if (/cannot be changed by this user|42501|permission/i.test(msg)) {
-        return NextResponse.json(
-          {
-            error:
-              'Database is blocking role changes. In Supabase → SQL Editor, run supabase/fix-profiles-role-change-trigger.sql, then try again.',
-            detail: msg,
-          },
-          { status: 500 }
-        );
-      }
-      return NextResponse.json({ error: msg }, { status: 500 });
+    if (!updateError && updated) {
+      return NextResponse.json({ success: true, profile: updated });
     }
 
-    if (!updated) {
-      return NextResponse.json(
-        { error: 'Approve did not update any row. Check the profile id and try again.' },
-        { status: 404 }
-      );
-    }
+    const detail = updateError?.message || rpcError?.message || 'Unknown database error';
+    console.error('[admin/members/approve] failed', { rpcError, updateError, userId });
 
-    return NextResponse.json({ success: true, profile: updated });
+    const needsSql = /cannot be changed by this user|blocking role|42501|permission denied|function.*does not exist/i.test(
+      detail
+    );
+
+    return NextResponse.json(
+      {
+        error: needsSql
+          ? 'Database is still blocking role changes. Run the FULL script supabase/fix-profiles-role-change-trigger.sql in Supabase SQL Editor (as project owner), then try Approve again.'
+          : `Could not approve member: ${detail}`,
+        detail,
+        hint: needsSql
+          ? 'SQL Editor → paste entire fix-profiles-role-change-trigger.sql → Run. Confirm Notices show dropped triggers.'
+          : undefined,
+      },
+      { status: 500 }
+    );
   } catch (err) {
     console.error('[admin/members/approve]', err);
     return NextResponse.json(

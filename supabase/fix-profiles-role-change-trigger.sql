@@ -1,15 +1,10 @@
 -- ============================================================
--- FIX: "profile cannot be changed by this user" on Approve
---
--- Cause: a BEFORE UPDATE trigger on public.profiles that blocks
--- role changes unless auth.uid() = the row id. That stops:
---   • admins approving other members
---   • service_role API updates (auth.uid() is null)
---
--- Safe to re-run. Profiles-only. Does not touch sermons/storage.
+-- FIX: "profile cannot be changed by this user" / "database is blocking role changes"
+-- Run entire file in Supabase → SQL Editor as project owner.
+-- Safe to re-run. Profiles only — no sermons/storage changes.
 -- ============================================================
 
--- 1) Ensure is_admin() exists
+-- 1) is_admin()
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean
 LANGUAGE sql
@@ -27,28 +22,36 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated, anon, service_role;
 
--- 2) Drop known restrictive triggers / functions (names vary by project history)
-DROP TRIGGER IF EXISTS protect_profile_role ON public.profiles;
-DROP TRIGGER IF EXISTS prevent_profile_role_change ON public.profiles;
-DROP TRIGGER IF EXISTS profiles_role_guard ON public.profiles;
-DROP TRIGGER IF EXISTS enforce_profile_role ON public.profiles;
-DROP TRIGGER IF EXISTS trg_profiles_protect_role ON public.profiles;
-DROP TRIGGER IF EXISTS on_profile_update ON public.profiles;
-DROP TRIGGER IF EXISTS profiles_before_update ON public.profiles;
+-- 2) Drop EVERY user trigger on public.profiles (keeps system/internal ones)
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT t.tgname
+    FROM pg_trigger t
+    JOIN pg_class c ON c.oid = t.tgrelid
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relname = 'profiles'
+      AND NOT t.tgisinternal
+  LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS %I ON public.profiles', r.tgname);
+    RAISE NOTICE 'Dropped trigger: %', r.tgname;
+  END LOOP;
+END $$;
 
--- Drop common function names if present (ignore if still used elsewhere)
+-- Drop old guard functions if present
 DROP FUNCTION IF EXISTS public.protect_profile_role() CASCADE;
 DROP FUNCTION IF EXISTS public.prevent_profile_role_change() CASCADE;
 DROP FUNCTION IF EXISTS public.profiles_role_guard() CASCADE;
 DROP FUNCTION IF EXISTS public.enforce_profile_role() CASCADE;
 DROP FUNCTION IF EXISTS public.handle_profile_update() CASCADE;
+DROP FUNCTION IF EXISTS public.profiles_guard_role_change() CASCADE;
 
--- 3) Replace with a safe guard:
---    - Anyone may update non-role fields per RLS
---    - Role may change only if:
---        a) service_role (admin API), OR
---        b) caller is admin (is_admin())
---    - Non-admins cannot escalate their own role
+-- 3) Safe role guard:
+--    Block ONLY logged-in non-admins from changing role.
+--    service_role, postgres, and admins are allowed.
 CREATE OR REPLACE FUNCTION public.profiles_guard_role_change()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -56,47 +59,45 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  jwt_role text;
+  req_role text;
 BEGIN
-  -- No role change → allow
   IF NEW.role IS NOT DISTINCT FROM OLD.role THEN
     RETURN NEW;
   END IF;
 
-  -- Service role (PostgREST / supabaseAdmin) may change roles
+  -- Who is making this request?
   BEGIN
-    jwt_role := coalesce(
-      current_setting('request.jwt.claim.role', true),
-      current_setting('role', true),
-      ''
-    );
+    req_role := coalesce(auth.role(), '');
   EXCEPTION WHEN OTHERS THEN
-    jwt_role := '';
+    req_role := '';
   END;
 
-  IF jwt_role = 'service_role'
-     OR current_user IN ('postgres', 'supabase_admin', 'service_role') THEN
+  -- service_role / backend / SQL editor: always allow role updates
+  IF req_role IN ('service_role', 'supabase_admin')
+     OR current_user IN ('postgres', 'supabase_admin', 'service_role')
+     OR session_user IN ('postgres', 'supabase_admin') THEN
     RETURN NEW;
   END IF;
 
-  -- Authenticated admin may approve / manage roles
+  -- Authenticated admin: allow
   IF public.is_admin() THEN
     RETURN NEW;
   END IF;
 
-  -- Block everyone else (including self-escalation)
+  -- Everyone else (including members editing their own profile): cannot change role
   RAISE EXCEPTION 'Profile role cannot be changed by this user'
     USING ERRCODE = '42501';
 END;
 $$;
 
-DROP TRIGGER IF EXISTS profiles_guard_role_change ON public.profiles;
 CREATE TRIGGER profiles_guard_role_change
   BEFORE UPDATE ON public.profiles
   FOR EACH ROW
   EXECUTE FUNCTION public.profiles_guard_role_change();
 
--- 4) Keep admin UPDATE RLS (approve path)
+-- 4) RLS: admins can update any profile row
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
 DROP POLICY IF EXISTS "Admins can update all profiles" ON public.profiles;
 CREATE POLICY "Admins can update all profiles"
 ON public.profiles
@@ -105,10 +106,28 @@ TO authenticated
 USING (public.is_admin())
 WITH CHECK (public.is_admin());
 
+-- Keep self-update if missing (non-role fields)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'profiles'
+      AND policyname = 'Users can update own profile'
+  ) THEN
+    CREATE POLICY "Users can update own profile"
+    ON public.profiles
+    FOR UPDATE
+    TO authenticated
+    USING (auth.uid() = id)
+    WITH CHECK (auth.uid() = id);
+  END IF;
+END $$;
+
 GRANT SELECT, INSERT, UPDATE ON public.profiles TO authenticated;
 GRANT ALL ON public.profiles TO service_role;
 
--- 5) Dedicated approve RPC (admins via JWT, or service_role after API auth check)
+-- 5) Approve RPC (used by /api/admin/members/approve)
+--    SECURITY DEFINER + allows service_role and is_admin()
 CREATE OR REPLACE FUNCTION public.admin_approve_member(target_id uuid)
 RETURNS public.profiles
 LANGUAGE plpgsql
@@ -117,21 +136,21 @@ SET search_path = public
 AS $$
 DECLARE
   updated public.profiles;
-  jwt_role text;
+  req_role text;
   allowed boolean := false;
 BEGIN
+  BEGIN
+    req_role := coalesce(auth.role(), '');
+  EXCEPTION WHEN OTHERS THEN
+    req_role := '';
+  END;
+
   IF public.is_admin() THEN
     allowed := true;
-  ELSE
-    BEGIN
-      jwt_role := coalesce(current_setting('request.jwt.claim.role', true), '');
-    EXCEPTION WHEN OTHERS THEN
-      jwt_role := '';
-    END;
-    IF jwt_role = 'service_role'
-       OR current_user IN ('postgres', 'supabase_admin', 'service_role') THEN
-      allowed := true;
-    END IF;
+  ELSIF req_role IN ('service_role', 'supabase_admin') THEN
+    allowed := true;
+  ELSIF current_user IN ('postgres', 'supabase_admin', 'service_role') THEN
+    allowed := true;
   END IF;
 
   IF NOT allowed THEN
@@ -141,11 +160,11 @@ BEGIN
   UPDATE public.profiles
   SET role = 'approved'
   WHERE id = target_id
-    AND role IN ('pending', 'approved')  -- no demoting admins via this RPC
+    AND coalesce(role, 'pending') IN ('pending', 'approved')
   RETURNING * INTO updated;
 
   IF updated.id IS NULL THEN
-    RAISE EXCEPTION 'Member profile not found or is an admin account';
+    RAISE EXCEPTION 'Member profile not found or cannot be approved (admin accounts are protected)';
   END IF;
 
   RETURN updated;
@@ -155,9 +174,13 @@ $$;
 GRANT EXECUTE ON FUNCTION public.admin_approve_member(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_approve_member(uuid) TO service_role;
 
--- ============================================================
--- VERIFY (optional): list remaining triggers on profiles
--- SELECT tgname, pg_get_triggerdef(oid)
--- FROM pg_trigger
--- WHERE tgrelid = 'public.profiles'::regclass AND NOT tgisinternal;
--- ============================================================
+-- 6) Sanity checks (read the Results / Notices)
+SELECT tgname AS remaining_triggers
+FROM pg_trigger
+WHERE tgrelid = 'public.profiles'::regclass
+  AND NOT tgisinternal;
+
+SELECT policyname, cmd
+FROM pg_policies
+WHERE schemaname = 'public' AND tablename = 'profiles'
+ORDER BY policyname;
