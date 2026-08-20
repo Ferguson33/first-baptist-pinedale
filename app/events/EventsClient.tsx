@@ -66,32 +66,11 @@ export default function EventsClient({ spotlightEvents, scheduleEmbedUrl }: Even
         </p>
       </div>
 
-      {/* Special Notice — community flyer + optional admin spotlight events */}
-      <div className="mb-12">
-        <div className="uppercase text-xs tracking-[3px] text-[var(--color-gold-dark)] mb-3">Special Notice</div>
-        <div className="space-y-6">
-          {/* Rocky Mountain STOL 2026 — entire flyer links to the event site */}
-          <a
-            href="http://nationalstol.com/rockymountain"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block group rounded-3xl overflow-hidden border border-[var(--color-gold)]/30 shadow-lg hover:shadow-xl hover:border-[var(--color-gold)]/60 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-gold)] focus-visible:ring-offset-2"
-            aria-label="Rocky Mountain STOL 2026 — open event website (opens in a new tab)"
-          >
-            <img
-              src="/images/events/rocky-mountain-stol-2026.jpg"
-              alt="Rocky Mountain STOL 2026 at Pinedale Airport, August 13–15. Come watch planes defy gravity. Admission $15 adults, kids free. Visit nationalstol.com/rockymountain for details."
-              loading="lazy"
-              decoding="async"
-              className="w-full h-auto block group-hover:scale-[1.01] transition-transform duration-300"
-            />
-            <div className="bg-[var(--color-navy)] text-white text-center text-sm md:text-base font-medium py-3 px-4">
-              Click the flyer for event details → nationalstol.com/rockymountain
-            </div>
-          </a>
-
-          {hasSpotlight &&
-            spotlightEvents.map((event, index) => (
+      {hasSpotlight && (
+        <div className="mb-12">
+          <div className="uppercase text-xs tracking-[3px] text-[var(--color-gold-dark)] mb-3">Special Notice</div>
+          <div className="space-y-6">
+            {spotlightEvents.map((event, index) => (
               <div
                 key={event.id}
                 onClick={() => openGallery(index)}
@@ -116,8 +95,9 @@ export default function EventsClient({ spotlightEvents, scheduleEmbedUrl }: Even
                 </div>
               </div>
             ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Youth link */}
       <div className="mb-12 text-sm text-[var(--color-stone)]">
