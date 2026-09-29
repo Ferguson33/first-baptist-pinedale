@@ -71,7 +71,7 @@ export function Navbar() {
 
           {/* Right side actions */}
           <div className="flex items-center gap-3 ml-4 lg:ml-8" suppressHydrationWarning>
-            {/* Give Button - prominent */}
+            {/* Give Button - prominent on sm+; unchanged desktop layout */}
             <Link
               href="/give"
               className="hidden sm:block px-5 py-2.5 bg-[var(--color-gold)] hover:bg-[var(--color-gold-dark)] text-white rounded-full text-sm font-semibold transition-colors"
@@ -167,6 +167,14 @@ export function Navbar() {
               </Link>
             )}
 
+            {/* Compact Give — phones only, beside the hamburger. Desktop button above is unchanged. */}
+            <Link
+              href="/give"
+              className="sm:hidden shrink-0 whitespace-nowrap px-3 py-2 bg-[var(--color-gold)] hover:bg-[var(--color-gold-dark)] text-white rounded-full text-sm font-semibold transition-colors"
+            >
+              Give
+            </Link>
+
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -186,53 +194,55 @@ export function Navbar() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="lg:hidden border-t bg-white"
+            className="lg:hidden border-t bg-white overflow-hidden"
           >
-            <div className="px-4 py-6 flex flex-col gap-1 text-base">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              
-              {showMemberLinks && (
-                <>
-                  <Link href="/members/directory" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>Member Directory</Link>
-                  <Link href="/prayer-bulletin" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>
-                    Prayer Bulletin
+            <div className="flex max-h-[calc(100dvh-5.5rem)] flex-col overflow-hidden">
+              <div className="px-4 py-6 flex flex-col gap-1 text-base overflow-y-auto min-h-0">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {link.label}
                   </Link>
-                  <Link href="/nursery-schedule" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>
-                    Nursery Schedule
-                  </Link>
-                </>
-              )}
+                ))}
+                
+                {showMemberLinks && (
+                  <>
+                    <Link href="/members/directory" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>Member Directory</Link>
+                    <Link href="/prayer-bulletin" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>
+                      Prayer Bulletin
+                    </Link>
+                    <Link href="/nursery-schedule" className="py-3 px-2 hover:bg-[var(--color-cream)] rounded-lg" onClick={() => setMobileOpen(false)}>
+                      Nursery Schedule
+                    </Link>
+                  </>
+                )}
 
-              {isAdmin && (
-                <Link href="/admin" className="py-3 px-2 text-[var(--color-gold-dark)] font-medium" onClick={() => setMobileOpen(false)}>Dashboard</Link>
-              )}
+                {isAdmin && (
+                  <Link href="/admin" className="py-3 px-2 text-[var(--color-gold-dark)] font-medium" onClick={() => setMobileOpen(false)}>Dashboard</Link>
+                )}
 
-              {isLoggedIn && (
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  disabled={signingOut}
-                  className="py-3 px-2 text-left text-red-700 hover:bg-red-50 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {signingOut ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <LogOut className="w-4 h-4" />
-                  )}
-                  {signingOut ? 'Signing out…' : 'Sign Out'}
-                </button>
-              )}
+                {isLoggedIn && (
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    disabled={signingOut}
+                    className="py-3 px-2 text-left text-red-700 hover:bg-red-50 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {signingOut ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <LogOut className="w-4 h-4" />
+                    )}
+                    {signingOut ? 'Signing out…' : 'Sign Out'}
+                  </button>
+                )}
+              </div>
 
-              <div className="pt-3 mt-2 border-t">
+              <div className="shrink-0 border-t bg-white px-4 py-3">
                 <Link href="/give" className="block w-full text-center py-3 bg-[var(--color-gold)] text-white rounded-full font-semibold" onClick={() => setMobileOpen(false)}>
                   Give Online
                 </Link>
